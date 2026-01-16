@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { ItemType, ItineraryItem } from '../types';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, ScanIcon } from './Icons';
@@ -18,14 +19,14 @@ const OptionCard: React.FC<{
 }> = ({ icon, title, desc, onClick }) => (
   <button 
     onClick={onClick}
-    className="w-full flex items-center gap-4 p-5 bg-tactical-card/50 hover:bg-tactical-card border border-tactical-muted/20 hover:border-tactical-accent/50 rounded-xl transition-all group text-left"
+    className="w-full flex items-center gap-4 p-5 bg-tactical-card/50 hover:bg-tactical-card border border-tactical-muted/20 hover:border-tactical-accent/50 rounded-xl transition-all group text-left h-full"
   >
-    <div className="w-12 h-12 rounded bg-tactical-bg flex items-center justify-center text-tactical-accent group-hover:bg-tactical-accent group-hover:text-black transition-colors">
+    <div className="w-12 h-12 rounded bg-tactical-bg flex items-center justify-center text-tactical-accent group-hover:bg-tactical-accent group-hover:text-black transition-colors shrink-0">
       {icon}
     </div>
-    <div className="flex-1">
-      <h3 className="font-display font-bold text-white uppercase text-lg">{title}</h3>
-      <p className="text-tactical-muted text-sm">{desc}</p>
+    <div className="flex-1 min-w-0">
+      <h3 className="font-display font-bold text-white uppercase text-lg truncate">{title}</h3>
+      <p className="text-tactical-muted text-sm truncate">{desc}</p>
     </div>
     <div className="text-tactical-muted group-hover:text-tactical-accent">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
@@ -141,12 +142,12 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
           onChange={handleFileChange} 
         />
         
-        {/* Scan Button */}
+        {/* Scan Button - Full Width */}
         <button 
           onClick={handleScanClick}
           className="w-full flex items-center gap-4 p-5 bg-tactical-accent/10 hover:bg-tactical-accent/20 border border-tactical-accent/50 hover:border-tactical-accent rounded-xl transition-all group text-left mb-6"
         >
-           <div className="w-12 h-12 rounded bg-tactical-bg flex items-center justify-center text-tactical-accent border border-tactical-accent/30 shadow-[0_0_15px_rgba(255,215,0,0.2)]">
+           <div className="w-12 h-12 rounded bg-tactical-bg flex items-center justify-center text-tactical-accent border border-tactical-accent/30 shadow-[0_0_15px_rgba(255,215,0,0.2)] shrink-0">
               <ScanIcon className="w-6 h-6" />
            </div>
            <div className="flex-1">
@@ -158,30 +159,33 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
            </div>
         </button>
 
-        <OptionCard 
-          icon={<BedIcon className="w-6 h-6" />}
-          title="Book a Bed"
-          desc="Secure safehouse for the night"
-          onClick={() => onSelectType(ItemType.STAY)}
-        />
-        <OptionCard 
-          icon={<TrainIcon className="w-6 h-6" />}
-          title="Catch a Ride"
-          desc="Transport to next sector"
-          onClick={() => onSelectType(ItemType.TRANSPORT)}
-        />
-        <OptionCard 
-          icon={<CameraIcon className="w-6 h-6" />}
-          title="Hunt for Views"
-          desc="Reconnaissance & documentation"
-          onClick={() => onSelectType(ItemType.ACTIVITY)}
-        />
-        <OptionCard 
-          icon={<UtensilsIcon className="w-6 h-6" />}
-          title="Refuel"
-          desc="Replenish vital supplies"
-          onClick={() => onSelectType(ItemType.FOOD)}
-        />
+        {/* Action Grid for Larger Screens */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <OptionCard 
+              icon={<BedIcon className="w-6 h-6" />}
+              title="Book a Bed"
+              desc="Secure safehouse"
+              onClick={() => onSelectType(ItemType.STAY)}
+            />
+            <OptionCard 
+              icon={<TrainIcon className="w-6 h-6" />}
+              title="Catch a Ride"
+              desc="Transport to next sector"
+              onClick={() => onSelectType(ItemType.TRANSPORT)}
+            />
+            <OptionCard 
+              icon={<CameraIcon className="w-6 h-6" />}
+              title="Hunt for Views"
+              desc="Reconnaissance"
+              onClick={() => onSelectType(ItemType.ACTIVITY)}
+            />
+            <OptionCard 
+              icon={<UtensilsIcon className="w-6 h-6" />}
+              title="Refuel"
+              desc="Replenish supplies"
+              onClick={() => onSelectType(ItemType.FOOD)}
+            />
+        </div>
       </div>
 
       {/* Latest Intel Panel & Debug */}

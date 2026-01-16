@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
 import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon } from './Icons';
@@ -328,13 +329,13 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
              </div>
          </div>
 
-         {/* 2. Category Breakdown */}
+         {/* 2. Category Breakdown - Responsive Grid */}
          <div className="mb-8">
              <div className="flex justify-between items-center mb-3">
                  <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Category Breakdown</h3>
              </div>
              
-             <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                  {[ItemType.FOOD, ItemType.STAY, ItemType.TRANSPORT, ItemType.ACTIVITY, ItemType.ESSENTIALS].map((type) => {
                      const spent = categorySpend[type];
                      const percent = userBudget > 0 ? Math.min((spent / userBudget) * 100, 100) : 0;
@@ -597,7 +598,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                   {/* Settle Modal Overlay */}
                   {settleModalOpen && (
                       <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-fade-in">
-                          <div className="w-full bg-tactical-card border border-tactical-muted/40 rounded-xl p-6 shadow-2xl">
+                          <div className="w-full max-w-sm bg-tactical-card border border-tactical-muted/40 rounded-xl p-6 shadow-2xl mx-auto">
                               <div className="text-center mb-4">
                                   <div className="w-12 h-12 bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3 border border-green-700/50 text-green-500">
                                       <BanknoteIcon className="w-6 h-6" />

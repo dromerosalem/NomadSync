@@ -118,51 +118,56 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
           </p>
         </header>
 
-        <div className="space-y-8">
-          {/* Mission Name */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Spain Adventure"
-              className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
-            />
-          </div>
-
-          {/* Target Location */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Target Location</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="Enter primary destination"
-                className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 pr-12 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
-              />
-              <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            </div>
-          </div>
+        {/* Responsive Grid Layout for Tablet+ */}
+        <div className="space-y-8 md:space-y-0 md:grid md:grid-cols-2 md:gap-8">
           
-          {/* Budget */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ($)</label>
-            <input
-              type="number"
-              value={budget}
-              onChange={(e) => setBudget(e.target.value)}
-              placeholder="2000"
-              className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
-            />
-             <p className="text-[10px] text-gray-500">This budget is private to you and tracked separately from other members.</p>
+          {/* Left Column: Inputs */}
+          <div className="space-y-8">
+              {/* Mission Name */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Spain Adventure"
+                  className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
+                />
+              </div>
+
+              {/* Target Location */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Target Location</label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Enter primary destination"
+                    className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 pr-12 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
+                  />
+                  <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                </div>
+              </div>
+              
+              {/* Budget */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ($)</label>
+                <input
+                  type="number"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="2000"
+                  className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                 <p className="text-[10px] text-gray-500">This budget is private to you and tracked separately from other members.</p>
+              </div>
           </div>
 
-          {/* Interactive Calendar */}
-          <div className="space-y-2">
+          {/* Right Column: Calendar */}
+          <div className="space-y-2 h-full flex flex-col">
              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Timeline</label>
-             <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20">
+             <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20 flex-1">
                 <div className="flex justify-between items-center mb-6">
                    <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>
                    <h3 className="font-display font-bold text-white uppercase tracking-wider">
@@ -195,8 +200,10 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
              </div>
           </div>
           
-          {/* Action Button */}
-          <div className="pt-2 pb-2">
+        </div>
+        
+        {/* Action Button - Spans full width */}
+        <div className="pt-8 pb-2">
             <button 
               onClick={handleSubmit}
               disabled={isLoading || !name || !location || !startDate}
@@ -210,8 +217,8 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
                 </>
               )}
             </button>
-          </div>
         </div>
+
       </div>
     </div>
   );

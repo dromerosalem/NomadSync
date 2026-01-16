@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Trip } from '../types';
 import { MapPinIcon, ChevronLeftIcon } from './Icons';
@@ -148,7 +149,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
               type="number"
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
-              className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
+              className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <p className="text-[10px] text-gray-500">Updating this value changes your personal tracking only.</p>
           </div>

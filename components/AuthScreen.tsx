@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { GoogleIcon, LightningIcon } from './Icons';
 
@@ -51,7 +52,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                   <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==')] opacity-30"></div>
               </div>
 
-              <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 text-center">
+              <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 text-center w-full max-w-md mx-auto">
                   <div className="mb-2 px-3 py-1 border border-tactical-accent/30 rounded bg-black/40 backdrop-blur-sm">
                       <span className="text-[10px] font-bold text-tactical-accent uppercase tracking-[0.2em] flex items-center gap-2">
                           <span className="w-2 h-2 rounded-full bg-tactical-accent animate-pulse"></span>
@@ -110,7 +111,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     <div className="flex flex-col h-full bg-tactical-bg relative animate-fade-in">
         <div className="absolute inset-0 z-0 opacity-10 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==')]"></div>
 
-        <header className="px-6 py-8 z-10">
+        <header className="px-6 py-8 z-10 w-full max-w-md mx-auto">
             <button 
                onClick={() => setMode('LANDING')}
                className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest hover:text-white mb-6"
@@ -128,7 +129,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             </p>
         </header>
 
-        <div className="flex-1 px-6 z-10 overflow-y-auto">
+        <div className="flex-1 px-6 z-10 overflow-y-auto w-full max-w-md mx-auto">
              
              {/* Google Button */}
              <button 
@@ -192,7 +193,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
              </div>
         </div>
 
-        <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20">
+        <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-md mx-auto">
             <button 
               onClick={handleDeploy}
               disabled={isLoading}

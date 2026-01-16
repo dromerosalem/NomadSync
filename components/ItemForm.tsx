@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member } from '../types';
 import { ChevronLeftIcon, MapPinIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, UserIcon, WalletIcon } from './Icons';
@@ -212,7 +213,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
   return (
     <div className="flex flex-col h-full bg-tactical-bg animate-fade-in overflow-y-auto">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10">
+      <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10 w-full max-w-2xl mx-auto">
         <button onClick={onClose} className="text-gray-400 hover:text-white">
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
@@ -231,7 +232,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         </button>
       </header>
 
-      <div className="p-6 space-y-8 pb-32">
+      <div className="p-6 space-y-8 pb-32 w-full max-w-2xl mx-auto flex-1">
         {/* Title Section */}
         <div>
           <h1 className={`font-display text-3xl font-bold uppercase leading-tight mb-6 ${getTypeColor()}`}>
@@ -566,7 +567,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       </div>
 
       {/* Footer / Cost / Save */}
-      <div className="mt-auto sticky bottom-0 bg-tactical-bg p-6 border-t border-tactical-muted/20 z-20">
+      <div className="mt-auto sticky bottom-0 bg-tactical-bg p-6 border-t border-tactical-muted/20 z-20 w-full max-w-2xl mx-auto">
          <div className="flex items-end justify-between mb-4">
             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Financial Toll</span>
             <div className="flex items-baseline text-tactical-accent">
@@ -576,7 +577,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                  value={cost} 
                  onChange={(e) => setCost(e.target.value)}
                  placeholder="0.00"
-                 className="bg-transparent w-32 text-4xl font-display font-bold text-right outline-none placeholder-tactical-muted/30"
+                 className="bg-transparent w-32 text-4xl font-display font-bold text-right outline-none placeholder-tactical-muted/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                />
             </div>
          </div>

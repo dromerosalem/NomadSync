@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member } from '../types';
 import { ChevronLeftIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
@@ -254,7 +255,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         )}
         
         {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10">
+        <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10 w-full max-w-2xl mx-auto">
             <button onClick={onClose} className="text-gray-400 hover:text-white">
                 <ChevronLeftIcon className="w-6 h-6" />
             </button>
@@ -271,7 +272,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             )}
         </header>
 
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-32">
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-32 w-full max-w-2xl mx-auto">
             
             {/* 1. Cost Input */}
             <div className="flex flex-col items-center justify-center mb-8 mt-4">
@@ -569,7 +570,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             </div>
         </div>
 
-        <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20">
+        <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-2xl mx-auto">
             {isSettlement ? (
                 <div className="space-y-3">
                     <div className="text-center text-[10px] text-gray-500 uppercase tracking-widest font-bold">
