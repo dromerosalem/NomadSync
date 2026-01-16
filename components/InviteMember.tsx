@@ -3,197 +3,196 @@ import { Trip, Role } from '../types';
 import { ChevronLeftIcon, LinkIcon, CopyIcon, SendIcon, EditIcon, EyeIcon, PlusIcon } from './Icons';
 
 interface InviteMemberProps {
-  trip: Trip;
-  onBack: () => void;
-  onInvite: (email: string, role: Role) => void;
+    trip: Trip;
+    onBack: () => void;
+    onInvite: (email: string, role: Role) => void;
 }
 
 const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) => {
-  const [selectedRole, setSelectedRole] = useState<Role>('SCOUT');
-  const [email, setEmail] = useState('');
-  const [copied, setCopied] = useState(false);
+    const [selectedRole, setSelectedRole] = useState<Role>('SCOUT');
+    const [email, setEmail] = useState('');
+    const [copied, setCopied] = useState(false);
 
-  const inviteLink = `nomadsync.app/j/${trip.id.slice(-6)}`;
+    const inviteLink = `nomadsync.app/j/${trip.id.slice(-6)}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(inviteLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    const handleCopy = () => {
+        navigator.clipboard.writeText(inviteLink);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
-  const handleSendInvite = () => {
-    if (email && email.includes('@')) {
-      onInvite(email, selectedRole);
-      setEmail('');
-      // Optionally show success feedback
-    }
-  };
+    const handleSendInvite = () => {
+        if (email && email.includes('@')) {
+            const normalizedEmail = email.trim().toLowerCase();
+            onInvite(normalizedEmail, selectedRole);
+            setEmail('');
+            // Optionally show success feedback
+        }
+    };
 
-  return (
-    <div className="flex flex-col h-full bg-tactical-bg animate-fade-in">
-      <header className="px-6 py-4 flex items-center gap-4 sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10">
-        <button onClick={onBack} className="text-gray-400 hover:text-white">
-          <ChevronLeftIcon className="w-6 h-6" />
-        </button>
-        <div className="font-display font-bold text-lg text-tactical-accent uppercase tracking-wider">
-           Recruit Your Circle
-        </div>
-      </header>
-
-      <div className="flex-1 overflow-y-auto p-6 space-y-8">
-        
-        {/* Mission URL */}
-        <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
-                <LinkIcon className="w-3 h-3" /> Mission URL
-            </div>
-            <div className="bg-tactical-card rounded-xl p-1 border border-tactical-muted/30 flex flex-col gap-2">
-                <div className="bg-black/20 rounded-t-lg p-3 font-mono text-sm text-gray-400 select-all truncate">
-                    {inviteLink}
-                </div>
-                <button 
-                  onClick={handleCopy}
-                  className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-bold uppercase py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                >
-                   {copied ? (
-                       <span>COPIED TO CLIPBOARD</span>
-                   ) : (
-                       <>
-                         <CopyIcon className="w-4 h-4" /> COPY LINK
-                       </>
-                   )}
+    return (
+        <div className="flex flex-col h-full bg-tactical-bg animate-fade-in">
+            <header className="px-6 py-4 flex items-center gap-4 sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10">
+                <button onClick={onBack} className="text-gray-400 hover:text-white">
+                    <ChevronLeftIcon className="w-6 h-6" />
                 </button>
-            </div>
-        </div>
-
-        {/* Clearance Level */}
-        <div className="space-y-3">
-             <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                Clearance Level
-             </div>
-             
-             {/* SCOUT Option */}
-             <button 
-               onClick={() => setSelectedRole('SCOUT')}
-               className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-4 group ${
-                   selectedRole === 'SCOUT' 
-                   ? 'bg-tactical-accent/10 border-tactical-accent' 
-                   : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
-               }`}
-             >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedRole === 'SCOUT' ? 'bg-tactical-accent text-black' : 'bg-black/40 text-gray-500'}`}>
-                    <EditIcon className="w-5 h-5" />
+                <div className="font-display font-bold text-lg text-tactical-accent uppercase tracking-wider">
+                    Recruit Your Circle
                 </div>
-                <div className="flex-1">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className={`font-display font-bold uppercase tracking-wide ${selectedRole === 'SCOUT' ? 'text-tactical-accent' : 'text-gray-300'}`}>SCOUT</span>
-                        <div className={`w-3 h-3 rounded-full border border-gray-600 flex items-center justify-center ${selectedRole === 'SCOUT' ? 'bg-tactical-accent border-transparent' : ''}`}>
-                            {selectedRole === 'SCOUT' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
-                        </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+
+                {/* Mission URL */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
+                        <LinkIcon className="w-3 h-3" /> Mission URL
                     </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                        Full operational access. Can modify itinerary and budget.
-                    </p>
-                </div>
-             </button>
-
-             {/* PASSENGER Option */}
-             <button 
-               onClick={() => setSelectedRole('PASSENGER')}
-               className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-4 group ${
-                   selectedRole === 'PASSENGER' 
-                   ? 'bg-tactical-accent/10 border-tactical-accent' 
-                   : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
-               }`}
-             >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedRole === 'PASSENGER' ? 'bg-tactical-accent text-black' : 'bg-black/40 text-gray-500'}`}>
-                    <EyeIcon className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className={`font-display font-bold uppercase tracking-wide ${selectedRole === 'PASSENGER' ? 'text-tactical-accent' : 'text-gray-300'}`}>PASSENGER</span>
-                        <div className={`w-3 h-3 rounded-full border border-gray-600 flex items-center justify-center ${selectedRole === 'PASSENGER' ? 'bg-tactical-accent border-transparent' : ''}`}>
-                            {selectedRole === 'PASSENGER' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
+                    <div className="bg-tactical-card rounded-xl p-1 border border-tactical-muted/30 flex flex-col gap-2">
+                        <div className="bg-black/20 rounded-t-lg p-3 font-mono text-sm text-gray-400 select-all truncate">
+                            {inviteLink}
                         </div>
-                    </div>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                        Surveillance only. Read-only access to mission details.
-                    </p>
-                </div>
-             </button>
-        </div>
-
-        {/* Direct Comms */}
-        <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                Direct Comms
-            </div>
-            <div className="flex gap-2">
-                <input 
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter operative email..."
-                  className="flex-1 bg-tactical-card border border-tactical-muted/30 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-tactical-accent outline-none"
-                />
-                <button 
-                  onClick={handleSendInvite}
-                  disabled={!email}
-                  className="bg-[#FF4500] hover:bg-[#FF6347] disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(255,69,0,0.3)] transition-all"
-                >
-                   <SendIcon className="w-5 h-5" />
-                </button>
-            </div>
-        </div>
-
-        {/* Active Squad Preview */}
-        <div className="pt-4 border-t border-tactical-muted/10">
-            <div className="flex justify-between items-end mb-3">
-                 <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    Active Squad
-                 </div>
-                 <div className="text-[9px] font-bold text-tactical-muted border border-tactical-muted/30 px-1.5 py-0.5 rounded bg-black/30">
-                     {trip.members.filter(m => m.status === 'ACTIVE').length} ACTIVE
-                 </div>
-            </div>
-
-            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {trip.members.map(member => (
-                    <div key={member.id} className="flex flex-col items-center gap-1 min-w-[60px]">
-                        <div className="relative">
-                            <img 
-                                src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`} 
-                                alt={member.name}
-                                className={`w-14 h-14 rounded-full object-cover border-2 ${member.role === 'PATHFINDER' ? 'border-tactical-accent' : 'border-gray-700'}`}
-                            />
-                            {member.role === 'PATHFINDER' && (
-                                <div className="absolute bottom-0 right-0 bg-tactical-accent text-black p-0.5 rounded-full border border-tactical-bg">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                                </div>
+                        <button
+                            onClick={handleCopy}
+                            className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-bold uppercase py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                        >
+                            {copied ? (
+                                <span>COPIED TO CLIPBOARD</span>
+                            ) : (
+                                <>
+                                    <CopyIcon className="w-4 h-4" /> COPY LINK
+                                </>
                             )}
-                        </div>
-                        <span className="text-[10px] text-gray-400 font-medium truncate w-full text-center">
-                            {member.name.split(' ')[0]} {member.name.split(' ')[1]?.[0]}.
-                        </span>
+                        </button>
                     </div>
-                ))}
-                
-                {/* Dummy Invite placeholder at end */}
-                <div className="flex flex-col items-center gap-1 min-w-[60px] opacity-50">
-                    <div className="w-14 h-14 rounded-full border border-dashed border-gray-500 flex items-center justify-center text-gray-500">
-                        <PlusIcon className="w-6 h-6" />
-                    </div>
-                    <span className="text-[10px] text-gray-500 font-medium">Invite</span>
                 </div>
+
+                {/* Clearance Level */}
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                        Clearance Level
+                    </div>
+
+                    {/* SCOUT Option */}
+                    <button
+                        onClick={() => setSelectedRole('SCOUT')}
+                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-4 group ${selectedRole === 'SCOUT'
+                                ? 'bg-tactical-accent/10 border-tactical-accent'
+                                : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
+                            }`}
+                    >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedRole === 'SCOUT' ? 'bg-tactical-accent text-black' : 'bg-black/40 text-gray-500'}`}>
+                            <EditIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className={`font-display font-bold uppercase tracking-wide ${selectedRole === 'SCOUT' ? 'text-tactical-accent' : 'text-gray-300'}`}>SCOUT</span>
+                                <div className={`w-3 h-3 rounded-full border border-gray-600 flex items-center justify-center ${selectedRole === 'SCOUT' ? 'bg-tactical-accent border-transparent' : ''}`}>
+                                    {selectedRole === 'SCOUT' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Full operational access. Can modify itinerary and budget.
+                            </p>
+                        </div>
+                    </button>
+
+                    {/* PASSENGER Option */}
+                    <button
+                        onClick={() => setSelectedRole('PASSENGER')}
+                        className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-4 group ${selectedRole === 'PASSENGER'
+                                ? 'bg-tactical-accent/10 border-tactical-accent'
+                                : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
+                            }`}
+                    >
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedRole === 'PASSENGER' ? 'bg-tactical-accent text-black' : 'bg-black/40 text-gray-500'}`}>
+                            <EyeIcon className="w-5 h-5" />
+                        </div>
+                        <div className="flex-1">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className={`font-display font-bold uppercase tracking-wide ${selectedRole === 'PASSENGER' ? 'text-tactical-accent' : 'text-gray-300'}`}>PASSENGER</span>
+                                <div className={`w-3 h-3 rounded-full border border-gray-600 flex items-center justify-center ${selectedRole === 'PASSENGER' ? 'bg-tactical-accent border-transparent' : ''}`}>
+                                    {selectedRole === 'PASSENGER' && <div className="w-1.5 h-1.5 rounded-full bg-black"></div>}
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-relaxed">
+                                Surveillance only. Read-only access to mission details.
+                            </p>
+                        </div>
+                    </button>
+                </div>
+
+                {/* Direct Comms */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
+                        Direct Comms
+                    </div>
+                    <div className="flex gap-2">
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter operative email..."
+                            className="flex-1 bg-tactical-card border border-tactical-muted/30 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-tactical-accent outline-none"
+                        />
+                        <button
+                            onClick={handleSendInvite}
+                            disabled={!email}
+                            className="bg-[#FF4500] hover:bg-[#FF6347] disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(255,69,0,0.3)] transition-all"
+                        >
+                            <SendIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Active Squad Preview */}
+                <div className="pt-4 border-t border-tactical-muted/10">
+                    <div className="flex justify-between items-end mb-3">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                            Active Squad
+                        </div>
+                        <div className="text-[9px] font-bold text-tactical-muted border border-tactical-muted/30 px-1.5 py-0.5 rounded bg-black/30">
+                            {trip.members.filter(m => m.status === 'ACTIVE').length} ACTIVE
+                        </div>
+                    </div>
+
+                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                        {trip.members.map(member => (
+                            <div key={member.id} className="flex flex-col items-center gap-1 min-w-[60px]">
+                                <div className="relative">
+                                    <img
+                                        src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`}
+                                        alt={member.name}
+                                        className={`w-14 h-14 rounded-full object-cover border-2 ${member.role === 'PATHFINDER' ? 'border-tactical-accent' : 'border-gray-700'}`}
+                                    />
+                                    {member.role === 'PATHFINDER' && (
+                                        <div className="absolute bottom-0 right-0 bg-tactical-accent text-black p-0.5 rounded-full border border-tactical-bg">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                        </div>
+                                    )}
+                                </div>
+                                <span className="text-[10px] text-gray-400 font-medium truncate w-full text-center">
+                                    {member.name.split(' ')[0]} {member.name.split(' ')[1]?.[0]}.
+                                </span>
+                            </div>
+                        ))}
+
+                        {/* Dummy Invite placeholder at end */}
+                        <div className="flex flex-col items-center gap-1 min-w-[60px] opacity-50">
+                            <div className="w-14 h-14 rounded-full border border-dashed border-gray-500 flex items-center justify-center text-gray-500">
+                                <PlusIcon className="w-6 h-6" />
+                            </div>
+                            <span className="text-[10px] text-gray-500 font-medium">Invite</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
-
-      </div>
-    </div>
-  );
+    );
 };
 
 export default InviteMember;

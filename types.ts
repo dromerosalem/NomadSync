@@ -26,6 +26,7 @@ export interface Member {
 
 export interface ItineraryItem {
   id: string;
+  tripId: string;
   type: ItemType;
   title: string;
   location: string;
@@ -33,7 +34,7 @@ export interface ItineraryItem {
   startDate: Date;
   endDate?: Date;
   details?: string;
-  cost?: number;
+  cost: number; // Making it mandatory for budget logic
   mapUri?: string; // Google Maps URL from grounding
   rating?: string; // From Maps grounding
   tags?: string[]; // Custom labels/tags

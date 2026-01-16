@@ -15,9 +15,11 @@ import BudgetEngine from './components/BudgetEngine';
 import LogExpense from './components/LogExpense';
 import LedgerScreen from './components/LedgerScreen';
 import AuthScreen from './components/AuthScreen';
+import { supabase } from './services/supabaseClient';
+import { tripService } from './services/tripService';
 
 const INITIAL_USER: Member = {
-  id: '1',
+  id: 'placeholder',
   name: 'Ghost Operative',
   email: 'ghost@nomad.com',
   role: 'PATHFINDER', // Default role for creator
@@ -31,10 +33,10 @@ const calculateTripStatus = (start: Date, end: Date): 'PLANNING' | 'IN_PROGRESS'
   const now = new Date();
   const startDate = new Date(start);
   const endDate = new Date(end);
-  
+
   // Reset time portions for cleaner comparison if desired, 
   // but strict time comparison is usually better for 'Right Now' accuracy.
-  
+
   if (now < startDate) return 'PLANNING';
   if (now > endDate) return 'COMPLETE';
   return 'IN_PROGRESS';
@@ -47,188 +49,254 @@ const getRelativeDate = (daysOffset: number) => {
   return d;
 };
 
-const INITIAL_TRIPS: Trip[] = [
-  {
-    id: '101',
-    name: 'OPERATION: TOKYO DRIFT',
-    destination: 'Shibuya District • Japan',
-    // Active: Started 5 days ago, ends in 15 days
-    startDate: getRelativeDate(-5),
-    endDate: getRelativeDate(15),
-    budget: 5000,
-    items: [],
-    members: [
-      { ...INITIAL_USER, budget: 5000 }, 
-      { id: '2', name: 'Beatrix', email: 'b@v.com', role: 'SCOUT', budget: 4000, status: 'ACTIVE' }, 
-      { id: '3', name: 'O-Ren', email: 'o@y.com', role: 'PASSENGER', budget: 10000, status: 'ACTIVE' }
-    ],
-    status: 'IN_PROGRESS', // Initial value, will be recalculated by state init
-    coverImage: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=2070&auto=format&fit=crop',
-    budgetViewMode: 'SMART'
-  },
-  {
-    id: '102',
-    name: 'PROJECT: ANDALUSIA',
-    destination: 'Seville • Spain',
-    // Planning: Starts in 30 days
-    startDate: getRelativeDate(30),
-    endDate: getRelativeDate(45),
-    budget: 3500,
-    items: [],
-    members: [{ ...INITIAL_USER, budget: 3500 }],
-    status: 'PLANNING',
-    coverImage: 'https://images.unsplash.com/photo-1558642084-fd07fae5282e?q=80&w=1936&auto=format&fit=crop',
-    budgetViewMode: 'SMART'
-  },
-  {
-    id: '103',
-    name: 'PROTOCOL: BALI',
-    destination: 'Ubud • Indonesia',
-    // Complete: Ended 30 days ago
-    startDate: getRelativeDate(-60),
-    endDate: getRelativeDate(-30),
-    budget: 2000,
-    items: [],
-    members: [
-      { ...INITIAL_USER, budget: 2000 }, 
-      { id: '4', name: 'Bill', email: 'bill@v.com', role: 'PASSENGER', budget: 5000, status: 'ACTIVE' }
-    ],
-    status: 'COMPLETE',
-    coverImage: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?q=80&w=1938&auto=format&fit=crop',
-    budgetViewMode: 'SMART'
-  }
-];
+const INITIAL_TRIPS: Trip[] = [];
 
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<Member>(INITIAL_USER);
-  
+
   // View State logic
   const [view, setView] = useState<ViewState>('AUTH');
-  
+
   // Initialize trips with auto-calculated status based on current time
   const [trips, setTrips] = useState<Trip[]>(() => {
-      return INITIAL_TRIPS.map(t => ({
-          ...t,
-          status: calculateTripStatus(t.startDate, t.endDate)
-      }));
+    return INITIAL_TRIPS.map(t => ({
+      ...t,
+      status: calculateTripStatus(t.startDate, t.endDate)
+    }));
   });
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state change:', _event, session?.user?.id);
+      if (session) {
+        setIsAuthenticated(true);
+        const user = session.user;
+        const mappedUser: Member = {
+          id: user.id,
+          name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Ghost Operative',
+          email: user.email!,
+          role: 'PATHFINDER',
+          avatarUrl: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email!)}&background=random`,
+          isCurrentUser: true,
+          status: 'ACTIVE'
+        };
+        setCurrentUser(mappedUser);
+        setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+      } else {
+        handleSignOutCleanup();
+      }
+    });
+
+    // Initial session check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsAuthenticated(true);
+        const user = session.user;
+        const mappedUser: Member = {
+          id: user.id,
+          name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Ghost Operative',
+          email: user.email!,
+          role: 'PATHFINDER',
+          avatarUrl: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email!)}&background=random`,
+          isCurrentUser: true,
+          status: 'ACTIVE'
+        };
+        setCurrentUser(mappedUser);
+        setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Dedicated data loader - triggers only when identity actually changes
+  useEffect(() => {
+    if (isAuthenticated && currentUser.id !== 'placeholder') {
+      console.log('Loading data for verified user:', currentUser.id);
+      loadAllData(currentUser.id);
+    }
+  }, [isAuthenticated, currentUser.id]);
+
+  const loadAllData = async (userId: string) => {
+    setIsLoading(true);
+    try {
+      // Stage 1: Fetch Trip Headers (Fast)
+      const userTrips = await tripService.fetchUserTrips(userId);
+      console.log('Staged Loading: Fetched trip headers:', userTrips.length);
+
+      // Show missions immediately even if they don't have items yet
+      setTrips(userTrips);
+      setIsLoading(false); // <--- Flip to false here for Stage 1 visibility
+
+      // Stage 2: Fetch Itineraries in Background (Slower, concurrent)
+      Promise.all(userTrips.map(async (trip) => {
+        try {
+          const items = await tripService.fetchTripItinerary(trip.id);
+          const sorted = semanticSort(items);
+
+          setTrips(prev => prev.map(t =>
+            t.id === trip.id ? { ...t, items: sorted } : t
+          ));
+        } catch (itemErr) {
+          console.error(`Failed to load itinerary for trip ${trip.id}:`, itemErr);
+        }
+      })).then(() => {
+        console.log('Staged Loading: Background sync complete.');
+      });
+
+    } catch (err) {
+      console.error('Error loading data:', err);
+      // If an error occurs during initial trip loading, ensure loading state is reset
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignOutCleanup = () => {
+    setIsAuthenticated(false);
+    setCurrentUser(INITIAL_USER);
+    setTrips([]);
+    setCurrentTripId(null);
+    setView('AUTH');
+  };
 
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const currentTrip = useMemo(() => trips.find(t => t.id === currentTripId) || null, [trips, currentTripId]);
 
   // Selection State
   const [selectedItemType, setSelectedItemType] = useState<ItemType | null>(null);
   const [selectedItem, setSelectedItem] = useState<Partial<ItineraryItem> | null>(null);
-  
+
   // Scanning Queue State
   const [scannedItemsQueue, setScannedItemsQueue] = useState<Partial<ItineraryItem>[]>([]);
 
   // Permission Checks
   const currentUserRole = useMemo(() => {
-     if (!currentTrip) return currentUser.role;
-     const userInTrip = currentTrip.members.find(m => m.id === currentUser.id);
-     return userInTrip ? userInTrip.role : 'PASSENGER'; // Default to Passenger if not found
+    if (!currentTrip) return currentUser.role;
+    const userInTrip = currentTrip.members.find(m => m.id === currentUser.id);
+    return userInTrip ? userInTrip.role : 'PASSENGER'; // Default to Passenger if not found
   }, [currentTrip, currentUser.id]); // Fixed dependency
 
   const canEdit = currentUserRole === 'PATHFINDER' || currentUserRole === 'SCOUT';
 
   // Auth Handler
-  const handleAuthSuccess = (userData: { name: string, email: string }) => {
-      const updatedUser: Member = {
-          ...INITIAL_USER,
-          name: userData.name,
-          email: userData.email,
-          avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=random`
-      };
-      
-      setCurrentUser(updatedUser);
-      setIsAuthenticated(true);
-      
-      // Update trips to reflect new user name (in a real app this is backend work)
-      const updatedTrips = trips.map(trip => ({
-          ...trip,
-          members: trip.members.map(m => m.id === '1' ? { ...m, ...updatedUser } : m)
-      }));
-      setTrips(updatedTrips);
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
-      setView('DASHBOARD');
+  const handleAuthSuccess = () => {
+    // Rely on onAuthStateChange to set user state and isAuthenticated
+    // Just ensure we move to the dashboard if we aren't already there
+    setView('DASHBOARD');
   };
 
   // Helper: Semantic Sort Logic
   const semanticSort = (items: ItineraryItem[]): ItineraryItem[] => {
     return [...items].sort((a, b) => {
-        const dateA = new Date(a.startDate);
-        const dateB = new Date(b.startDate);
+      const dateA = new Date(a.startDate);
+      const dateB = new Date(b.startDate);
 
-        // 1. Sort by Date first (ignoring time)
-        const dayDiff = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime() - 
-                        new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime();
-        
-        if (dayDiff !== 0) return dayDiff;
+      // 1. Sort by Date first (ignoring time)
+      const dayDiff = new Date(dateA.getFullYear(), dateA.getMonth(), dateA.getDate()).getTime() -
+        new Date(dateB.getFullYear(), dateB.getMonth(), dateB.getDate()).getTime();
 
-        // 2. Same Day? Apply Semantic Weight
-        const getWeight = (type: ItemType) => {
-            if (type === ItemType.TRANSPORT) return 1;
-            if (type === ItemType.STAY) return 2;
-            if (type === ItemType.FOOD || type === ItemType.ACTIVITY) return 3;
-            if (type === ItemType.ESSENTIALS) return 4;
-            return 4;
-        };
+      if (dayDiff !== 0) return dayDiff;
 
-        const weightA = getWeight(a.type);
-        const weightB = getWeight(b.type);
+      // 2. Same Day? Apply Semantic Weight
+      const getWeight = (type: ItemType) => {
+        if (type === ItemType.TRANSPORT) return 1;
+        if (type === ItemType.STAY) return 2;
+        if (type === ItemType.FOOD || type === ItemType.ACTIVITY) return 3;
+        if (type === ItemType.ESSENTIALS) return 4;
+        return 4;
+      };
 
-        if (weightA !== weightB) return weightA - weightB;
+      const weightA = getWeight(a.type);
+      const weightB = getWeight(b.type);
 
-        // 3. Same Type? Sort by Time
-        return dateA.getTime() - dateB.getTime();
+      if (weightA !== weightB) return weightA - weightB;
+
+      // 3. Same Type? Sort by Time
+      return dateA.getTime() - dateB.getTime();
     });
   };
 
-  const handleCreateTrip = (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[]) => {
-    // Ensure Current User is the PATHFINDER and attach their personal budget
-    const creatorMember = { ...currentUser, budget: budget };
-    const members = [creatorMember, ...initialMembers];
+  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[]) => {
+    setIsLoading(true);
+    try {
+      const creatorMember = { ...currentUser, budget: budget };
+      const members = [creatorMember, ...initialMembers];
 
-    const newTrip: Trip = {
-      id: Date.now().toString(),
-      name,
-      destination: location,
-      startDate: startDate,
-      endDate: endDate,
-      budget, // Keep as reference
-      items: [],
-      members: members,
-      status: calculateTripStatus(startDate, endDate), // Calculate initial status
-      budgetViewMode: 'SMART' // Default to Smart Mode
-    };
+      const newTripData: Omit<Trip, 'id' | 'items'> = {
+        name,
+        destination: location,
+        startDate,
+        endDate,
+        budget,
+        members,
+        status: calculateTripStatus(startDate, endDate),
+        budgetViewMode: 'SMART',
+        coverImage: `https://picsum.photos/seed/${Date.now()}/800/400`
+      };
 
-    setTrips([newTrip, ...trips]);
-    setCurrentTripId(newTrip.id);
-    // Redirect immediately to Add Item screen
-    setView('ADD_ITEM');
+      const createdTrip = await tripService.createTrip(newTripData, currentUser.id);
+      setTrips([createdTrip, ...trips]);
+      setCurrentTripId(createdTrip.id);
+      setView('ADD_ITEM');
+    } catch (err) {
+      console.error('Failed to create trip:', err);
+      alert('Mission initiation failed. Check connection.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleUpdateTrip = (updatedTrip: Trip) => {
-    // Recalculate status in case dates changed
-    const finalTrip = {
+  const handleUpdateTrip = async (updatedTrip: Trip) => {
+    if (!currentUser) return;
+    setIsLoading(true);
+    try {
+      // 1. Persist Trip Level Changes
+      await tripService.updateTrip(updatedTrip.id, {
+        name: updatedTrip.name,
+        destination: updatedTrip.destination,
+        startDate: updatedTrip.startDate,
+        endDate: updatedTrip.endDate,
+        status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate)
+      });
+
+      // 2. Persist Personal Budget Change (if current user's budget changed)
+      const oldTrip = trips.find(t => t.id === updatedTrip.id);
+      const oldMember = oldTrip?.members.find(m => m.id === currentUser.id);
+      const newMember = updatedTrip.members.find(m => m.id === currentUser.id);
+
+      if (newMember && oldMember && newMember.budget !== oldMember.budget) {
+        await tripService.updateMemberBudget(updatedTrip.id, currentUser.id, newMember.budget);
+      }
+
+      // 3. Update Local State
+      const finalTrip = {
         ...updatedTrip,
         status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate)
-    };
-    setTrips(trips.map(t => t.id === finalTrip.id ? finalTrip : t));
-    setView('TIMELINE');
+      };
+      setTrips(trips.map(t => t.id === finalTrip.id ? finalTrip : t));
+      setView('TIMELINE');
+    } catch (err) {
+      console.error('Failed to update trip:', err);
+      alert('Mission update failed. Check connection.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleUpdateMemberRole = (memberId: string, newRole: Role) => {
     if (!currentTrip) return;
-    
+
     // Only PATHFINDER can change roles
     if (currentUserRole !== 'PATHFINDER') return;
 
-    const updatedMembers = currentTrip.members.map(m => 
+    const updatedMembers = currentTrip.members.map(m =>
       m.id === memberId ? { ...m, role: newRole } : m
     );
 
@@ -237,100 +305,101 @@ const App: React.FC = () => {
   };
 
   const handleInviteMember = (email: string, role: Role) => {
-      if (!currentTrip) return;
-      const newMember: Member = {
-          id: Date.now().toString(),
-          name: email.split('@')[0], // Mock name from email
-          email: email,
-          role: role,
-          status: 'PENDING',
-          budget: 0 // Default budget for new invitees
-      };
-      
-      const updatedTrip = {
-          ...currentTrip,
-          members: [...currentTrip.members, newMember]
-      };
-      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    if (!currentTrip) return;
+    const newMember: Member = {
+      id: Date.now().toString(),
+      name: email.split('@')[0], // Mock name from email
+      email: email,
+      role: role,
+      status: 'PENDING',
+      budget: 0 // Default budget for new invitees
+    };
+
+    const updatedTrip = {
+      ...currentTrip,
+      members: [...currentTrip.members, newMember]
+    };
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
   // --- Expense Sharing Logic ---
-  
+
   const handleSendExpenseInvite = (memberId: string) => {
-      if (!currentTrip) return;
-      // Mark member as pending invitation
-      const updatedMembers = currentTrip.members.map(m => 
-          m.id === memberId ? { ...m, pendingPastExpensesInvitation: true } : m
-      );
-      const updatedTrip = { ...currentTrip, members: updatedMembers };
-      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    if (!currentTrip) return;
+    // Mark member as pending invitation
+    const updatedMembers = currentTrip.members.map(m =>
+      m.id === memberId ? { ...m, pendingPastExpensesInvitation: true } : m
+    );
+    const updatedTrip = { ...currentTrip, members: updatedMembers };
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
   const handleAcceptExpenseInvite = () => {
-      if (!currentTrip) return;
-      
-      const updatedItems = currentTrip.items.map(item => {
-          if (item.isPrivate && item.createdBy !== currentUser.id) return item; 
-          
-          if (!item.splitWith.includes(currentUser.id)) {
-              return { ...item, splitWith: [...item.splitWith, currentUser.id] };
-          }
-          return item;
-      });
+    if (!currentTrip) return;
 
-      const updatedMembers = currentTrip.members.map(m => 
-        m.id === currentUser.id ? { ...m, pendingPastExpensesInvitation: false } : m
-      );
+    const updatedItems = currentTrip.items.map(item => {
+      if (item.isPrivate && item.createdBy !== currentUser.id) return item;
 
-      const updatedTrip = { ...currentTrip, items: updatedItems, members: updatedMembers };
-      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+      if (!item.splitWith.includes(currentUser.id)) {
+        return { ...item, splitWith: [...item.splitWith, currentUser.id] };
+      }
+      return item;
+    });
+
+    const updatedMembers = currentTrip.members.map(m =>
+      m.id === currentUser.id ? { ...m, pendingPastExpensesInvitation: false } : m
+    );
+
+    const updatedTrip = { ...currentTrip, items: updatedItems, members: updatedMembers };
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
   const handleDeclineExpenseInvite = () => {
-     if (!currentTrip) return;
-      const updatedMembers = currentTrip.members.map(m => 
-        m.id === currentUser.id ? { ...m, pendingPastExpensesInvitation: false } : m
-      );
-      const updatedTrip = { ...currentTrip, members: updatedMembers };
-      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    if (!currentTrip) return;
+    const updatedMembers = currentTrip.members.map(m =>
+      m.id === currentUser.id ? { ...m, pendingPastExpensesInvitation: false } : m
+    );
+    const updatedTrip = { ...currentTrip, members: updatedMembers };
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
   const handleToggleBudgetMode = (mode: 'SMART' | 'DIRECT') => {
-      if (!currentTrip) return;
-      const updatedTrip = { ...currentTrip, budgetViewMode: mode };
-      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    if (!currentTrip) return;
+    const updatedTrip = { ...currentTrip, budgetViewMode: mode };
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
-  
+
   const handleSettleDebt = (fromUserId: string, toUserId: string, amount: number) => {
-      if (!currentTrip) return;
-      
-      const newItem: ItineraryItem = {
-          id: Date.now().toString(),
-          type: ItemType.SETTLEMENT,
-          title: 'Debt Settlement',
-          location: 'Direct Transfer',
-          startDate: new Date(),
-          cost: amount,
-          createdBy: currentUser.id,
-          paidBy: fromUserId, // Sender
-          splitWith: [toUserId], // Receiver
-          details: `Settlement transfer from ${fromUserId} to ${toUserId}`,
-          isPrivate: false,
-          showInTimeline: false // Settlements typically don't clutter the main itinerary timeline
-      };
-      
-      const updatedItems = [...currentTrip.items, newItem];
-      const sorted = semanticSort(updatedItems);
-      const updatedTrip = { ...currentTrip, items: sorted };
-      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    if (!currentTrip) return;
+
+    const newItem: ItineraryItem = {
+      id: Date.now().toString(),
+      tripId: currentTrip.id,
+      type: ItemType.SETTLEMENT,
+      title: 'Debt Settlement',
+      location: 'Direct Transfer',
+      startDate: new Date(),
+      cost: amount,
+      createdBy: currentUser.id,
+      paidBy: fromUserId, // Sender
+      splitWith: [toUserId], // Receiver
+      details: `Settlement transfer from ${fromUserId} to ${toUserId}`,
+      isPrivate: false,
+      showInTimeline: false // Settlements typically don't clutter the main itinerary timeline
+    };
+
+    const updatedItems = [...currentTrip.items, newItem];
+    const sorted = semanticSort(updatedItems);
+    const updatedTrip = { ...currentTrip, items: sorted };
+    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
   // ---------------------------------------------------------
 
   const handleSelectType = (type: ItemType) => {
     setSelectedItemType(type);
-    setSelectedItem(null); 
-    setScannedItemsQueue([]); 
+    setSelectedItem(null);
+    setScannedItemsQueue([]);
     setView('ITEM_FORM');
   };
 
@@ -349,72 +418,63 @@ const App: React.FC = () => {
   };
 
   const handleEditExpense = (item: ItineraryItem) => {
-      setSelectedItem(item);
-      setView('LOG_EXPENSE');
+    setSelectedItem(item);
+    setView('LOG_EXPENSE');
   };
 
   const handleEditItem = () => {
     if (selectedItem && selectedItem.type) {
       setSelectedItemType(selectedItem.type);
-      setScannedItemsQueue([]); 
+      setScannedItemsQueue([]);
       setView('ITEM_FORM');
     }
   };
 
-  const handleDeleteItem = (itemId?: string) => {
+  const handleDeleteItem = async (itemId?: string) => {
     const idToDelete = itemId || selectedItem?.id;
-    
-    if (currentTrip && idToDelete) {
-       const updatedItems = currentTrip.items.filter(i => i.id !== idToDelete);
-       const updatedTrip = {
-         ...currentTrip,
-         items: updatedItems
-       };
-       setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
-       setSelectedItem(null);
-       
-       // Route back based on previous context ideally, but defaulting to appropriate screens
-       if (view === 'LOG_EXPENSE') setView('BUDGET');
-       else setView('TIMELINE');
+    if (!idToDelete || !currentTrip) return;
+
+    setIsLoading(true);
+    try {
+      await tripService.deleteItineraryItem(idToDelete);
+      const updatedItems = currentTrip.items.filter(i => i.id !== idToDelete);
+      const updatedTrip = { ...currentTrip, items: updatedItems };
+      setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+      setSelectedItem(null);
+
+      if (view === 'LOG_EXPENSE') setView('BUDGET');
+      else setView('TIMELINE');
+    } catch (err) {
+      console.error('Delete failed:', err);
+      alert('Failed to delete item.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleSaveItem = (itemData: Partial<ItineraryItem>) => {
-    if (!currentTrip) return;
-    if (!canEdit) return;
+  const handleSaveItem = async (itemData: Partial<ItineraryItem>) => {
+    if (!currentTrip || !canEdit) return;
 
-    let updatedItems = [...currentTrip.items];
+    setIsLoading(true);
+    try {
+      let itemToSave: ItineraryItem;
 
-    if (itemData.id) {
-       updatedItems = updatedItems.map(item => 
-          item.id === itemData.id ? {
-            ...item,
-            title: itemData.title || item.title,
-            location: itemData.location || item.location,
-            endLocation: itemData.endLocation !== undefined ? itemData.endLocation : item.endLocation,
-            startDate: itemData.startDate || item.startDate,
-            endDate: 'endDate' in itemData ? itemData.endDate : item.endDate, // Preserve unless explicitly passed (even as undefined)
-            cost: itemData.cost !== undefined ? itemData.cost : item.cost,
-            details: itemData.details,
-            tags: itemData.tags !== undefined ? itemData.tags : item.tags,
-            durationMinutes: itemData.durationMinutes !== undefined ? itemData.durationMinutes : item.durationMinutes,
-            mapUri: item.mapUri,
-            isPrivate: itemData.isPrivate !== undefined ? itemData.isPrivate : item.isPrivate,
-            splitWith: itemData.splitWith || item.splitWith || [],
-            splitDetails: itemData.splitDetails || item.splitDetails, // Preserve or update custom split
-            paidBy: itemData.paidBy || item.paidBy || currentUser.id,
-            type: itemData.type || item.type,
-            showInTimeline: itemData.showInTimeline !== undefined ? itemData.showInTimeline : item.showInTimeline
-          } : item
-       );
-       finishSave(updatedItems);
-    } else {
-       const defaultSplitWith = currentTrip.members
+      if (itemData.id && itemData.id.length > 10) { // Existing UUID
+        const existing = currentTrip.items.find(i => i.id === itemData.id)!;
+        itemToSave = {
+          ...existing,
+          ...itemData,
+          startDate: itemData.startDate || existing.startDate,
+          endDate: 'endDate' in itemData ? itemData.endDate : existing.endDate
+        } as ItineraryItem;
+      } else {
+        const defaultSplitWith = currentTrip.members
           .filter(m => m.status === 'ACTIVE' || !m.status)
           .map(m => m.id);
 
-       const newItem: ItineraryItem = {
-          id: Date.now().toString(),
+        itemToSave = {
+          id: itemData.id || '', // tripService handles new vs update
+          tripId: currentTrip.id,
           type: itemData.type || selectedItemType || ItemType.ACTIVITY,
           title: itemData.title || 'Untitled',
           location: itemData.location || currentTrip.destination,
@@ -424,39 +484,50 @@ const App: React.FC = () => {
           cost: itemData.cost || 0,
           details: itemData.details,
           tags: itemData.tags || [],
-          durationMinutes: itemData.durationMinutes,
-          createdBy: currentUser.id, 
+          durationMinutes: itemData.durationMinutes || 0,
+          createdBy: currentUser.id,
           isPrivate: itemData.isPrivate || false,
           splitWith: itemData.splitWith || defaultSplitWith,
-          splitDetails: itemData.splitDetails, // Apply custom split if provided
+          splitDetails: itemData.splitDetails,
           paidBy: itemData.paidBy || currentUser.id,
-          showInTimeline: itemData.showInTimeline !== undefined ? itemData.showInTimeline : true // Default to true if not specified (Standard items)
-        };
-        updatedItems.push(newItem);
+          showInTimeline: itemData.showInTimeline !== undefined ? itemData.showInTimeline : true
+        } as ItineraryItem;
+      }
 
-        if (scannedItemsQueue.length > 1) {
-            const nextQueue = scannedItemsQueue.slice(1);
-            const nextItem = nextQueue[0];
-            const sorted = semanticSort(updatedItems);
-            const updatedTrip = { ...currentTrip, items: sorted };
-            setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
-            
-            setScannedItemsQueue(nextQueue);
-            setSelectedItemType(nextItem.type || ItemType.ACTIVITY);
-            setSelectedItem(nextItem);
-        } else {
-            setScannedItemsQueue([]);
-            finishSave(updatedItems);
-        }
+      const savedItem = await tripService.saveItineraryItem(itemToSave);
+
+      let updatedItems = [...currentTrip.items];
+      if (itemData.id) {
+        updatedItems = updatedItems.map(i => i.id === savedItem.id ? savedItem : i);
+      } else {
+        updatedItems.push(savedItem);
+      }
+
+      if (scannedItemsQueue.length > 1) {
+        const nextQueue = scannedItemsQueue.slice(1);
+        const firstNext = nextQueue[0];
+        setTrips(trips.map(t => t.id === currentTrip.id ? { ...t, items: semanticSort(updatedItems) } : t));
+        setScannedItemsQueue(nextQueue);
+        setSelectedItemType(firstNext.type || ItemType.ACTIVITY);
+        setSelectedItem(firstNext);
+      } else {
+        setScannedItemsQueue([]);
+        finishSave(updatedItems);
+      }
+    } catch (err) {
+      console.error('Save failed:', err);
+      alert('Failed to save data to HQ.');
+    } finally {
+      setIsLoading(false);
     }
   };
-  
+
   const finishSave = (updatedItems: ItineraryItem[]) => {
     if (!currentTrip) return;
     const sorted = semanticSort(updatedItems);
     const updatedTrip = { ...currentTrip, items: sorted };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
-    
+
     setSelectedItemType(null);
     setSelectedItem(null);
     if (view === 'LOG_EXPENSE') setView('BUDGET');
@@ -474,166 +545,168 @@ const App: React.FC = () => {
 
   return (
     <div className="h-[100dvh] bg-tactical-bg text-white font-sans w-full md:max-w-2xl lg:max-w-4xl mx-auto relative shadow-2xl flex flex-col overflow-hidden border-x border-tactical-muted/20">
-       <main className="flex-1 relative overflow-hidden flex flex-col w-full">
-         
-         {!isAuthenticated && view === 'AUTH' && (
-             <AuthScreen onAuthSuccess={handleAuthSuccess} />
-         )}
-         
-         {isAuthenticated && view === 'DASHBOARD' && (
-             <Dashboard 
-                trips={trips}
-                onSelectTrip={(trip) => {
-                    setCurrentTripId(trip.id);
-                    setView('TIMELINE');
-                }}
-                onCreateTrip={() => setView('CREATE')}
-                onNavigateProfile={() => setView('PROFILE')}
-             />
-         )}
+      <main className="flex-1 relative overflow-hidden flex flex-col w-full">
 
-         {isAuthenticated && view === 'PROFILE' && (
-             <NomadProfile 
-                user={currentUser}
-                trips={trips}
-                onBack={() => setView('DASHBOARD')}
-                onCreateMission={() => setView('CREATE')}
-             />
-         )}
+        {!isAuthenticated && view === 'AUTH' && (
+          <AuthScreen onAuthSuccess={handleAuthSuccess} />
+        )}
 
-         {isAuthenticated && view === 'BUDGET' && currentTrip && (
-            <BudgetEngine 
-               trip={currentTrip}
-               currentUserId={currentUser.id}
-               currentUserRole={currentUserRole}
-               onBack={() => setView('TIMELINE')}
-               onLogExpense={() => {
-                   setSelectedItem(null); // Clear any selection
-                   setView('LOG_EXPENSE');
-               }}
-               onViewLedger={() => setView('LEDGER')}
-               onItemClick={handleEditExpense}
-               onToggleBudgetMode={handleToggleBudgetMode}
-               onSettleDebt={handleSettleDebt}
-            />
-         )}
+        {isAuthenticated && view === 'DASHBOARD' && (
+          <Dashboard
+            trips={trips}
+            isLoading={isLoading}
+            onSelectTrip={(trip) => {
+              setCurrentTripId(trip.id);
+              setView('TIMELINE');
+            }}
+            onCreateTrip={() => setView('CREATE')}
+            onNavigateProfile={() => setView('PROFILE')}
+          />
+        )}
 
-         {isAuthenticated && view === 'LEDGER' && currentTrip && (
-            <LedgerScreen 
-               trip={currentTrip}
-               currentUserId={currentUser.id}
-               onBack={() => setView('BUDGET')}
-               onItemClick={handleEditExpense}
-            />
-         )}
-         
-         {isAuthenticated && view === 'LOG_EXPENSE' && currentTrip && (
-            <LogExpense 
-                onClose={() => setView('BUDGET')}
-                onSave={handleSaveItem}
-                onDelete={handleDeleteItem}
-                tripStartDate={currentTrip.startDate}
-                currentUserId={currentUser.id}
-                members={currentTrip.members}
-                initialItem={selectedItem as ItineraryItem}
-            />
-         )}
+        {isAuthenticated && view === 'PROFILE' && (
+          <NomadProfile
+            user={currentUser}
+            trips={trips}
+            onBack={() => setView('DASHBOARD')}
+            onCreateMission={() => setView('CREATE')}
+            onSignOut={handleSignOut}
+          />
+        )}
 
-         {isAuthenticated && view === 'CREATE' && (
-           <CreateMission 
-              onCreate={handleCreateTrip} 
-              onBack={() => setView('DASHBOARD')}
-              isLoading={isLoading} 
-           />
-         )}
+        {isAuthenticated && view === 'BUDGET' && currentTrip && (
+          <BudgetEngine
+            trip={currentTrip}
+            currentUserId={currentUser.id}
+            currentUserRole={currentUserRole}
+            onBack={() => setView('TIMELINE')}
+            onLogExpense={() => {
+              setSelectedItem(null); // Clear any selection
+              setView('LOG_EXPENSE');
+            }}
+            onViewLedger={() => setView('LEDGER')}
+            onItemClick={handleEditExpense}
+            onToggleBudgetMode={handleToggleBudgetMode}
+            onSettleDebt={handleSettleDebt}
+          />
+        )}
 
-         {isAuthenticated && view === 'TIMELINE' && currentTrip && (
-           <Timeline 
-             trip={currentTrip} 
-             availableTags={availableTags}
-             canEdit={canEdit}
-             currentUserId={currentUser.id}
-             onAddItem={() => setView('ADD_ITEM')}
-             onEditTrip={() => setView('EDIT_TRIP')}
-             onManageTeam={() => setView('MANAGE_TEAM')}
-             onItemClick={handleItemClick}
-             onBackToBase={() => {
-                 setCurrentTripId(null);
-                 setView('DASHBOARD');
-             }}
-             onNavigateBudget={() => setView('BUDGET')}
-             onAcceptPastExpenses={handleAcceptExpenseInvite}
-             onDeclinePastExpenses={handleDeclineExpenseInvite}
-           />
-         )}
+        {isAuthenticated && view === 'LEDGER' && currentTrip && (
+          <LedgerScreen
+            trip={currentTrip}
+            currentUserId={currentUser.id}
+            onBack={() => setView('BUDGET')}
+            onItemClick={handleEditExpense}
+          />
+        )}
 
-         {isAuthenticated && view === 'MANAGE_TEAM' && currentTrip && (
-            <ManageTeam 
-                trip={currentTrip}
-                currentUserId={currentUser.id}
-                onBack={() => setView('TIMELINE')}
-                onUpdateMemberRole={handleUpdateMemberRole}
-                onNavigateInvite={() => setView('INVITE_MEMBER')}
-                onSendExpenseInvite={handleSendExpenseInvite}
-            />
-         )}
-         
-         {isAuthenticated && view === 'INVITE_MEMBER' && currentTrip && (
-            <InviteMember 
-                trip={currentTrip}
-                onBack={() => setView('MANAGE_TEAM')}
-                onInvite={handleInviteMember}
-            />
-         )}
+        {isAuthenticated && view === 'LOG_EXPENSE' && currentTrip && (
+          <LogExpense
+            onClose={() => setView('BUDGET')}
+            onSave={handleSaveItem}
+            onDelete={handleDeleteItem}
+            tripStartDate={currentTrip.startDate}
+            currentUserId={currentUser.id}
+            members={currentTrip.members}
+            initialItem={selectedItem as ItineraryItem}
+          />
+        )}
 
-         {isAuthenticated && view === 'ADD_ITEM' && (
-           <AddItem 
-             onClose={() => setView('TIMELINE')} 
-             onSelectType={handleSelectType}
-             onScannedItem={handleScannedItem}
-             tripStartDate={currentTrip?.startDate}
-           />
-         )}
+        {isAuthenticated && view === 'CREATE' && (
+          <CreateMission
+            onCreate={handleCreateTrip}
+            onBack={() => setView('DASHBOARD')}
+            isLoading={isLoading}
+          />
+        )}
 
-         {isAuthenticated && view === 'ITEM_FORM' && selectedItemType && currentTrip && (
-           <ItemForm 
-              type={selectedItemType}
-              tripStartDate={currentTrip.startDate}
-              onClose={() => {
-                setScannedItemsQueue([]);
-                if (selectedItem && selectedItem.id) setView('ITEM_DETAILS');
-                else setView('TIMELINE');
-              }}
-              onSave={handleSaveItem}
-              initialItem={selectedItem || undefined}
-              availableTags={availableTags}
-              queueLength={scannedItemsQueue.length > 0 ? scannedItemsQueue.length : undefined}
-              currentUserId={currentUser.id}
-              members={currentTrip.members} 
-           />
-         )}
+        {isAuthenticated && view === 'TIMELINE' && currentTrip && (
+          <Timeline
+            trip={currentTrip}
+            availableTags={availableTags}
+            canEdit={canEdit}
+            currentUserId={currentUser.id}
+            onAddItem={() => setView('ADD_ITEM')}
+            onEditTrip={() => setView('EDIT_TRIP')}
+            onManageTeam={() => setView('MANAGE_TEAM')}
+            onItemClick={handleItemClick}
+            onBackToBase={() => {
+              setCurrentTripId(null);
+              setView('DASHBOARD');
+            }}
+            onNavigateBudget={() => setView('BUDGET')}
+            onAcceptPastExpenses={handleAcceptExpenseInvite}
+            onDeclinePastExpenses={handleDeclineExpenseInvite}
+          />
+        )}
 
-         {isAuthenticated && view === 'ITEM_DETAILS' && selectedItem && selectedItem.id && currentTrip && (
-           <ItemDetails 
-             item={selectedItem as ItineraryItem}
-             members={currentTrip.members} 
-             onClose={() => setView('TIMELINE')}
-             canEdit={canEdit}
-             onEdit={handleEditItem}
-             onDelete={() => handleDeleteItem()}
-             currentUserId={currentUser.id}
-           />
-         )}
+        {isAuthenticated && view === 'MANAGE_TEAM' && currentTrip && (
+          <ManageTeam
+            trip={currentTrip}
+            currentUserId={currentUser.id}
+            onBack={() => setView('TIMELINE')}
+            onUpdateMemberRole={handleUpdateMemberRole}
+            onNavigateInvite={() => setView('INVITE_MEMBER')}
+            onSendExpenseInvite={handleSendExpenseInvite}
+          />
+        )}
 
-         {isAuthenticated && view === 'EDIT_TRIP' && currentTrip && (
-           <EditTrip 
-             trip={currentTrip}
-             onUpdate={handleUpdateTrip}
-             onCancel={() => setView('TIMELINE')}
-             currentUserId={currentUser.id}
-           />
-         )}
-       </main>
+        {isAuthenticated && view === 'INVITE_MEMBER' && currentTrip && (
+          <InviteMember
+            trip={currentTrip}
+            onBack={() => setView('MANAGE_TEAM')}
+            onInvite={handleInviteMember}
+          />
+        )}
+
+        {isAuthenticated && view === 'ADD_ITEM' && (
+          <AddItem
+            onClose={() => setView('TIMELINE')}
+            onSelectType={handleSelectType}
+            onScannedItem={handleScannedItem}
+            tripStartDate={currentTrip?.startDate}
+          />
+        )}
+
+        {isAuthenticated && view === 'ITEM_FORM' && selectedItemType && currentTrip && (
+          <ItemForm
+            type={selectedItemType}
+            tripStartDate={currentTrip.startDate}
+            onClose={() => {
+              setScannedItemsQueue([]);
+              if (selectedItem && selectedItem.id) setView('ITEM_DETAILS');
+              else setView('TIMELINE');
+            }}
+            onSave={handleSaveItem}
+            initialItem={selectedItem || undefined}
+            availableTags={availableTags}
+            queueLength={scannedItemsQueue.length > 0 ? scannedItemsQueue.length : undefined}
+            currentUserId={currentUser.id}
+            members={currentTrip.members}
+          />
+        )}
+
+        {isAuthenticated && view === 'ITEM_DETAILS' && selectedItem && selectedItem.id && currentTrip && (
+          <ItemDetails
+            item={selectedItem as ItineraryItem}
+            members={currentTrip.members}
+            onClose={() => setView('TIMELINE')}
+            canEdit={canEdit}
+            onEdit={handleEditItem}
+            onDelete={() => handleDeleteItem()}
+            currentUserId={currentUser.id}
+          />
+        )}
+
+        {isAuthenticated && view === 'EDIT_TRIP' && currentTrip && (
+          <EditTrip
+            trip={currentTrip}
+            onUpdate={handleUpdateTrip}
+            onCancel={() => setView('TIMELINE')}
+            currentUserId={currentUser.id}
+          />
+        )}
+      </main>
     </div>
   );
 };
