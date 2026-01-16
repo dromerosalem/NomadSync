@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Trip } from '../types';
 import { MenuIcon, BellIcon, GridIcon, GlobeIcon, SendIcon, UserIcon, MapPinIcon, PlusIcon, WalletIcon } from './Icons';
@@ -15,7 +16,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, onSelectTrip, onCreateTrip
     switch(status) {
         case 'IN_PROGRESS': return 'bg-tactical-accent text-black border-transparent shadow-[0_0_10px_rgba(255,215,0,0.5)]';
         case 'PLANNING': return 'bg-white/10 text-white backdrop-blur-md border-white/20';
-        case 'COMPLETE': return 'bg-transparent text-gray-400 border-gray-600';
+        case 'COMPLETE': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50';
         default: return 'bg-gray-800 text-gray-300';
     }
   };
@@ -26,6 +27,18 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, onSelectTrip, onCreateTrip
     const m1 = s.toLocaleString('default', { month: 'short' }).toUpperCase();
     const m2 = e.toLocaleString('default', { month: 'short' }).toUpperCase();
     return `${m1} ${s.getDate()} - ${m2} ${e.getDate()}`;
+  };
+
+  const calculateProgress = (start: Date, end: Date) => {
+      const startTime = new Date(start).getTime();
+      const endTime = new Date(end).getTime();
+      const now = new Date().getTime();
+      
+      const totalDuration = endTime - startTime;
+      const elapsed = now - startTime;
+      
+      if (totalDuration <= 0) return 0;
+      return Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
   };
 
   return (
@@ -81,62 +94,101 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, onSelectTrip, onCreateTrip
         <div className="flex-1 overflow-y-auto px-6 pb-32 space-y-6 scrollbar-hide">
             <div className="flex items-center justify-between">
                  <div className="border-l-4 border-tactical-accent pl-3">
-                     <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">Active Missions</h2>
+                     <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">All Missions</h2>
                  </div>
                  <button className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest hover:text-white transition-colors">
                      VIEW ARCHIVE
                  </button>
             </div>
 
-            {trips.map((trip) => (
-                <div 
-                    key={trip.id} 
-                    onClick={() => onSelectTrip(trip)}
-                    className="relative rounded-2xl overflow-hidden h-64 group cursor-pointer border border-transparent hover:border-tactical-accent/50 transition-all active:scale-[0.98]"
-                >
-                    {/* Background Image */}
-                    <img 
-                        src={trip.coverImage || `https://picsum.photos/seed/${trip.id}/800/600`} 
-                        alt={trip.name} 
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    {/* Overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10"></div>
-                    
-                    {/* Content */}
-                    <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                        <div className="flex justify-between items-start">
-                             <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${getStatusStyle(trip.status)}`}>
-                                 STATUS: {trip.status?.replace('_', ' ')}
-                             </span>
-                             <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full border border-white/10">
-                                 <UserIcon className="w-3 h-3 text-tactical-accent" />
-                                 <span className="text-xs font-bold text-white">{trip.members.length}</span>
-                             </div>
-                        </div>
+            {trips.map((trip) => {
+                const progressPercent = calculateProgress(trip.startDate, trip.endDate);
+                const isComplete = trip.status === 'COMPLETE';
 
-                        <div>
-                            <div className="flex items-center gap-2 text-gray-300 text-[10px] font-bold uppercase tracking-widest mb-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
-                                {formatDateRange(trip.startDate, trip.endDate)}
-                            </div>
-                            <h3 className="font-display font-bold text-2xl text-white uppercase leading-tight mb-1 shadow-sm">
-                                {trip.name}
-                            </h3>
-                            <div className="text-gray-400 text-xs font-medium flex items-center gap-1">
-                                {trip.destination}
-                            </div>
-                            
-                            {/* Progress Bar for Active */}
-                            {trip.status === 'IN_PROGRESS' && (
-                                <div className="mt-4 w-1/2 h-1 bg-gray-700 rounded-full overflow-hidden">
-                                    <div className="h-full bg-tactical-accent w-2/3 shadow-[0_0_10px_rgba(255,215,0,0.8)]"></div>
+                return (
+                    <div 
+                        key={trip.id} 
+                        onClick={() => onSelectTrip(trip)}
+                        className="relative rounded-2xl overflow-hidden h-64 group cursor-pointer border border-transparent hover:border-tactical-accent/50 transition-all active:scale-[0.98]"
+                    >
+                        {/* Background Image */}
+                        <img 
+                            src={trip.coverImage || `https://picsum.photos/seed/${trip.id}/800/600`} 
+                            alt={trip.name} 
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        {/* Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10"></div>
+                        
+                        {/* Passport Stamp Seal for Complete Trips */}
+                        {isComplete && (
+                            <div className="absolute top-4 right-4 z-10">
+                                {/* Stamp Container - Rotated */}
+                                <div className="w-20 h-20 rounded-full border-2 border-double border-tactical-accent/80 flex items-center justify-center transform -rotate-12 group-hover:rotate-0 transition-transform duration-500 bg-black/20 backdrop-blur-[2px] shadow-[0_0_15px_rgba(255,215,0,0.15)]">
+                                    {/* Inner Ring */}
+                                    <div className="w-[90%] h-[90%] rounded-full border border-tactical-accent/60 flex flex-col items-center justify-center p-1">
+                                         {/* Top Arc Text Simulation */}
+                                        <div className="text-[6px] font-black text-tactical-accent/90 uppercase tracking-[0.2em] leading-none mb-0.5">
+                                            MISSION
+                                        </div>
+                                        
+                                        {/* Center Icon/Text */}
+                                        <div className="flex flex-col items-center justify-center my-0.5">
+                                            <div className="text-tactical-accent drop-shadow-[0_0_2px_rgba(255,215,0,0.5)]">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                            </div>
+                                            <div className="font-display font-bold text-[10px] text-tactical-accent uppercase tracking-widest leading-none mt-1">
+                                                CLEARED
+                                            </div>
+                                        </div>
+
+                                        {/* Date */}
+                                         <div className="text-[6px] font-mono font-bold text-tactical-accent/80 uppercase tracking-wider border-t border-tactical-accent/40 pt-0.5 mt-0.5">
+                                            {new Date(trip.endDate).toLocaleDateString(undefined, {month:'short', day:'2-digit', year:'2-digit'}).toUpperCase()}
+                                        </div>
+                                    </div>
                                 </div>
-                            )}
+                            </div>
+                        )}
+
+                        {/* Content */}
+                        <div className="absolute inset-0 p-5 flex flex-col justify-between">
+                            <div className="flex justify-between items-start">
+                                <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${getStatusStyle(trip.status)}`}>
+                                    STATUS: {trip.status?.replace('_', ' ')}
+                                </span>
+                                <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full border border-white/10">
+                                    <UserIcon className="w-3 h-3 text-tactical-accent" />
+                                    <span className="text-xs font-bold text-white">{trip.members.length}</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex items-center gap-2 text-gray-300 text-[10px] font-bold uppercase tracking-widest mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                                    {formatDateRange(trip.startDate, trip.endDate)}
+                                </div>
+                                <h3 className="font-display font-bold text-2xl uppercase leading-tight mb-1 shadow-sm text-white">
+                                    {trip.name}
+                                </h3>
+                                <div className="text-gray-400 text-xs font-medium flex items-center gap-1">
+                                    {trip.destination}
+                                </div>
+                                
+                                {/* Progress Bar for Active */}
+                                {trip.status === 'IN_PROGRESS' && (
+                                    <div className="mt-4 w-full h-1.5 bg-gray-700 rounded-full overflow-hidden border border-white/10">
+                                        <div 
+                                            className="h-full bg-tactical-accent shadow-[0_0_10px_rgba(255,215,0,0.8)] transition-all duration-1000 ease-out"
+                                            style={{ width: `${progressPercent}%` }}
+                                        ></div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
             
             {/* End of list spacer or additional actions can go here if needed */}
              <div className="h-8"></div>

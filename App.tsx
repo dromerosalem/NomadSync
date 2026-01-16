@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { ViewState, Trip, ItineraryItem, ItemType, Member, Role } from './types';
 import CreateMission from './components/CreateMission';
@@ -25,13 +26,35 @@ const INITIAL_USER: Member = {
   status: 'ACTIVE'
 };
 
+// Helper to determine status based on dates
+const calculateTripStatus = (start: Date, end: Date): 'PLANNING' | 'IN_PROGRESS' | 'COMPLETE' => {
+  const now = new Date();
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  
+  // Reset time portions for cleaner comparison if desired, 
+  // but strict time comparison is usually better for 'Right Now' accuracy.
+  
+  if (now < startDate) return 'PLANNING';
+  if (now > endDate) return 'COMPLETE';
+  return 'IN_PROGRESS';
+};
+
+// Helper to get relative dates for the demo data so it always looks good
+const getRelativeDate = (daysOffset: number) => {
+  const d = new Date();
+  d.setDate(d.getDate() + daysOffset);
+  return d;
+};
+
 const INITIAL_TRIPS: Trip[] = [
   {
     id: '101',
     name: 'OPERATION: TOKYO DRIFT',
     destination: 'Shibuya District • Japan',
-    startDate: new Date('2023-10-12'),
-    endDate: new Date('2023-11-03'),
+    // Active: Started 5 days ago, ends in 15 days
+    startDate: getRelativeDate(-5),
+    endDate: getRelativeDate(15),
     budget: 5000,
     items: [],
     members: [
@@ -39,7 +62,7 @@ const INITIAL_TRIPS: Trip[] = [
       { id: '2', name: 'Beatrix', email: 'b@v.com', role: 'SCOUT', budget: 4000, status: 'ACTIVE' }, 
       { id: '3', name: 'O-Ren', email: 'o@y.com', role: 'PASSENGER', budget: 10000, status: 'ACTIVE' }
     ],
-    status: 'IN_PROGRESS',
+    status: 'IN_PROGRESS', // Initial value, will be recalculated by state init
     coverImage: 'https://images.unsplash.com/photo-1542051841857-5f90071e7989?q=80&w=2070&auto=format&fit=crop',
     budgetViewMode: 'SMART'
   },
@@ -47,8 +70,9 @@ const INITIAL_TRIPS: Trip[] = [
     id: '102',
     name: 'PROJECT: ANDALUSIA',
     destination: 'Seville • Spain',
-    startDate: new Date('2023-12-15'),
-    endDate: new Date('2024-01-10'),
+    // Planning: Starts in 30 days
+    startDate: getRelativeDate(30),
+    endDate: getRelativeDate(45),
     budget: 3500,
     items: [],
     members: [{ ...INITIAL_USER, budget: 3500 }],
@@ -60,8 +84,9 @@ const INITIAL_TRIPS: Trip[] = [
     id: '103',
     name: 'PROTOCOL: BALI',
     destination: 'Ubud • Indonesia',
-    startDate: new Date('2023-02-01'),
-    endDate: new Date('2023-03-01'),
+    // Complete: Ended 30 days ago
+    startDate: getRelativeDate(-60),
+    endDate: getRelativeDate(-30),
     budget: 2000,
     items: [],
     members: [
@@ -81,7 +106,14 @@ const App: React.FC = () => {
   // View State logic
   const [view, setView] = useState<ViewState>('AUTH');
   
-  const [trips, setTrips] = useState<Trip[]>(INITIAL_TRIPS);
+  // Initialize trips with auto-calculated status based on current time
+  const [trips, setTrips] = useState<Trip[]>(() => {
+      return INITIAL_TRIPS.map(t => ({
+          ...t,
+          status: calculateTripStatus(t.startDate, t.endDate)
+      }));
+  });
+
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -170,7 +202,7 @@ const App: React.FC = () => {
       budget, // Keep as reference
       items: [],
       members: members,
-      status: 'PLANNING',
+      status: calculateTripStatus(startDate, endDate), // Calculate initial status
       budgetViewMode: 'SMART' // Default to Smart Mode
     };
 
@@ -181,7 +213,12 @@ const App: React.FC = () => {
   };
 
   const handleUpdateTrip = (updatedTrip: Trip) => {
-    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    // Recalculate status in case dates changed
+    const finalTrip = {
+        ...updatedTrip,
+        status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate)
+    };
+    setTrips(trips.map(t => t.id === finalTrip.id ? finalTrip : t));
     setView('TIMELINE');
   };
 
