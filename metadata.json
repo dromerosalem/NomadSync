@@ -1,0 +1,7 @@
+{
+  "name": "TacticalTravel",
+  "description": "A mobile-first, mission-oriented travel itinerary app featuring timeline tracking, budget management, and Google Maps powered location intelligence.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

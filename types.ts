@@ -1,0 +1,66 @@
+
+export type ViewState = 'AUTH' | 'DASHBOARD' | 'CREATE' | 'TIMELINE' | 'ADD_ITEM' | 'ITEM_FORM' | 'EDIT_TRIP' | 'ITEM_DETAILS' | 'MANAGE_TEAM' | 'INVITE_MEMBER' | 'PROFILE' | 'BUDGET' | 'LOG_EXPENSE' | 'LEDGER';
+
+export enum ItemType {
+  STAY = 'STAY',
+  TRANSPORT = 'TRANSPORT',
+  ACTIVITY = 'ACTIVITY',
+  FOOD = 'FOOD',
+  ESSENTIALS = 'ESSENTIALS',
+  SETTLEMENT = 'SETTLEMENT'
+}
+
+export type Role = 'PATHFINDER' | 'SCOUT' | 'PASSENGER';
+
+export interface Member {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  avatarUrl?: string;
+  isCurrentUser?: boolean;
+  status?: 'ACTIVE' | 'BLOCKED' | 'PENDING';
+  budget?: number; // Personal budget for the trip
+  pendingPastExpensesInvitation?: boolean; // Flag for late joiners invited to share past expenses
+}
+
+export interface ItineraryItem {
+  id: string;
+  type: ItemType;
+  title: string;
+  location: string;
+  endLocation?: string; // Added for Transport (Origin -> Destination)
+  startDate: Date;
+  endDate?: Date;
+  details?: string;
+  cost?: number;
+  mapUri?: string; // Google Maps URL from grounding
+  rating?: string; // From Maps grounding
+  tags?: string[]; // Custom labels/tags
+  durationMinutes?: number; // Explicit duration from document (e.g. "8h 29m" -> 509)
+  createdBy: string; // User ID of the creator
+  isPrivate?: boolean; // If true, only visible to createdBy
+  splitWith: string[]; // IDs of members sharing this expense
+  splitDetails?: Record<string, number>; // Optional: Custom amount per member ID
+  paidBy: string; // ID of the member who paid
+  showInTimeline?: boolean; // Defaults to true for standard items, false for logged expenses
+}
+
+export interface Trip {
+  id: string;
+  name: string;
+  destination: string;
+  startDate: Date;
+  endDate: Date;
+  budget: number; // Kept as reference or default
+  items: ItineraryItem[];
+  members: Member[];
+  status?: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETE';
+  coverImage?: string;
+  budgetViewMode?: 'SMART' | 'DIRECT'; // Shared view setting controlled by Pathfinder
+}
+
+export interface GroundingSource {
+  title: string;
+  uri: string;
+}
