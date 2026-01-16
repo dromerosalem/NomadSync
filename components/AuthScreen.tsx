@@ -23,7 +23,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
             /* global google */
             google.accounts.id.initialize({
-                client_id: '875459345070-5is0p064l1d3p06a090p06a090p06a0.apps.googleusercontent.com', // Replace with real Client ID
+                client_id: '115085525445-uff7tlrs2ps28r6jb03s12c4be7cdmvp.apps.googleusercontent.com', // Replace with real Client ID
                 callback: handleGoogleCredentialResponse,
                 cancel_on_tap_outside: false,
             });
