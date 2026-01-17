@@ -243,5 +243,46 @@ export const tripService = {
     async deleteItineraryItem(itemId: string): Promise<void> {
         const { error } = await supabase.from('itinerary_items').delete().eq('id', itemId);
         if (error) throw error;
+    },
+
+    // --- RECRUITMENT OPERATIONS ---
+
+    async searchUsers(query: string): Promise<Member[]> {
+        if (!query || query.length < 3) return [];
+
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, full_name, email, avatar_url')
+            .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+            .limit(5);
+
+        if (error) throw error;
+
+        return data.map((p: any) => ({
+            id: p.id,
+            name: p.full_name || p.email.split('@')[0],
+            email: p.email,
+            avatarUrl: p.avatar_url,
+            role: 'SCOUT', // Default placeholder
+            status: 'ACTIVE'
+        } as Member));
+    },
+
+    async addMemberToTrip(tripId: string, userId: string, role: Role): Promise<void> {
+        const { error } = await supabase
+            .from('trip_members')
+            .insert({
+                trip_id: tripId,
+                user_id: userId,
+                role: role,
+                status: 'ACTIVE',
+                personal_budget: 0
+            });
+
+        if (error) {
+            // Ignore duplicate key error (already added)
+            if (error.code === '23505') return;
+            throw error;
+        }
     }
 };

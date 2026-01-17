@@ -1,45 +1,59 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TacticalTravel</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              sans: ['Inter', 'sans-serif'],
-              display: ['Chakra Petch', 'sans-serif'],
-            },
-            colors: {
-              tactical: {
-                bg: '#121211', // Very dark brown/black
-                card: '#1C1C1A', // Slightly lighter
-                accent: '#FFD700', // Gold/Yellow
-                muted: '#5C5C50', // Olive/Gray
-                text: '#EAEAEA',
-                highlight: '#2A2A28'
-              }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NomadSync</title>
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#121211" />
+
+  <!-- iOS PWA Support -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NomadSync">
+  <link rel="apple-touch-startup-image" href="/splash.png">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Chakra Petch', 'sans-serif'],
+          },
+          colors: {
+            tactical: {
+              bg: '#121211', // Very dark brown/black
+              card: '#1C1C1A', // Slightly lighter
+              accent: '#FFD700', // Gold/Yellow
+              muted: '#5C5C50', // Olive/Gray
+              text: '#EAEAEA',
+              highlight: '#2A2A28'
             }
           }
         }
       }
-    </script>
-    <style>
-      body {
-        background-color: #121211;
-        color: #EAEAEA;
-      }
-      /* Hide scrollbar for clean mobile look */
-      ::-webkit-scrollbar {
-        width: 0px;
-        background: transparent;
-      }
-    </style>
+    }
+  </script>
+  <style>
+    body {
+      background-color: #121211;
+      color: #EAEAEA;
+    }
+
+    /* Hide scrollbar for clean mobile look */
+    ::-webkit-scrollbar {
+      width: 0px;
+      background: transparent;
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -50,10 +64,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
+
+<body>
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

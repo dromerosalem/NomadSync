@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { ViewState, Trip, ItineraryItem, ItemType, Member, Role } from './types';
 import CreateMission from './components/CreateMission';
@@ -15,6 +14,7 @@ import BudgetEngine from './components/BudgetEngine';
 import LogExpense from './components/LogExpense';
 import LedgerScreen from './components/LedgerScreen';
 import AuthScreen from './components/AuthScreen';
+import JoinMission from './components/JoinMission';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 
@@ -22,27 +22,21 @@ const INITIAL_USER: Member = {
   id: 'placeholder',
   name: 'Ghost Operative',
   email: 'ghost@nomad.com',
-  role: 'PATHFINDER', // Default role for creator
+  role: 'PATHFINDER',
   avatarUrl: 'https://i.pravatar.cc/150?u=ghost',
   isCurrentUser: true,
   status: 'ACTIVE'
 };
 
-// Helper to determine status based on dates
 const calculateTripStatus = (start: Date, end: Date): 'PLANNING' | 'IN_PROGRESS' | 'COMPLETE' => {
   const now = new Date();
   const startDate = new Date(start);
   const endDate = new Date(end);
-
-  // Reset time portions for cleaner comparison if desired, 
-  // but strict time comparison is usually better for 'Right Now' accuracy.
-
   if (now < startDate) return 'PLANNING';
   if (now > endDate) return 'COMPLETE';
   return 'IN_PROGRESS';
 };
 
-// Helper to get relative dates for the demo data so it always looks good
 const getRelativeDate = (daysOffset: number) => {
   const d = new Date();
   d.setDate(d.getDate() + daysOffset);
@@ -54,11 +48,9 @@ const INITIAL_TRIPS: Trip[] = [];
 const App: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentUser, setCurrentUser] = useState<Member>(INITIAL_USER);
-
-  // View State logic
   const [view, setView] = useState<ViewState>('AUTH');
+  const [pendingJoinTripId, setPendingJoinTripId] = useState<string | null>(null);
 
-  // Initialize trips with auto-calculated status based on current time
   const [trips, setTrips] = useState<Trip[]>(() => {
     return INITIAL_TRIPS.map(t => ({
       ...t,
@@ -67,6 +59,16 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
+    // Check for Deep Link
+    const params = new URLSearchParams(window.location.search);
+    const joinId = params.get('join');
+    if (joinId) {
+      console.log("Deep Link Detected: Joining Trip", joinId);
+      setPendingJoinTripId(joinId);
+      // We wait for auth to confirmed before switching view fully, 
+      // but we hold the ID.
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state change:', _event, session?.user?.id);
       if (session) {
@@ -82,11 +84,19 @@ const App: React.FC = () => {
           status: 'ACTIVE'
         };
         setCurrentUser(mappedUser);
-        setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+
+        // Deep Link Routing
+        if (pendingJoinTripId) {
+          setView('JOIN_MISSION');
+        } else {
+          setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+        }
       } else {
         handleSignOutCleanup();
       }
     });
+
+    // ... (rest of initial session check with similar logic)
 
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -103,12 +113,22 @@ const App: React.FC = () => {
           status: 'ACTIVE'
         };
         setCurrentUser(mappedUser);
-        setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+
+        // Check params again here for immediate logged-in load
+        const immediateParams = new URLSearchParams(window.location.search);
+        const immediateJoinId = immediateParams.get('join');
+
+        if (immediateJoinId) {
+          setPendingJoinTripId(immediateJoinId);
+          setView('JOIN_MISSION');
+        } else {
+          setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, []); // Remove pendingJoinTripId dependency to avoid double firing, handled in refs if needed inside, but simple state is fine here.
 
   // Dedicated data loader - triggers only when identity actually changes
   useEffect(() => {
@@ -304,22 +324,27 @@ const App: React.FC = () => {
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
-  const handleInviteMember = (email: string, role: Role) => {
+  const handleInviteMember = async (userId: string, role: Role) => {
     if (!currentTrip) return;
-    const newMember: Member = {
-      id: Date.now().toString(),
-      name: email.split('@')[0], // Mock name from email
-      email: email,
-      role: role,
-      status: 'PENDING',
-      budget: 0 // Default budget for new invitees
-    };
+    setIsLoading(true);
+    try {
+      await tripService.addMemberToTrip(currentTrip.id, userId, role);
 
-    const updatedTrip = {
-      ...currentTrip,
-      members: [...currentTrip.members, newMember]
-    };
-    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+      // Refresh to see the new member
+      const userTrips = await tripService.fetchUserTrips(currentUser.id);
+      const updatedTrip = userTrips.find(t => t.id === currentTrip.id);
+
+      if (updatedTrip) {
+        // Restore items which aren't in the shallow fetch
+        updatedTrip.items = currentTrip.items;
+        setTrips(prev => prev.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+      }
+    } catch (err) {
+      console.error('Invite failed:', err);
+      alert('Recruitment failed. Operative may already be deployed.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- Expense Sharing Logic ---
@@ -704,6 +729,22 @@ const App: React.FC = () => {
             onUpdate={handleUpdateTrip}
             onCancel={() => setView('TIMELINE')}
             currentUserId={currentUser.id}
+          />
+        )}
+
+        {isAuthenticated && view === 'JOIN_MISSION' && pendingJoinTripId && (
+          <JoinMission
+            tripId={pendingJoinTripId}
+            currentUser={currentUser}
+            onJoin={() => {
+              setPendingJoinTripId(null);
+              loadAllData(currentUser.id); // Reload to fetch the new trip
+              setView('DASHBOARD');
+            }}
+            onCancel={() => {
+              setPendingJoinTripId(null);
+              setView('DASHBOARD');
+            }}
           />
         )}
       </main>

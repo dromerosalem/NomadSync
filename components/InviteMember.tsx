@@ -1,19 +1,63 @@
-import React, { useState } from 'react';
-import { Trip, Role } from '../types';
-import { ChevronLeftIcon, LinkIcon, CopyIcon, SendIcon, EditIcon, EyeIcon, PlusIcon } from './Icons';
+import React, { useState, useEffect } from 'react';
+import { Trip, Role, Member } from '../types';
+import { ChevronLeftIcon, LinkIcon, CopyIcon, SendIcon, EditIcon, EyeIcon, PlusIcon, SearchIcon } from './Icons';
+import { tripService } from '../services/tripService';
 
 interface InviteMemberProps {
     trip: Trip;
     onBack: () => void;
-    onInvite: (email: string, role: Role) => void;
+    onInvite: (emailOrId: string, role: Role) => void;
 }
+
+const SearchList: React.FC<{ query: string, onSelect: (user: Member) => void, existingMemberIds: string[] }> = ({ query, onSelect, existingMemberIds }) => {
+    const [results, setResults] = useState<Member[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const search = async () => {
+            setLoading(true);
+            try {
+                const users = await tripService.searchUsers(query);
+                setResults(users.filter(u => !existingMemberIds.includes(u.id)));
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        const timeout = setTimeout(search, 500);
+        return () => clearTimeout(timeout);
+    }, [query, existingMemberIds]);
+
+    if (loading) return <div className="p-4 text-center text-xs text-gray-400">SCANNING DATABASE...</div>;
+    if (results.length === 0) return <div className="p-4 text-center text-xs text-gray-500">NO OPERATIVES FOUND</div>;
+
+    return (
+        <div className="divide-y divide-white/5">
+            {results.map(user => (
+                <button
+                    key={user.id}
+                    onClick={() => onSelect(user)}
+                    className="w-full p-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+                >
+                    <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`} className="w-8 h-8 rounded-full bg-gray-700" />
+                    <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-white truncate">{user.name}</div>
+                        <div className="text-[10px] text-gray-500 truncate">{user.email}</div>
+                    </div>
+                    <div className="text-[9px] font-bold text-tactical-accent border border-tactical-accent/30 px-2 py-0.5 rounded">RECRUIT</div>
+                </button>
+            ))}
+        </div>
+    );
+};
 
 const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) => {
     const [selectedRole, setSelectedRole] = useState<Role>('SCOUT');
     const [email, setEmail] = useState('');
     const [copied, setCopied] = useState(false);
 
-    const inviteLink = `nomadsync.app/j/${trip.id.slice(-6)}`;
+    const inviteLink = `${window.location.origin}/?join=${trip.id}`;
 
     const handleCopy = () => {
         navigator.clipboard.writeText(inviteLink);
@@ -78,8 +122,8 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                     <button
                         onClick={() => setSelectedRole('SCOUT')}
                         className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-4 group ${selectedRole === 'SCOUT'
-                                ? 'bg-tactical-accent/10 border-tactical-accent'
-                                : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
+                            ? 'bg-tactical-accent/10 border-tactical-accent'
+                            : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
                             }`}
                     >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedRole === 'SCOUT' ? 'bg-tactical-accent text-black' : 'bg-black/40 text-gray-500'}`}>
@@ -102,8 +146,8 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                     <button
                         onClick={() => setSelectedRole('PASSENGER')}
                         className={`w-full text-left p-4 rounded-xl border transition-all flex items-start gap-4 group ${selectedRole === 'PASSENGER'
-                                ? 'bg-tactical-accent/10 border-tactical-accent'
-                                : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
+                            ? 'bg-tactical-accent/10 border-tactical-accent'
+                            : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-muted'
                             }`}
                     >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${selectedRole === 'PASSENGER' ? 'bg-tactical-accent text-black' : 'bg-black/40 text-gray-500'}`}>
@@ -123,27 +167,31 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                     </button>
                 </div>
 
-                {/* Direct Comms */}
+                {/* Direct Comms (Search) */}
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
-                        Direct Comms
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
+                        Find Operative
                     </div>
-                    <div className="flex gap-2">
+                    <div className="relative">
                         <input
-                            type="email"
+                            type="text"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Enter operative email..."
-                            className="flex-1 bg-tactical-card border border-tactical-muted/30 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-tactical-accent outline-none"
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                // Trigger search (debounced ideally, but simple for now)
+                            }}
+                            placeholder="Search by name or email..."
+                            className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg px-4 py-3 text-white placeholder-gray-600 focus:border-tactical-accent outline-none"
                         />
-                        <button
-                            onClick={handleSendInvite}
-                            disabled={!email}
-                            className="bg-[#FF4500] hover:bg-[#FF6347] disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-lg flex items-center justify-center shadow-[0_0_10px_rgba(255,69,0,0.3)] transition-all"
-                        >
-                            <SendIcon className="w-5 h-5" />
-                        </button>
+                        {email.length > 2 && (
+                            <div className="absolute top-full left-0 right-0 mt-2 bg-tactical-card border border-tactical-muted/50 rounded-lg shadow-2xl z-30 max-h-48 overflow-y-auto">
+                                <SearchList query={email} onSelect={(user) => {
+                                    onInvite(user.id, selectedRole); // Passing ID now
+                                    setEmail('');
+                                }} existingMemberIds={trip.members.map(m => m.id)} />
+                            </div>
+                        )}
                     </div>
                 </div>
 
