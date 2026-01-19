@@ -1,7 +1,8 @@
 
 import React, { useMemo, useState } from 'react';
 import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
-import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon } from './Icons';
+import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon } from './Icons';
+import { getCurrencySymbol } from '../utils/currencyUtils';
 
 interface BudgetEngineProps {
     trip: Trip;
@@ -31,6 +32,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     // ---------------------------------------------------------
     const {
         myTotalSpend,
+        myTotalPaid,
+        myTotalReceived,
         groupTotalSpend,
         categorySpend,
         pairwiseDebt,    // SIMPLE: Direct debts
@@ -70,16 +73,12 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             .filter(item => (item.cost || 0) > 0)
             .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
+        let myPaid = 0;
+        let myReceived = 0;
         trip.items.forEach(item => {
             if (item.isPrivate) return;
-
             const cost = item.cost || 0;
             const isSettlement = item.type === ItemType.SETTLEMENT;
-
-            // Expenses increase burn. Settlements do not.
-            if (!isSettlement) {
-                groupTotal += cost;
-            }
 
             const splitWith = item.splitWith || [];
             const splitDetails = item.splitDetails || {};
@@ -87,8 +86,12 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             const payerId = item.paidBy;
             const involvedIds = hasCustomSplit ? Object.keys(splitDetails) : splitWith;
 
-            // --- CALCULATE PERSONAL SPEND (TOTAL TRIP) ---
             if (!isSettlement) {
+                groupTotal += cost;
+                // Payment tracking
+                if (payerId === currentUserId) myPaid += cost;
+
+                // Consumption tracking
                 let myShare = 0;
                 if (hasCustomSplit && splitDetails[currentUserId] !== undefined) {
                     myShare = splitDetails[currentUserId];
@@ -104,6 +107,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         catSpend[ItemType.ESSENTIALS] = (catSpend[ItemType.ESSENTIALS] || 0) + myShare;
                     }
                 }
+            } else {
+                // Settlement tracking
+                if (payerId === currentUserId) myPaid += cost;
+                if (involvedIds.includes(currentUserId)) myReceived += cost;
             }
 
             // --- CALCULATE DEBTS & BALANCES ---
@@ -111,7 +118,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             involvedIds.forEach(consumerId => {
                 let share = 0;
                 if (hasCustomSplit) share = splitDetails[consumerId];
-                else share = cost / (splitWith.length || 1);
+                else share = cost / (involvedIds.length || 1);
 
                 netBalances[consumerId] = (netBalances[consumerId] || 0) - share;
 
@@ -143,6 +150,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
         return {
             myTotalSpend: myTotal,
+            myTotalPaid: myPaid,
+            myTotalReceived: myReceived,
             groupTotalSpend: groupTotal,
             categorySpend: catSpend,
             pairwiseDebt: pDebt,
@@ -268,8 +277,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                     <div className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest mb-1">My Personal Budget</div>
                     <div className="flex items-baseline gap-2 mb-4">
-                        <span className="font-display text-5xl font-bold text-white">${myTotalSpend.toFixed(0)}</span>
-                        <span className="font-mono text-gray-500 font-bold">/ ${userBudget}</span>
+                        <span className="font-display text-5xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalSpend.toFixed(0)}</span>
+                        <span className="font-mono text-gray-500 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}</span>
                     </div>
 
                     <div className="flex justify-between items-end mb-2">
@@ -285,7 +294,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                     <div className="flex justify-between items-center text-xs border-t border-white/5 pt-3">
                         <span className="text-gray-500 uppercase">Mission Ends in {daysRemaining} days</span>
-                        <span className="text-white font-bold">Remaining: ${remaining.toFixed(0)}</span>
+                        <span className="text-white font-bold">Remaining: {getCurrencySymbol(trip.baseCurrency || 'USD')}{remaining.toFixed(0)}</span>
                     </div>
                 </div>
 
@@ -309,7 +318,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{getCategoryName(type)}</span>
                                     </div>
                                     <div className="flex items-baseline gap-1 mb-2">
-                                        <span className="font-display text-xl font-bold text-white">${spent.toFixed(0)}</span>
+                                        <span className="font-display text-xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{spent.toFixed(0)}</span>
                                     </div>
                                     <div className="h-1.5 bg-black rounded-full overflow-hidden">
                                         <div className="h-full bg-tactical-accent" style={{ width: `${percent}%` }}></div>
@@ -329,8 +338,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Group Burn</span>
                         </div>
                         <div className="flex items-baseline gap-2">
-                            <span className="font-display text-2xl font-bold text-white">${groupTotalSpend.toFixed(0)}</span>
-                            <span className="text-xs text-gray-600 font-bold">/ $5,000</span>
+                            <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalSpend.toFixed(0)}</span>
+                            <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}5,000</span>
                         </div>
                         <div className="h-1 w-24 bg-gray-800 rounded-full mt-2 overflow-hidden">
                             <div className="h-full bg-white/30 w-1/2"></div>
@@ -372,7 +381,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                         <div className="flex justify-between items-center">
                                             <h4 className="font-bold text-white text-xs truncate uppercase">{item.title}</h4>
                                             <span className={`font-mono text-xs font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
-                                                {isSettlement ? '' : '-'}${item.cost?.toFixed(2)}
+                                                {isSettlement ? '' : '-'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{item.cost?.toFixed(2)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
@@ -447,8 +456,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                             <div>
                                                 <div className="font-bold text-white text-sm">{member.name}</div>
                                                 <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5">
-                                                    {isOwed && <span className="text-tactical-accent">OWES YOU ${balance.toFixed(0)}</span>}
-                                                    {doesOwe && <span className="text-red-500">PAY THEM ${Math.abs(balance).toFixed(0)}</span>}
+                                                    {isOwed && <span className="text-tactical-accent">OWES YOU {getCurrencySymbol(trip.baseCurrency || 'USD')}{balance.toFixed(0)}</span>}
+                                                    {doesOwe && <span className="text-red-500">PAY THEM {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(balance).toFixed(0)}</span>}
                                                     {isSettled && <span className="text-gray-600">ALL SETTLED</span>}
                                                 </div>
                                             </div>
@@ -456,10 +465,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                                         <div className="flex items-center gap-3">
                                             {isOwed && (
-                                                <span className="text-white text-sm font-bold font-mono">+${balance.toFixed(0)}</span>
+                                                <span className="text-white text-sm font-bold font-mono">+{getCurrencySymbol(trip.baseCurrency || 'USD')}{balance.toFixed(0)}</span>
                                             )}
                                             {doesOwe && (
-                                                <span className="text-red-500 text-sm font-bold font-mono">-${Math.abs(balance).toFixed(0)}</span>
+                                                <span className="text-red-500 text-sm font-bold font-mono">-{getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(balance).toFixed(0)}</span>
                                             )}
                                             <ChevronLeftIcon className="w-4 h-4 text-gray-600 rotate-180" />
                                         </div>
@@ -493,7 +502,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                                 </span>
                                             </div>
                                             <div className="font-mono text-xs font-bold text-tactical-muted">
-                                                ${tx.amount.toFixed(2)}
+                                                {getCurrencySymbol(trip.baseCurrency || 'USD')}{tx.amount.toFixed(2)}
                                             </div>
                                         </div>
                                     );
@@ -539,10 +548,48 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             {useSmartSplit ? 'SMART ROUTE (OPTIMIZED)' : 'DIRECT LINK (UNSHUFFLED)'}
                         </div>
 
-                        <div className="text-sm font-bold tracking-wider mb-4">
-                            {selectedMemberBalance > 0.01 && <span className="text-tactical-accent">THEY OWE YOU ${selectedMemberBalance.toFixed(2)}</span>}
-                            {selectedMemberBalance < -0.01 && <span className="text-red-500">YOU OWE ${Math.abs(selectedMemberBalance).toFixed(2)}</span>}
+                        <div className="text-sm font-bold tracking-wider mb-6">
+                            {selectedMemberBalance > 0.01 && <span className="text-tactical-accent">THEY OWE YOU {getCurrencySymbol(trip.baseCurrency || 'USD')}{selectedMemberBalance.toFixed(2)}</span>}
+                            {selectedMemberBalance < -0.01 && <span className="text-red-500">YOU OWE {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(selectedMemberBalance).toFixed(2)}</span>}
                             {Math.abs(selectedMemberBalance) <= 0.01 && <span className="text-gray-500">ALL SETTLED</span>}
+                        </div>
+
+                        {/* Net Intel Card - The "Why" */}
+                        <div className="mx-6 mb-8 bg-black/40 border border-tactical-muted/20 rounded-xl p-4 text-left">
+                            <div className="flex items-center gap-2 mb-3">
+                                <SearchIcon className="w-3 h-3 text-tactical-accent" />
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Net Mission Intel</span>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2">
+                                <div>
+                                    <div className="text-[7px] font-bold text-gray-600 uppercase mb-1">Consumed</div>
+                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalSpend.toFixed(0)}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[7px] font-bold text-gray-600 uppercase mb-1">Paid Out</div>
+                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalPaid.toFixed(0)}</div>
+                                </div>
+                                <div>
+                                    <div className="text-[7px] font-bold text-gray-600 uppercase mb-1">Received In</div>
+                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalReceived.toFixed(0)}</div>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
+                                <div className="text-[8px] font-bold text-gray-500 uppercase">My Overall Mission Gap</div>
+                                <div className={`font-mono text-sm font-bold ${(myTotalPaid - myTotalReceived - myTotalSpend) >= -0.01 ? 'text-tactical-accent' : 'text-red-500'}`}>
+                                    {getCurrencySymbol(trip.baseCurrency || 'USD')}{(myTotalPaid - myTotalReceived - myTotalSpend).toFixed(2)}
+                                </div>
+                            </div>
+
+                            {useSmartSplit && Math.abs(selectedMemberBalance - (pairwiseDebt[selectedMemberId!] || 0)) > 0.01 && (
+                                <div className="mt-3 bg-tactical-accent/10 p-2 rounded border border-tactical-accent/20">
+                                    <p className="text-[8px] font-mono text-tactical-accent uppercase leading-tight">
+                                        Note: Smart Route has optimized your transfers. Direct debt to this operative: {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(pairwiseDebt[selectedMemberId!] || 0).toFixed(0)}.
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Settle Up Action */}
@@ -551,7 +598,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                 onClick={() => setSettleModalOpen(true)}
                                 className="px-6 py-2 bg-green-700/80 hover:bg-green-600 text-white text-xs font-bold uppercase rounded-lg border border-green-500/50 shadow-lg"
                             >
-                                SETTLE ${Math.abs(selectedMemberBalance).toFixed(2)}
+                                SETTLE {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(selectedMemberBalance).toFixed(2)}
                             </button>
                         )}
 
@@ -570,7 +617,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     </div>
 
                                     <div className="bg-black/40 rounded-lg p-4 mb-6 text-center border border-white/5">
-                                        <span className="text-3xl font-display font-bold text-green-500">${Math.abs(selectedMemberBalance).toFixed(2)}</span>
+                                        <span className="text-3xl font-display font-bold text-green-500">{getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(selectedMemberBalance).toFixed(2)}</span>
                                     </div>
 
                                     <div className="flex gap-3">
@@ -594,7 +641,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-2">
-                            Direct Transactions (Proof of Debt)
+                            Evidence Locker (Proof of Debt)
                         </div>
                         {sharedHistory.length === 0 && (
                             <div className="text-center text-gray-500 mt-8 text-xs font-bold uppercase tracking-widest">
@@ -636,7 +683,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     </div>
                                     <div className="text-right">
                                         <div className={`font-bold font-mono text-sm ${isSettlement ? 'text-green-500' : (iPaid ? 'text-tactical-accent' : 'text-red-500')}`}>
-                                            {isSettlement ? 'PAID' : (iPaid ? 'lent' : 'borrowed')} ${transactionAmount.toFixed(2)}
+                                            {isSettlement ? 'PAID' : (iPaid ? 'lent' : 'borrowed')} {getCurrencySymbol(trip.baseCurrency || 'USD')}{transactionAmount.toFixed(2)}
                                         </div>
                                     </div>
                                 </div>

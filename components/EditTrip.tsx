@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Trip } from '../types';
 import { MapPinIcon, ChevronLeftIcon } from './Icons';
+import { getCurrencySymbol } from '../utils/currencyUtils';
 
 interface EditTripProps {
   trip: Trip;
@@ -13,11 +14,12 @@ interface EditTripProps {
 const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUserId }) => {
   const [name, setName] = useState(trip.name);
   const [location, setLocation] = useState(trip.destination);
-  
+  const [baseCurrency, setBaseCurrency] = useState(trip.baseCurrency || 'USD');
+
   // Initialize budget from Current User's Personal Budget
   const currentUser = trip.members.find(m => m.id === currentUserId);
   const [budget, setBudget] = useState(currentUser?.budget?.toString() || '');
-  
+
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date(trip.startDate));
   const [startDate, setStartDate] = useState<Date | null>(new Date(trip.startDate));
@@ -26,14 +28,15 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
   const handleSubmit = () => {
     if (name && location && startDate && endDate) {
       // Update Current User's budget in the members list
-      const updatedMembers = trip.members.map(m => 
-          m.id === currentUserId ? { ...m, budget: parseInt(budget) || 0 } : m
+      const updatedMembers = trip.members.map(m =>
+        m.id === currentUserId ? { ...m, budget: parseInt(budget) || 0 } : m
       );
 
       onUpdate({
         ...trip,
         name,
         destination: location,
+        baseCurrency,
         startDate,
         endDate,
         members: updatedMembers // Pass updated members with new budget
@@ -44,24 +47,24 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
   // Calendar Logic
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth();
-  
+
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
   const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfWeek = getFirstDayOfMonth(currentYear, currentMonth);
-  
+
   const handlePrevMonth = () => setViewDate(new Date(currentYear, currentMonth - 1, 1));
   const handleNextMonth = () => setViewDate(new Date(currentYear, currentMonth + 1, 1));
 
-  const isSameDay = (d1: Date, d2: Date) => 
-    d1.getDate() === d2.getDate() && 
-    d1.getMonth() === d2.getMonth() && 
+  const isSameDay = (d1: Date, d2: Date) =>
+    d1.getDate() === d2.getDate() &&
+    d1.getMonth() === d2.getMonth() &&
     d1.getFullYear() === d2.getFullYear();
 
   const handleDateClick = (day: number) => {
     const clickedDate = new Date(currentYear, currentMonth, day);
-    clickedDate.setHours(0,0,0,0);
+    clickedDate.setHours(0, 0, 0, 0);
 
     if (!startDate || (startDate && endDate)) {
       setStartDate(clickedDate);
@@ -71,7 +74,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
         setStartDate(clickedDate);
         setEndDate(null);
       } else if (isSameDay(clickedDate, startDate)) {
-         // Do nothing
+        // Do nothing
       } else {
         setEndDate(clickedDate);
       }
@@ -80,11 +83,11 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
 
   const getDayClass = (day: number) => {
     const date = new Date(currentYear, currentMonth, day);
-    date.setHours(0,0,0,0);
+    date.setHours(0, 0, 0, 0);
 
     const isStart = startDate && isSameDay(date, startDate);
     const isEnd = endDate && isSameDay(date, endDate);
-    
+
     let isInRange = false;
     if (startDate && endDate) {
       isInRange = date > startDate && date < endDate;
@@ -109,7 +112,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-           Modify Mission
+          Modify Mission
         </div>
         <div className="w-6"></div> {/* Spacer */}
       </header>
@@ -141,10 +144,10 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
               <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
             </div>
           </div>
-          
+
           {/* Budget */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ($)</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ({getCurrencySymbol(baseCurrency)})</label>
             <input
               type="number"
               value={budget}
@@ -154,45 +157,92 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
             <p className="text-[10px] text-gray-500">Updating this value changes your personal tracking only.</p>
           </div>
 
+          {/* Mission Currency */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Base Currency</label>
+            <select
+              value={baseCurrency}
+              onChange={(e) => setBaseCurrency(e.target.value)}
+              className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text focus:outline-none focus:border-tactical-accent transition-colors appearance-none"
+            >
+              <option value="USD">USD - US Dollar</option>
+              <option value="EUR">EUR - Euro</option>
+              <option value="GBP">GBP - British Pound</option>
+              <option value="JPY">JPY - Japanese Yen</option>
+              <option value="AUD">AUD - Australian Dollar</option>
+              <option value="CAD">CAD - Canadian Dollar</option>
+              <option value="CHF">CHF - Swiss Franc</option>
+              <option value="CNY">CNY - Chinese Yuan</option>
+              <option value="HKD">HKD - Hong Kong Dollar</option>
+              <option value="NZD">NZD - New Zealand Dollar</option>
+              <option value="SEK">SEK - Swedish Krona</option>
+              <option value="KRW">KRW - South Korean Won</option>
+              <option value="SGD">SGD - Singapore Dollar</option>
+              <option value="NOK">NOK - Norwegian Krone</option>
+              <option value="MXN">MXN - Mexican Peso</option>
+              <option value="INR">INR - Indian Rupee</option>
+              <option value="RUB">RUB - Russian Ruble</option>
+              <option value="ZAR">ZAR - South African Rand</option>
+              <option value="TRY">TRY - Turkish Lira</option>
+              <option value="BRL">BRL - Brazilian Real</option>
+              <option value="TWD">TWD - Taiwan Dollar</option>
+              <option value="DKK">DKK - Danish Krone</option>
+              <option value="PLN">PLN - Polish Zloty</option>
+              <option value="THB">THB - Thai Baht</option>
+              <option value="IDR">IDR - Indonesian Rupiah</option>
+              <option value="HUF">HUF - Hungarian Forint</option>
+              <option value="CZK">CZK - Czech Koruna</option>
+              <option value="ILS">ILS - Israeli Shekel</option>
+              <option value="CLP">CLP - Chilean Peso</option>
+              <option value="PHP">PHP - Philippine Peso</option>
+              <option value="AED">AED - UAE Dirham</option>
+              <option value="COP">COP - Colombian Peso</option>
+              <option value="SAR">SAR - Saudi Riyal</option>
+              <option value="MYR">MYR - Malaysian Ringgit</option>
+              <option value="RON">RON - Romanian Leu</option>
+            </select>
+            <p className="text-[10px] text-gray-500">All expenses for this mission will be converted to this currency.</p>
+          </div>
+
           {/* Interactive Calendar */}
           <div className="space-y-2">
-             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Timeline</label>
-             <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20">
-                <div className="flex justify-between items-center mb-6">
-                   <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>
-                   <h3 className="font-display font-bold text-white uppercase tracking-wider">
-                     {monthNames[currentMonth]} {currentYear}
-                   </h3>
-                   <button onClick={handleNextMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">›</button>
-                </div>
-                
-                <div className="grid grid-cols-7 gap-2 text-center text-sm">
-                   {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(d => (
-                     <span key={d} className="text-tactical-muted font-bold text-[10px] tracking-widest">{d}</span>
-                   ))}
-                   
-                   {/* Empty spaces */}
-                   {Array.from({length: firstDayOfWeek}, (_, i) => (
-                      <div key={`empty-${i}`} className="p-2"></div>
-                   ))}
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Timeline</label>
+            <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20">
+              <div className="flex justify-between items-center mb-6">
+                <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>
+                <h3 className="font-display font-bold text-white uppercase tracking-wider">
+                  {monthNames[currentMonth]} {currentYear}
+                </h3>
+                <button onClick={handleNextMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">›</button>
+              </div>
 
-                   {/* Days */}
-                   {Array.from({length: daysInMonth}, (_, i) => i + 1).map(day => (
-                     <button 
-                        key={day} 
-                        onClick={() => handleDateClick(day)}
-                        className={`p-2 rounded-full text-xs transition-all duration-200 ${getDayClass(day)}`}
-                     >
-                       {day}
-                     </button>
-                   ))}
-                </div>
-             </div>
+              <div className="grid grid-cols-7 gap-2 text-center text-sm">
+                {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(d => (
+                  <span key={d} className="text-tactical-muted font-bold text-[10px] tracking-widest">{d}</span>
+                ))}
+
+                {/* Empty spaces */}
+                {Array.from({ length: firstDayOfWeek }, (_, i) => (
+                  <div key={`empty-${i}`} className="p-2"></div>
+                ))}
+
+                {/* Days */}
+                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                  <button
+                    key={day}
+                    onClick={() => handleDateClick(day)}
+                    className={`p-2 rounded-full text-xs transition-all duration-200 ${getDayClass(day)}`}
+                  >
+                    {day}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-          
+
           {/* Action Button */}
           <div className="pt-2 pb-2">
-            <button 
+            <button
               onClick={handleSubmit}
               disabled={!name || !location || !startDate || !endDate}
               className="w-full bg-tactical-accent hover:bg-yellow-500 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,215,0,0.2)]"

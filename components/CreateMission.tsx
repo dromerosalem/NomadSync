@@ -2,9 +2,10 @@
 import React, { useState } from 'react';
 import { ArrowRightIcon, MapPinIcon, ChevronLeftIcon } from './Icons';
 import { Member } from '../types';
+import { getCurrencySymbol } from '../utils/currencyUtils';
 
 interface CreateMissionProps {
-  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[]) => void;
+  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string) => void;
   onBack: () => void;
   isLoading: boolean;
 }
@@ -13,6 +14,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [budget, setBudget] = useState('2000');
+  const [baseCurrency, setBaseCurrency] = useState('USD');
 
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
@@ -21,13 +23,10 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
 
   const handleSubmit = () => {
     if (name && location && startDate) {
-      // Create some mock members for the demo
-      const mockMembers: Member[] = [
-        { id: '2', name: 'Beatrix Kiddo', email: 'blackmamba@vipers.com', role: 'SCOUT', avatarUrl: 'https://i.pravatar.cc/150?u=beatrix', status: 'ACTIVE', budget: 1500 }
-      ];
+      const mockMembers: Member[] = [];
 
       // Default to single day trip if no end date selected
-      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers);
+      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency);
     }
   };
 
@@ -149,7 +148,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
 
             {/* Budget */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ($)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ({getCurrencySymbol(baseCurrency)})</label>
               <input
                 type="number"
                 value={budget}
@@ -158,6 +157,52 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
                 className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <p className="text-[10px] text-gray-500">This budget is private to you and tracked separately from other members.</p>
+            </div>
+
+            {/* Base Currency */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Base Currency</label>
+              <select
+                value={baseCurrency}
+                onChange={(e) => setBaseCurrency(e.target.value)}
+                className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text focus:outline-none focus:border-tactical-accent transition-colors appearance-none font-bold"
+              >
+                <option value="USD">USD - US Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="GBP">GBP - British Pound</option>
+                <option value="JPY">JPY - Japanese Yen</option>
+                <option value="AUD">AUD - Australian Dollar</option>
+                <option value="CAD">CAD - Canadian Dollar</option>
+                <option value="CHF">CHF - Swiss Franc</option>
+                <option value="CNY">CNY - Chinese Yuan</option>
+                <option value="HKD">HKD - Hong Kong Dollar</option>
+                <option value="NZD">NZD - New Zealand Dollar</option>
+                <option value="SEK">SEK - Swedish Krona</option>
+                <option value="KRW">KRW - South Korean Won</option>
+                <option value="SGD">SGD - Singapore Dollar</option>
+                <option value="NOK">NOK - Norwegian Krone</option>
+                <option value="MXN">MXN - Mexican Peso</option>
+                <option value="INR">INR - Indian Rupee</option>
+                <option value="RUB">RUB - Russian Ruble</option>
+                <option value="ZAR">ZAR - South African Rand</option>
+                <option value="TRY">TRY - Turkish Lira</option>
+                <option value="BRL">BRL - Brazilian Real</option>
+                <option value="TWD">TWD - Taiwan Dollar</option>
+                <option value="DKK">DKK - Danish Krone</option>
+                <option value="PLN">PLN - Polish Zloty</option>
+                <option value="THB">THB - Thai Baht</option>
+                <option value="IDR">IDR - Indonesian Rupiah</option>
+                <option value="HUF">HUF - Hungarian Forint</option>
+                <option value="CZK">CZK - Czech Koruna</option>
+                <option value="ILS">ILS - Israeli Shekel</option>
+                <option value="CLP">CLP - Chilean Peso</option>
+                <option value="PHP">PHP - Philippine Peso</option>
+                <option value="AED">AED - UAE Dirham</option>
+                <option value="COP">COP - Colombian Peso</option>
+                <option value="SAR">SAR - Saudi Riyal</option>
+                <option value="MYR">MYR - Malaysian Ringgit</option>
+                <option value="RON">RON - Romanian Leu</option>
+              </select>
             </div>
           </div>
 

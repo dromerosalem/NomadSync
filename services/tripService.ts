@@ -21,6 +21,7 @@ export const tripService = {
           cover_image_url,
           budget_view_mode,
           status,
+          base_currency,
           created_by,
           trip_members (
             user_id,
@@ -51,6 +52,7 @@ export const tripService = {
                 status: trip.status,
                 coverImage: trip.cover_image_url,
                 budgetViewMode: trip.budget_view_mode || 'SMART',
+                baseCurrency: trip.base_currency || 'USD',
                 items: [], // Will fetch separate or with another join
                 members: trip.trip_members.map((m: any) => ({
                     id: m.user_id,
@@ -79,6 +81,7 @@ export const tripService = {
                 cover_image_url: tripData.coverImage,
                 budget_view_mode: tripData.budgetViewMode,
                 status: tripData.status,
+                base_currency: tripData.baseCurrency || 'USD',
                 created_by: creatorId
             })
             .select()
@@ -123,6 +126,7 @@ export const tripService = {
         if (updates.endDate) dbUpdates.end_date = new Date(updates.endDate).toISOString();
         if (updates.status) dbUpdates.status = updates.status;
         if (updates.budgetViewMode) dbUpdates.budget_view_mode = updates.budgetViewMode;
+        if (updates.baseCurrency) dbUpdates.base_currency = updates.baseCurrency;
 
         const { error } = await supabase
             .from('trips')
@@ -176,6 +180,9 @@ export const tripService = {
             details: item.details,
             mapUri: item.map_uri,
             tags: item.tags || [],
+            originalAmount: item.original_amount,
+            currencyCode: item.currency_code,
+            exchangeRate: item.exchange_rate,
             splitWith: item.expense_splits.map((s: any) => s.user_id),
             splitDetails: item.expense_splits.reduce((acc: any, s: any) => {
                 acc[s.user_id] = s.amount;
@@ -203,7 +210,10 @@ export const tripService = {
             show_in_timeline: item.showInTimeline,
             details: item.details,
             map_uri: item.mapUri,
-            tags: item.tags
+            tags: item.tags,
+            original_amount: item.originalAmount,
+            currency_code: item.currencyCode,
+            exchange_rate: item.exchangeRate
         };
 
         let resultId = item.id;
@@ -269,20 +279,42 @@ export const tripService = {
     },
 
     async addMemberToTrip(tripId: string, userId: string, role: Role): Promise<void> {
-        const { error } = await supabase
+        // 1. Join the mission first with status ACTIVE (gaining RLS clearance)
+        const { error: joinError } = await supabase
             .from('trip_members')
-            .insert({
+            .upsert({
                 trip_id: tripId,
                 user_id: userId,
                 role: role,
                 status: 'ACTIVE',
                 personal_budget: 0
-            });
+            }, { onConflict: 'trip_id,user_id' });
 
-        if (error) {
-            // Ignore duplicate key error (already added)
-            if (error.code === '23505') return;
-            throw error;
+        if (joinError) throw joinError;
+
+        // 2. Fetch the trip's overall budget (now allowed because we are a member)
+        const { data: tripData, error: tripFetchError } = await supabase
+            .from('trips')
+            .select('budget')
+            .eq('id', tripId)
+            .single();
+
+        // If trip fetch fails (e.g. invalid ID), we've already joined, 
+        // but we can't sync budget. We'll ignore it as non-critical or log it.
+        if (tripFetchError) {
+            console.warn('Could not sync mission budget for recruit:', tripFetchError);
+            return;
+        }
+
+        // 3. Synchronize the operatives personal budget with the mission budget
+        if (tripData?.budget) {
+            const { error: syncError } = await supabase
+                .from('trip_members')
+                .update({ personal_budget: tripData.budget })
+                .eq('trip_id', tripId)
+                .eq('user_id', userId);
+
+            if (syncError) console.warn('Budget sync handshake failed:', syncError);
         }
     }
 };

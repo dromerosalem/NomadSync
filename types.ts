@@ -45,6 +45,11 @@ export interface ItineraryItem {
   splitDetails?: Record<string, number>; // Optional: Custom amount per member ID
   paidBy: string; // ID of the member who paid
   showInTimeline?: boolean; // Defaults to true for standard items, false for logged expenses
+
+  // Multi-Currency Fields
+  originalAmount?: number;
+  currencyCode?: string;
+  exchangeRate?: number;
 }
 
 export interface Trip {
@@ -58,6 +63,7 @@ export interface Trip {
   members: Member[];
   status?: 'PLANNING' | 'IN_PROGRESS' | 'COMPLETE';
   coverImage?: string;
+  baseCurrency?: string; // Default 'USD'
   budgetViewMode?: 'SMART' | 'DIRECT'; // Shared view setting controlled by Pathfinder
 }
 

@@ -59,8 +59,8 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                     <MenuIcon className="w-6 h-6" />
                 </button>
                 <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-tactical-accent animate-pulse"></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">SYSTEM ONLINE</span>
+                    <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-tactical-accent animate-pulse'}`}></div>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'SYSTEM ONLINE'}</span>
                 </div>
                 <button className="text-white hover:text-tactical-accent transition-colors relative">
                     <BellIcon className="w-6 h-6" />

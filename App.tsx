@@ -229,7 +229,7 @@ const App: React.FC = () => {
         if (type === ItemType.TRANSPORT) return 1;
         if (type === ItemType.STAY) return 2;
         if (type === ItemType.FOOD || type === ItemType.ACTIVITY) return 3;
-        if (type === ItemType.ESSENTIALS) return 4;
+        if (type === ItemType.SETTLEMENT) return 5; // Put settlements at the end of the day
         return 4;
       };
 
@@ -243,7 +243,7 @@ const App: React.FC = () => {
     });
   };
 
-  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[]) => {
+  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string) => {
     setIsLoading(true);
     try {
       const creatorMember = { ...currentUser, budget: budget };
@@ -255,6 +255,7 @@ const App: React.FC = () => {
         startDate,
         endDate,
         budget,
+        baseCurrency,
         members,
         status: calculateTripStatus(startDate, endDate),
         budgetViewMode: 'SMART',
@@ -283,6 +284,7 @@ const App: React.FC = () => {
         destination: updatedTrip.destination,
         startDate: updatedTrip.startDate,
         endDate: updatedTrip.endDate,
+        baseCurrency: updatedTrip.baseCurrency,
         status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate)
       });
 
@@ -394,29 +396,39 @@ const App: React.FC = () => {
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
-  const handleSettleDebt = (fromUserId: string, toUserId: string, amount: number) => {
+  const handleSettleDebt = async (fromUserId: string, toUserId: string, amount: number) => {
     if (!currentTrip) return;
 
-    const newItem: ItineraryItem = {
-      id: Date.now().toString(),
-      tripId: currentTrip.id,
-      type: ItemType.SETTLEMENT,
-      title: 'Debt Settlement',
-      location: 'Direct Transfer',
-      startDate: new Date(),
-      cost: amount,
-      createdBy: currentUser.id,
-      paidBy: fromUserId, // Sender
-      splitWith: [toUserId], // Receiver
-      details: `Settlement transfer from ${fromUserId} to ${toUserId}`,
-      isPrivate: false,
-      showInTimeline: false // Settlements typically don't clutter the main itinerary timeline
-    };
+    setIsLoading(true);
+    try {
+      const newItem: ItineraryItem = {
+        id: '', // Empty ID tells service to create new record
+        tripId: currentTrip.id,
+        type: ItemType.SETTLEMENT,
+        title: 'Debt Settlement',
+        location: 'Direct Transfer',
+        startDate: new Date(),
+        cost: amount,
+        createdBy: currentUser.id,
+        paidBy: fromUserId, // Sender
+        splitWith: [toUserId], // Receiver
+        details: `Settlement transfer from ${fromUserId} to ${toUserId}`,
+        isPrivate: false,
+        showInTimeline: false // Settlements typically don't clutter the main itinerary timeline
+      };
 
-    const updatedItems = [...currentTrip.items, newItem];
-    const sorted = semanticSort(updatedItems);
-    const updatedTrip = { ...currentTrip, items: sorted };
-    setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+      const savedItem = await tripService.saveItineraryItem(newItem);
+
+      const updatedItems = [...currentTrip.items, savedItem];
+      const sorted = semanticSort(updatedItems);
+      const updatedTrip = { ...currentTrip, items: sorted };
+      setTrips(prevTrips => prevTrips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
+    } catch (err) {
+      console.error('Settlement failed:', err);
+      alert('Failed to log settlement at HQ.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ---------------------------------------------------------
@@ -634,6 +646,7 @@ const App: React.FC = () => {
             currentUserId={currentUser.id}
             members={currentTrip.members}
             initialItem={selectedItem as ItineraryItem}
+            baseCurrency={currentTrip.baseCurrency || 'USD'}
           />
         )}
 
@@ -720,6 +733,7 @@ const App: React.FC = () => {
             onEdit={handleEditItem}
             onDelete={() => handleDeleteItem()}
             currentUserId={currentUser.id}
+            trip={currentTrip}
           />
         )}
 

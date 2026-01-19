@@ -24,6 +24,7 @@ create table public.trips (
   cover_image_url text,
   status text default 'PLANNING' check (status in ('PLANNING', 'IN_PROGRESS', 'COMPLETE')),
   budget_view_mode text default 'SMART' check (budget_view_mode in ('SMART', 'DIRECT')),
+  base_currency text default 'USD',
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -60,6 +61,9 @@ create table public.itinerary_items (
   details text,
   map_uri text,
   tags text[],
+  original_amount float,
+  currency_code text,
+  exchange_rate float,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -184,6 +188,28 @@ create policy "Members can view splits for visible items" on public.expense_spli
       where id = item_id
     )
   );
+
+create policy "Members can insert splits for items in their trips" on public.expense_splits
+  for insert with check (
+    exists (
+      select 1 from public.itinerary_items ii
+      join public.trip_members tm on tm.trip_id = ii.trip_id
+      where ii.id = item_id and tm.user_id = auth.uid()
+    )
+  );
+
+create policy "Members can delete splits for items in their trips" on public.expense_splits
+  for delete using (
+    exists (
+      select 1 from public.itinerary_items ii
+      join public.trip_members tm on tm.trip_id = ii.trip_id
+      where ii.id = item_id and tm.user_id = auth.uid()
+    )
+  );
+
+-- Application Logs
+create policy "Authenticated users can insert logs" on public.app_logs
+  for insert with check ( auth.role() = 'authenticated' );
 
 -- RPCs --
 
