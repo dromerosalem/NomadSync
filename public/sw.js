@@ -16,7 +16,28 @@ self.addEventListener('install', (event) => {
     );
 });
 
+const MAP_CACHE = 'nomadsync-map-tiles-v1';
+
 self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+
+    // Intercept Map Tile requests for Offline Sat-Link
+    if (url.hostname.includes('basemaps.cartocdn.com')) {
+        event.respondWith(
+            caches.open(MAP_CACHE).then((cache) => {
+                return cache.match(event.request).then((response) => {
+                    const fetchPromise = fetch(event.request).then((networkResponse) => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                    // Fallback to network if not in cache, but always update cache in background
+                    return response || fetchPromise;
+                });
+            })
+        );
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request).then((response) => {
             return response || fetch(event.request);
@@ -43,3 +64,18 @@ async function flushSyncQueue() {
         client.postMessage({ type: 'SYNC_REQUESTED' });
     });
 }
+
+// Notification Click Listener
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+
+    // Open app or focus existing tab
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+            if (clientList.length > 0) {
+                return clientList[0].focus();
+            }
+            return self.clients.openWindow('/');
+        })
+    );
+});

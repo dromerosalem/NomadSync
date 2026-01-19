@@ -225,6 +225,9 @@ export const tripService = {
 
     async saveItineraryItem(item: ItineraryItem): Promise<ItineraryItem> {
         const isNew = !item.id || item.id.length < 10;
+        // 1. Capture base state for merging before optimistic update
+        const basePayload = isNew ? null : await db.items.get(item.id);
+
         const optimisticItem = {
             ...item,
             id: isNew ? `temp-${Date.now()}` : item.id,
@@ -306,7 +309,8 @@ export const tripService = {
             await syncService.enqueue(
                 'itinerary_items',
                 isNew ? 'INSERT' : 'UPDATE',
-                optimisticItem
+                optimisticItem,
+                basePayload
             );
 
             return optimisticItem;

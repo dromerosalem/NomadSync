@@ -2,6 +2,7 @@ import React from 'react';
 import { Trip, ItineraryItem, ItemType, Member } from '../types';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, EyeOffIcon, UserIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import MapComponent from './MapComponent';
 
 interface ItemDetailsProps {
   item: ItineraryItem;
@@ -262,17 +263,18 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
             </div>
           </div>
 
-          {/* Map Link */}
-          {item.mapUri && (
-            <a
-              href={item.mapUri}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 w-full py-4 bg-tactical-card hover:bg-tactical-highlight border border-tactical-muted/30 rounded-lg text-tactical-accent font-bold uppercase text-sm transition-all"
-            >
-              <MapPinIcon className="w-5 h-5" /> View Satellite Feed
-            </a>
-          )}
+          {/* Tactical Map Block */}
+          <div className="space-y-2">
+            <div className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest flex items-center justify-between">
+              <span>Sat-Link Feed</span>
+              {item.mapUri && (
+                <a href={item.mapUri} target="_blank" rel="noopener noreferrer" className="text-[8px] underline opacity-50 hover:opacity-100">
+                  EXT: FEED
+                </a>
+              )}
+            </div>
+            <MapComponent locationName={item.location} />
+          </div>
 
         </div>
 

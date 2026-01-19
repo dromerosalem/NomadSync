@@ -11,12 +11,14 @@ class SyncService {
     async enqueue(
         table: SyncLog['table'],
         operation: SyncLog['operation'],
-        payload: any
+        payload: any,
+        base_payload?: any
     ) {
         const log: SyncLog = {
             table,
             operation,
             payload,
+            base_payload,
             timestamp: Date.now(),
             status: 'PENDING',
             retries: 0
@@ -37,6 +39,8 @@ class SyncService {
         if (this.isProcessing) return;
         this.isProcessing = true;
 
+        let syncCount = 0;
+
         try {
             const pending = await db.sync_queue
                 .where('status')
@@ -44,16 +48,28 @@ class SyncService {
                 .sortBy('timestamp');
 
             for (const log of pending) {
-                const success = await this.syncOne(log);
-                if (success) {
+                const result = await this.syncOne(log);
+
+                if (result === 'SUCCESS') {
                     await db.sync_queue.delete(log.id!);
+                    syncCount++;
+                } else if (result === 'CONFLICT') {
+                    await db.sync_queue.update(log.id!, {
+                        status: 'CONFLICT'
+                    });
+                    // Notify UI about conflict
+                    this.notifyConflict();
                 } else {
-                    // Update retry count
+                    // FAILED
                     await db.sync_queue.update(log.id!, {
                         status: 'FAILED',
                         retries: log.retries + 1
                     });
                 }
+            }
+
+            if (syncCount > 0) {
+                this.showSyncNotification(syncCount);
             }
         } catch (error) {
             console.error('Failed to process sync queue:', error);
@@ -62,15 +78,35 @@ class SyncService {
         }
     }
 
+    private notifyConflict() {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: 'CONFLICT_DETECTED' });
+        }
+    }
+
+    private async showSyncNotification(count: number) {
+        if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            registration.showNotification('Logistical Sync Complete', {
+                body: `${count} item(s) synchronized with Mission HQ.`,
+                icon: '/logo.png',
+                badge: '/logo.png',
+                tag: 'sync-complete'
+            });
+        }
+    }
+
     /**
      * Sync a single operation to Supabase with conflict detection.
      */
-    private async syncOne(log: SyncLog): Promise<boolean> {
+    private async syncOne(log: SyncLog): Promise<'SUCCESS' | 'CONFLICT' | 'FAILED'> {
         const { table, operation, payload } = log;
 
         try {
             if (table === 'itinerary_items') {
-                return await this.syncItineraryItem(operation, payload);
+                return await this.syncItineraryItem(log);
             }
 
             // Mapping table name to Supabase table
@@ -99,14 +135,15 @@ class SyncService {
                 }
             }
 
-            return true;
+            return 'SUCCESS';
         } catch (err) {
             console.error(`Sync failed for ${table}:${operation}`, err);
-            return false;
+            return 'FAILED';
         }
     }
 
-    private async syncItineraryItem(operation: SyncLog['operation'], item: any): Promise<boolean> {
+    private async syncItineraryItem(log: SyncLog): Promise<'SUCCESS' | 'CONFLICT' | 'FAILED'> {
+        const { operation, payload: item, base_payload } = log;
         try {
             const dbItem = { ...item };
             const splitWith = dbItem.splitWith;
@@ -155,15 +192,70 @@ class SyncService {
                     // Check for conflict BEFORE update
                     const { data: serverState } = await supabase
                         .from('itinerary_items')
-                        .select('updated_at')
+                        .select('*')
                         .eq('id', item.id)
                         .single();
 
                     if (serverState) {
                         const serverTime = new Date(serverState.updated_at).getTime();
-                        if (serverTime > item.updatedAt) {
-                            console.warn(`[SyncService] Conflict detected for item ${item.id}. Server newer (${serverTime}) than local base (${item.updatedAt}). Overwriting (Last Write Wins).`);
-                            // Here you could implement a merge or user prompt
+                        // 1 second grace period for clock skew
+                        if (serverTime > item.updatedAt + 1000) {
+                            console.warn(`[SyncService] Resource modified at HQ. Attempting Smart Merge for item ${item.id}.`);
+
+                            if (base_payload) {
+                                // Map server state (snake_case) to app state (camelCase)
+                                const serverItem = {
+                                    ...item, // Fallback for IDs/meta
+                                    title: serverState.title,
+                                    location: serverState.location,
+                                    endLocation: serverState.end_location,
+                                    startDate: new Date(serverState.start_date),
+                                    endDate: serverState.end_date ? new Date(serverState.end_date) : undefined,
+                                    durationMinutes: serverState.duration_minutes,
+                                    cost: serverState.cost,
+                                    paidBy: serverState.paid_by,
+                                    isPrivate: serverState.is_private,
+                                    showInTimeline: serverState.show_in_timeline,
+                                    details: serverState.details,
+                                    mapUri: serverState.map_uri,
+                                    tags: serverState.tags || [],
+                                    originalAmount: serverState.original_amount,
+                                    currencyCode: serverState.currency_code,
+                                    exchangeRate: serverState.exchange_rate,
+                                    updatedAt: serverTime
+                                };
+
+                                const { merged, hasOverlap } = this.smartMerge(item, base_payload, serverItem);
+
+                                if (!hasOverlap) {
+                                    console.log(`[SyncService] Smart Merge successful for item ${item.id}. No overlapping field conflicts.`);
+                                    // Update mappedItem with merged values for the actual Supabase write
+                                    Object.assign(mappedItem, {
+                                        title: merged.title,
+                                        location: merged.location,
+                                        end_location: merged.endLocation,
+                                        start_date: new Date(merged.startDate).toISOString(),
+                                        end_date: merged.endDate ? new Date(merged.endDate).toISOString() : null,
+                                        duration_minutes: merged.durationMinutes,
+                                        cost: merged.cost,
+                                        paid_by: merged.paidBy,
+                                        is_private: merged.isPrivate,
+                                        show_in_timeline: merged.showInTimeline,
+                                        details: merged.details,
+                                        map_uri: merged.mapUri,
+                                        tags: merged.tags,
+                                        original_amount: merged.originalAmount,
+                                        currency_code: merged.currencyCode,
+                                        exchange_rate: merged.exchangeRate
+                                    });
+                                } else {
+                                    console.warn(`[SyncService] Smart Merge failed for item ${item.id}. Overlapping changes detected.`);
+                                    return 'CONFLICT';
+                                }
+                            } else {
+                                console.warn(`[SyncService] No base_payload available for item ${item.id}. Manual resolution required.`);
+                                return 'CONFLICT';
+                            }
                         }
                     }
 
@@ -191,11 +283,43 @@ class SyncService {
                 if (error) throw error;
             }
 
-            return true;
+            return 'SUCCESS';
         } catch (err) {
             console.error('Itinerary sync failed:', err);
-            return false;
+            return 'FAILED';
         }
+    }
+
+    private smartMerge(local: any, base: any, server: any): { merged: any, hasOverlap: boolean } {
+        const merged = { ...server };
+        let hasOverlap = false;
+
+        const fields = [
+            'title', 'location', 'endLocation', 'startDate', 'endDate',
+            'durationMinutes', 'cost', 'paidBy', 'isPrivate',
+            'showInTimeline', 'details', 'mapUri', 'tags',
+            'originalAmount', 'currencyCode', 'exchangeRate'
+        ];
+
+        for (const field of fields) {
+            const localVal = local[field];
+            const baseVal = base[field];
+            const serverVal = server[field];
+
+            // Use JSON stringify for deep comparison (simple and effective for these flat-ish objects)
+            const localChanged = JSON.stringify(localVal) !== JSON.stringify(baseVal);
+            const serverChanged = JSON.stringify(serverVal) !== JSON.stringify(baseVal);
+
+            if (localChanged && serverChanged) {
+                if (JSON.stringify(localVal) !== JSON.stringify(serverVal)) {
+                    hasOverlap = true;
+                }
+            } else if (localChanged) {
+                merged[field] = localVal;
+            }
+        }
+
+        return { merged, hasOverlap };
     }
 }
 

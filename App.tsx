@@ -17,6 +17,8 @@ import AuthScreen from './components/AuthScreen';
 import JoinMission from './components/JoinMission';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
+import ConflictResolver from './components/ConflictResolver';
+import { SyncLog, db } from './db/LocalDatabase';
 
 const INITIAL_USER: Member = {
   id: 'placeholder',
@@ -50,6 +52,20 @@ const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<Member>(INITIAL_USER);
   const [view, setView] = useState<ViewState>('AUTH');
   const [pendingJoinTripId, setPendingJoinTripId] = useState<string | null>(null);
+  const [activeConflict, setActiveConflict] = useState<SyncLog | null>(null);
+
+  // Check for conflicts on mount and periodic
+  const checkConflicts = async () => {
+    const conflict = await db.sync_queue
+      .where('status')
+      .equals('CONFLICT')
+      .first();
+    if (conflict) {
+      setActiveConflict(conflict);
+    } else {
+      setActiveConflict(null);
+    }
+  };
 
   const [trips, setTrips] = useState<Trip[]>(() => {
     return INITIAL_TRIPS.map(t => ({
@@ -84,6 +100,11 @@ const App: React.FC = () => {
           status: 'ACTIVE'
         };
         setCurrentUser(mappedUser);
+
+        // Request Notifications
+        if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
 
         // Deep Link Routing
         if (pendingJoinTripId) {
@@ -126,32 +147,42 @@ const App: React.FC = () => {
     });
 
     // --- Service Worker & Sync Registration ---
+    let handleMessage: (event: MessageEvent) => void;
+
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
         console.log('[App] ServiceWorker registered');
-        // Request periodic sync if supported (optional)
       }).catch(err => {
         console.error('[App] ServiceWorker registration failed', err);
       });
 
       // Listen for messages from SW
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data.type === 'SYNC_REQUESTED') {
+      handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'SYNC_REQUESTED' || event.data.type === 'CONFLICT_DETECTED') {
           import('./services/SyncService').then(({ syncService }) => syncService.processQueue());
+          checkConflicts();
         }
-      });
+      };
+      navigator.serviceWorker.addEventListener('message', handleMessage);
     }
 
     // Online Event Listener
     const handleOnline = () => {
       console.log('[App] Network back online, triggering sync...');
       import('./services/SyncService').then(({ syncService }) => syncService.processQueue());
+      checkConflicts();
     };
     window.addEventListener('online', handleOnline);
+
+    // Initial checks
+    checkConflicts();
 
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('online', handleOnline);
+      if ('serviceWorker' in navigator && handleMessage) {
+        navigator.serviceWorker.removeEventListener('message', handleMessage);
+      }
     };
   }, []);
   // Remove pendingJoinTripId dependency to avoid double firing, handled in refs if needed inside, but simple state is fine here.
@@ -719,11 +750,11 @@ const App: React.FC = () => {
           />
         )}
 
-        {isAuthenticated && view === 'INVITE_MEMBER' && currentTrip && (
+        {/* Modal Layers */}
+        {view === 'INVITE_MEMBER' && currentTrip && (
           <InviteMember
-            trip={currentTrip}
-            onBack={() => setView('MANAGE_TEAM')}
-            onInvite={handleInviteMember}
+            tripId={currentTrip.id}
+            onClose={() => setView('MANAGE_TEAM')}
           />
         )}
 
@@ -789,6 +820,14 @@ const App: React.FC = () => {
               setPendingJoinTripId(null);
               setView('DASHBOARD');
             }}
+          />
+        )}
+
+        {/* Conflict Resolution Overlay */}
+        {activeConflict && (
+          <ConflictResolver
+            conflict={activeConflict}
+            onResolved={checkConflicts}
           />
         )}
       </main>

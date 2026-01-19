@@ -12,8 +12,9 @@ interface SyncLog {
     table: 'trips' | 'itinerary_items' | 'expense_splits' | 'trip_members';
     operation: 'INSERT' | 'UPDATE' | 'DELETE';
     payload: any;
+    base_payload?: any; // Added to store base state for merging
     timestamp: number;
-    status: 'PENDING' | 'SYNCING' | 'FAILED';
+    status: 'PENDING' | 'SYNCING' | 'FAILED' | 'CONFLICT';
     errorMessage?: string;
     retries: number;
 }
@@ -33,6 +34,10 @@ db.version(1).stores({
 });
 
 db.version(2).stores({
+    sync_queue: '++id, table, operation, status, timestamp'
+});
+
+db.version(3).stores({
     sync_queue: '++id, table, operation, status, timestamp'
 });
 
