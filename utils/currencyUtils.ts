@@ -19,6 +19,7 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
     CLP: 'CLP$',
     UYU: '$U',
     CRC: '₡',
+    PLN: 'zł',
 };
 
 export const getCurrencySymbol = (code: string): string => {

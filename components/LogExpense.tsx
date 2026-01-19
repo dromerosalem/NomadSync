@@ -5,6 +5,8 @@ import { ChevronLeftIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon
 import { analyzeReceipt } from '../services/geminiService';
 import { currencyService } from '../services/CurrencyService';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import { Money } from '../utils/money';
+import CurrencySelector from './CurrencySelector';
 
 interface LogExpenseProps {
     onClose: () => void;
@@ -131,11 +133,13 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     // Initialize custom amounts when cost changes or switching to custom
     useEffect(() => {
         if (splitMode === 'CUSTOM' && convertedCost && splitWith.length > 0 && Object.keys(customAmounts).length === 0) {
-            const total = convertedCost || 0;
-            if (total > 0) {
-                const split = (total / splitWith.length).toFixed(2);
+            const total = new Money(convertedCost);
+            if (total.greaterThan(0)) {
+                const shares = total.allocate(splitWith.length);
                 const newAmounts: Record<string, string> = {};
-                splitWith.forEach(id => newAmounts[id] = split);
+                splitWith.forEach((id, index) => {
+                    newAmounts[id] = shares[index].toFixed(2);
+                });
                 setCustomAmounts(newAmounts);
             }
         }
@@ -169,10 +173,12 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const handleSelectAll = () => {
         setSplitWith(activeMembers.map(m => m.id));
         if (splitMode === 'CUSTOM') {
-            const total = convertedCost || 0;
-            const split = (total / activeMembers.length).toFixed(2);
+            const total = new Money(convertedCost);
+            const shares = total.allocate(activeMembers.length);
             const newAmounts: Record<string, string> = {};
-            activeMembers.forEach(m => newAmounts[m.id] = split);
+            activeMembers.forEach((m, index) => {
+                newAmounts[m.id] = shares[index].toFixed(2);
+            });
             setCustomAmounts(newAmounts);
         }
     };
@@ -216,13 +222,16 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         const total = parseFloat(originalAmount);
         if (isNaN(total) || total <= 0) return false;
 
+        const totalMoney = new Money(convertedCost);
+
         if (splitMode === 'CUSTOM') {
             // Check if custom amounts sum up to total (approx) - Note: Custom amounts are typically in BASE currency
-            let sum = 0;
+            let sum = new Money(0);
             splitWith.forEach(id => {
-                sum += parseFloat(customAmounts[id] || '0');
+                sum = sum.add(customAmounts[id] || '0');
             });
-            if (Math.abs(sum - convertedCost) > 0.1) return false;
+            // Allow 1 cent drift for manual entry, but ideally 0
+            if (sum.subtract(totalMoney).abs().greaterThan(0.01)) return false;
         }
 
         if (splitWith.length === 0) return false;
@@ -233,19 +242,26 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const handleSubmit = () => {
         if (!validate()) return;
 
-        let splitDetails: Record<string, number> | undefined = undefined;
+        let splitDetails: Record<string, number> = {};
+        const totalMoney = new Money(convertedCost);
 
         if (splitMode === 'CUSTOM') {
-            splitDetails = {};
             splitWith.forEach(id => {
-                splitDetails![id] = parseFloat(customAmounts[id] || '0');
+                splitDetails[id] = parseFloat(customAmounts[id] || '0');
+            });
+        } else {
+            // Even in EQUAL mode, we allocate explicitly to ensure no penny is lost (Remainder Allocation)
+            // cost / 3 = 3.33, 3.33, 3.34
+            const shares = totalMoney.allocate(splitWith.length);
+            splitWith.forEach((id, index) => {
+                splitDetails[id] = shares[index].toNumber();
             });
         }
 
         onSave({
             id: initialItem?.id,
             title,
-            cost: convertedCost, // Store Base Currency Amount
+            cost: totalMoney.toNumber(), // Store Base Currency Amount
             originalAmount: parseFloat(originalAmount),
             currencyCode,
             exchangeRate,
@@ -253,7 +269,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             startDate: new Date(date),
             location: initialItem?.location || 'Logged Expense',
             splitWith,
-            splitDetails,
+            splitDetails, // Always save explicit splits for integrity
             paidBy,
             isPrivate,
             showInTimeline,
@@ -298,9 +314,6 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const receiverId = splitWith[0];
     const receiver = members.find(m => m.id === receiverId);
 
-    // Currency Options (Octopus + Major Local)
-    const currencyOptions = ['USD', 'EUR', 'GBP', 'COP', 'ARS', 'MXN', 'BRL', 'PEN', 'CRC', 'CLP', 'UYU'];
-
     return (
         <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative">
             {isScanning && (
@@ -332,16 +345,12 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 <div className="flex flex-col items-center justify-center mb-8 mt-4">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Total Amount</div>
                     <div className="flex items-center gap-2 mb-2">
-                        <select
+                        <CurrencySelector
+                            variant="minimal"
                             value={currencyCode}
-                            onChange={(e) => setCurrencyCode(e.target.value)}
-                            className="bg-tactical-card border border-tactical-muted/30 rounded-lg px-2 py-1 text-sm font-bold text-tactical-accent"
+                            onChange={setCurrencyCode}
                             disabled={isSettlement}
-                        >
-                            {currencyOptions.map(c => (
-                                <option key={c} value={c}>{c}</option>
-                            ))}
-                        </select>
+                        />
                     </div>
 
                     <div className="flex items-baseline justify-center gap-1">

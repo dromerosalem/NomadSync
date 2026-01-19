@@ -29,13 +29,12 @@ create table public.trips (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
-
 -- 3. Trip Members (Join Table)
 create table public.trip_members (
   trip_id uuid references public.trips(id) on delete cascade,
   user_id uuid references public.profiles(id) on delete cascade,
   role text not null default 'PASSENGER' check (role in ('PATHFINDER', 'SCOUT', 'PASSENGER')),
-  personal_budget float default 0.0,
+  personal_budget numeric default 0.0,
   status text default 'PENDING' check (status in ('ACTIVE', 'PENDING', 'BLOCKED')),
   pending_expense_invite boolean default false,
   created_at timestamptz default now(),
@@ -53,7 +52,7 @@ create table public.itinerary_items (
   start_date timestamptz not null,
   end_date timestamptz,
   duration_minutes int,
-  cost float default 0.0,
+  cost numeric default 0.0,
   paid_by uuid references public.profiles(id) on delete set null,
   created_by uuid references public.profiles(id) on delete set null,
   is_private boolean default false,
@@ -61,9 +60,9 @@ create table public.itinerary_items (
   details text,
   map_uri text,
   tags text[],
-  original_amount float,
+  original_amount numeric,
   currency_code text,
-  exchange_rate float,
+  exchange_rate numeric,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -72,9 +71,10 @@ create table public.itinerary_items (
 create table public.expense_splits (
   item_id uuid references public.itinerary_items(id) on delete cascade,
   user_id uuid references public.profiles(id) on delete cascade,
-  amount float not null,
+  amount numeric not null,
   primary key (item_id, user_id)
 );
+
 
 -- 6. Application Logs
 create table public.app_logs (

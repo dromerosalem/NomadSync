@@ -103,9 +103,16 @@ const LedgerScreen: React.FC<LedgerScreenProps> = ({ trip, currentUserId, onBack
                                                 <h3 className="font-display font-bold text-white uppercase truncate pr-2 text-sm md:text-base">
                                                     {item.title}
                                                 </h3>
-                                                <span className={`font-mono font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
-                                                    {isSettlement ? '' : '-'}{getCurrencySymbol(baseCurrency)}{item.cost?.toFixed(2)}
-                                                </span>
+                                                <div className="flex flex-col items-end shrink-0">
+                                                    <span className={`font-mono font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
+                                                        {isSettlement ? '' : '-'}{getCurrencySymbol(baseCurrency)}{item.cost?.toFixed(2)}
+                                                    </span>
+                                                    {item.currencyCode && item.currencyCode !== baseCurrency && item.originalAmount != null && (
+                                                        <span className="text-[10px] font-mono text-gray-500 leading-none mt-0.5">
+                                                            ({getCurrencySymbol(item.currencyCode)}{Number(item.originalAmount).toFixed(2)})
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             <div className="flex justify-between items-end">

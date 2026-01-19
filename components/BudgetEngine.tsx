@@ -3,6 +3,8 @@ import React, { useMemo, useState } from 'react';
 import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
 import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import { Money } from '../utils/money';
+import { useCachedCalculation } from '../hooks/useCachedCalculation';
 
 interface BudgetEngineProps {
     trip: Trip;
@@ -28,27 +30,24 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     const isPathfinder = currentUserRole === 'PATHFINDER';
 
     // ---------------------------------------------------------
-    // CORE CALCULATION ENGINE
+    // CORE CALCULATION ENGINE (Cached)
     // ---------------------------------------------------------
-    const {
-        myTotalSpend,
-        myTotalPaid,
-        myTotalReceived,
-        groupTotalSpend,
-        categorySpend,
-        pairwiseDebt,    // SIMPLE: Direct debts
-        smartTransfers,  // SMART: Optimized shuffled debts
-        recentTransactions,
-        daysUntilEnd
-    } = useMemo(() => {
-        let myTotal = 0;
-        let groupTotal = 0;
-        const catSpend = {
-            [ItemType.FOOD]: 0,
-            [ItemType.STAY]: 0,
-            [ItemType.TRANSPORT]: 0,
-            [ItemType.ACTIVITY]: 0,
-            [ItemType.ESSENTIALS]: 0
+
+    // Generate a unique cache key based on data version
+    // We include item count to catch quick updates if timestamp isn't perfectly synced yet
+    const cacheKey = `budget_calc_v1_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}`;
+
+    const { result: calculationData, isComputing: isCalculating } = useCachedCalculation(cacheKey, async () => {
+        // NOTE: This runs asynchronously if cache miss
+        let myTotal = new Money(0);
+        let groupTotal = new Money(0);
+        const catSpend: Record<ItemType, Money> = {
+            [ItemType.FOOD]: new Money(0),
+            [ItemType.STAY]: new Money(0),
+            [ItemType.TRANSPORT]: new Money(0),
+            [ItemType.ACTIVITY]: new Money(0),
+            [ItemType.ESSENTIALS]: new Money(0),
+            [ItemType.SETTLEMENT]: new Money(0)
         };
 
         const now = new Date().getTime();
@@ -56,28 +55,29 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         const dRemaining = Math.max(0, Math.ceil((tripEnd - now) / (1000 * 60 * 60 * 24)));
 
         // 1. SIMPLE MODE: Pairwise Balances 
-        // Key: MemberID -> Amount. (Positive = They owe me, Negative = I owe them)
-        const pDebt: Record<string, number> = {};
+        // Key: MemberID -> Money. (Positive = They owe me, Negative = I owe them)
+        const pDebt: Record<string, Money> = {};
 
         // 2. SMART MODE: Net Balances
-        const netBalances: Record<string, number> = {};
+        const netBalances: Record<string, Money> = {};
 
         // Initialize
         trip.members.forEach(m => {
-            pDebt[m.id] = 0;
-            netBalances[m.id] = 0;
+            pDebt[m.id] = new Money(0);
+            netBalances[m.id] = new Money(0);
         });
 
-        // Recent Transactions (Recent is recent)
+        // Recent Transactions
         const transactions = trip.items
             .filter(item => (item.cost || 0) > 0)
             .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 
-        let myPaid = 0;
-        let myReceived = 0;
+        let myPaid = new Money(0);
+        let myReceived = new Money(0);
+
         trip.items.forEach(item => {
             if (item.isPrivate) return;
-            const cost = item.cost || 0;
+            const cost = new Money(item.cost || 0); // Convert to Money immediately
             const isSettlement = item.type === ItemType.SETTLEMENT;
 
             const splitWith = item.splitWith || [];
@@ -87,79 +87,140 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             const involvedIds = hasCustomSplit ? Object.keys(splitDetails) : splitWith;
 
             if (!isSettlement) {
-                groupTotal += cost;
+                groupTotal = groupTotal.add(cost);
                 // Payment tracking
-                if (payerId === currentUserId) myPaid += cost;
+                if (payerId === currentUserId) myPaid = myPaid.add(cost);
 
                 // Consumption tracking
-                let myShare = 0;
+                let myShare = new Money(0);
                 if (hasCustomSplit && splitDetails[currentUserId] !== undefined) {
-                    myShare = splitDetails[currentUserId];
+                    myShare = new Money(splitDetails[currentUserId]);
                 } else if (splitWith.includes(currentUserId)) {
-                    myShare = cost / (splitWith.length || 1);
+                    myShare = cost.divide(splitWith.length || 1);
                 }
 
-                if (myShare > 0) {
-                    myTotal += myShare;
+                if (myShare.greaterThan(0)) {
+                    myTotal = myTotal.add(myShare);
                     if (item.type in catSpend) {
-                        catSpend[item.type] += myShare;
+                        catSpend[item.type] = catSpend[item.type].add(myShare);
                     } else {
-                        catSpend[ItemType.ESSENTIALS] = (catSpend[ItemType.ESSENTIALS] || 0) + myShare;
+                        catSpend[ItemType.ESSENTIALS] = catSpend[ItemType.ESSENTIALS].add(myShare);
                     }
                 }
             } else {
                 // Settlement tracking
-                if (payerId === currentUserId) myPaid += cost;
-                if (involvedIds.includes(currentUserId)) myReceived += cost;
+                if (payerId === currentUserId) myPaid = myPaid.add(cost);
+                if (involvedIds.includes(currentUserId)) myReceived = myReceived.add(cost);
             }
 
             // --- CALCULATE DEBTS & BALANCES ---
-            netBalances[payerId] = (netBalances[payerId] || 0) + cost;
-            involvedIds.forEach(consumerId => {
-                let share = 0;
-                if (hasCustomSplit) share = splitDetails[consumerId];
-                else share = cost / (involvedIds.length || 1);
+            netBalances[payerId] = (netBalances[payerId] || new Money(0)).add(cost);
 
-                netBalances[consumerId] = (netBalances[consumerId] || 0) - share;
+            involvedIds.forEach(consumerId => {
+                let share = new Money(0);
+                if (hasCustomSplit) share = new Money(splitDetails[consumerId]);
+                else share = cost.divide(involvedIds.length || 1);
+
+                netBalances[consumerId] = (netBalances[consumerId] || new Money(0)).subtract(share);
 
                 if (consumerId !== payerId) {
                     if (payerId === currentUserId) {
-                        pDebt[consumerId] = (pDebt[consumerId] || 0) + share;
+                        pDebt[consumerId] = (pDebt[consumerId] || new Money(0)).add(share);
                     } else if (consumerId === currentUserId) {
-                        pDebt[payerId] = (pDebt[payerId] || 0) - share;
+                        pDebt[payerId] = (pDebt[payerId] || new Money(0)).subtract(share);
                     }
                 }
             });
         });
 
         // --- SMART SPLIT ALGORITHM ---
-        let debtors = Object.keys(netBalances).filter(id => netBalances[id] < -0.01).map(id => ({ id, amount: netBalances[id] })).sort((a, b) => a.amount - b.amount);
-        let creditors = Object.keys(netBalances).filter(id => netBalances[id] > 0.01).map(id => ({ id, amount: netBalances[id] })).sort((a, b) => b.amount - a.amount);
+        let debtors = Object.keys(netBalances)
+            .filter(id => netBalances[id].lessThan(-0.01))
+            .map(id => ({ id, amount: netBalances[id] }))
+            .sort((a, b) => a.amount.toNumber() - b.amount.toNumber());
+
+        let creditors = Object.keys(netBalances)
+            .filter(id => netBalances[id].greaterThan(0.01))
+            .map(id => ({ id, amount: netBalances[id] }))
+            .sort((a, b) => b.amount.toNumber() - a.amount.toNumber()); // Descending
+
         const transfers: { from: string, to: string, amount: number }[] = [];
         let i = 0, j = 0;
+
         while (i < debtors.length && j < creditors.length) {
-            const debtor = debtors[i], creditor = creditors[j];
-            const rawAmount = Math.min(Math.abs(debtor.amount), creditor.amount);
-            const amount = Math.round(rawAmount * 100) / 100;
-            if (amount > 0) transfers.push({ from: debtor.id, to: creditor.id, amount });
-            debtor.amount += amount;
-            creditor.amount -= amount;
-            if (Math.abs(debtor.amount) < 0.01) i++;
-            if (creditor.amount < 0.01) j++;
+            const debtor = debtors[i];
+            const creditor = creditors[j];
+
+            const debtAbs = debtor.amount.abs();
+            const creditAbs = creditor.amount.abs();
+            const settleAmount = debtAbs.lessThan(creditAbs) ? debtAbs : creditAbs;
+
+            const roundedAmount = settleAmount.round(2);
+
+            if (roundedAmount.greaterThan(0)) {
+                transfers.push({ from: debtor.id, to: creditor.id, amount: roundedAmount.toNumber() });
+            }
+
+            debtor.amount = debtor.amount.add(settleAmount);
+            creditor.amount = creditor.amount.subtract(settleAmount);
+
+            if (debtor.amount.abs().lessThan(0.01)) i++;
+            if (creditor.amount.abs().lessThan(0.01)) j++;
         }
 
+        const catSpendNumbers = {
+            [ItemType.FOOD]: catSpend[ItemType.FOOD].toNumber(),
+            [ItemType.STAY]: catSpend[ItemType.STAY].toNumber(),
+            [ItemType.TRANSPORT]: catSpend[ItemType.TRANSPORT].toNumber(),
+            [ItemType.ACTIVITY]: catSpend[ItemType.ACTIVITY].toNumber(),
+            [ItemType.ESSENTIALS]: catSpend[ItemType.ESSENTIALS].toNumber(),
+            [ItemType.SETTLEMENT]: catSpend[ItemType.SETTLEMENT].toNumber(),
+        };
+
+        const pDebtNumbers: Record<string, number> = {};
+        Object.keys(pDebt).forEach(id => pDebtNumbers[id] = pDebt[id].toNumber());
+
         return {
-            myTotalSpend: myTotal,
-            myTotalPaid: myPaid,
-            myTotalReceived: myReceived,
-            groupTotalSpend: groupTotal,
-            categorySpend: catSpend,
-            pairwiseDebt: pDebt,
+            myTotalSpend: myTotal.toNumber(),
+            myTotalPaid: myPaid.toNumber(),
+            myTotalReceived: myReceived.toNumber(),
+            groupTotalSpend: groupTotal.toNumber(),
+            categorySpend: catSpendNumbers,
+            pairwiseDebt: pDebtNumbers,
             smartTransfers: transfers,
             recentTransactions: transactions.slice(0, 3),
             daysUntilEnd: dRemaining
         };
-    }, [trip, currentUserId]);
+    }, [trip.id, trip.updatedAt, trip.items.length]);
+
+    const {
+        myTotalSpend,
+        myTotalPaid,
+        myTotalReceived,
+        groupTotalSpend,
+        categorySpend,
+        pairwiseDebt,
+        smartTransfers,
+        recentTransactions,
+        daysUntilEnd
+    } = calculationData || {
+        myTotalSpend: 0,
+        myTotalPaid: 0,
+        myTotalReceived: 0,
+        groupTotalSpend: 0,
+        categorySpend: {
+            [ItemType.FOOD]: 0,
+            [ItemType.STAY]: 0,
+            [ItemType.TRANSPORT]: 0,
+            [ItemType.ACTIVITY]: 0,
+            [ItemType.ESSENTIALS]: 0,
+            [ItemType.SETTLEMENT]: 0
+        },
+        pairwiseDebt: {},
+        smartTransfers: [],
+        recentTransactions: [],
+        daysUntilEnd: 0
+    };
 
     // Derived UI Stats
     const burnRate = userBudget > 0 ? Math.min((myTotalSpend / userBudget) * 100, 100) : 0;

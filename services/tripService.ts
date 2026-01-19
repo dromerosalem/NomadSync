@@ -1,13 +1,16 @@
 import { supabase } from './supabaseClient';
 import { Trip, ItineraryItem, Member, Role } from '../types';
+import { db } from '../db/LocalDatabase';
 
 export const tripService = {
     // --- TRIP OPERATIONS ---
 
     async fetchUserTrips(userId: string): Promise<Trip[]> {
-        const { data, error } = await supabase
-            .from('trip_members')
-            .select(`
+        try {
+            // 1. Try Network
+            const { data, error } = await supabase
+                .from('trip_members')
+                .select(`
         role,
         personal_budget,
         status,
@@ -23,6 +26,7 @@ export const tripService = {
           status,
           base_currency,
           created_by,
+          updated_at,
           trip_members (
             user_id,
             role,
@@ -36,36 +40,107 @@ export const tripService = {
           )
         )
       `)
-            .eq('user_id', userId);
+                .eq('user_id', userId);
 
-        if (error) throw error;
+            if (error) throw error;
 
-        return (data || []).map((membership: any) => {
-            const trip = membership.trips;
-            return {
-                id: trip.id,
-                name: trip.name,
-                destination: trip.destination,
-                startDate: new Date(trip.start_date),
-                endDate: new Date(trip.end_date),
-                budget: trip.budget,
-                status: trip.status,
-                coverImage: trip.cover_image_url,
-                budgetViewMode: trip.budget_view_mode || 'SMART',
-                baseCurrency: trip.base_currency || 'USD',
-                items: [], // Will fetch separate or with another join
-                members: trip.trip_members.map((m: any) => ({
-                    id: m.user_id,
-                    name: m.profiles?.full_name || m.profiles?.email?.split('@')[0] || 'Unknown Traveler',
-                    email: m.profiles?.email || 'N/A',
-                    role: m.role,
-                    avatarUrl: m.profiles?.avatar_url,
-                    status: m.status,
-                    budget: m.personal_budget || 0,
-                    isCurrentUser: m.user_id === userId
-                }))
-            } as Trip;
-        });
+            const trips = (data || []).map((membership: any) => {
+                const trip = membership.trips;
+                return {
+                    id: trip.id,
+                    name: trip.name,
+                    destination: trip.destination,
+                    startDate: new Date(trip.start_date),
+                    endDate: new Date(trip.end_date),
+                    budget: trip.budget,
+                    status: trip.status,
+                    coverImage: trip.cover_image_url,
+                    budgetViewMode: trip.budget_view_mode || 'SMART',
+                    baseCurrency: trip.base_currency || 'USD',
+                    items: [], // Will fetch separate or with another join
+                    members: trip.trip_members.map((m: any) => ({
+                        id: m.user_id,
+                        name: m.profiles?.full_name || m.profiles?.email?.split('@')[0] || 'Unknown Traveler',
+                        email: m.profiles?.email || 'N/A',
+                        role: m.role,
+                        avatarUrl: m.profiles?.avatar_url,
+                        status: m.status,
+                        budget: m.personal_budget || 0,
+                        isCurrentUser: m.user_id === userId
+                    })),
+                    updatedAt: new Date(trip.updated_at || Date.now()).getTime()
+                } as Trip;
+            });
+
+            // 2. Sync to Local DB
+            await db.trips.bulkPut(trips);
+            return trips;
+
+        } catch (networkError) {
+            console.warn('[tripService] Network failed, falling back to local DB', networkError);
+            const cachedTrips = await db.trips.toArray();
+            return cachedTrips;
+        }
+    },
+
+
+
+    // --- ITINERARY OPERATIONS ---
+
+    async fetchTripItinerary(tripId: string): Promise<ItineraryItem[]> {
+        try {
+            // 1. Try Network
+            const { data, error } = await supabase
+                .from('itinerary_items')
+                .select(`
+        *,
+        expense_splits (
+          user_id,
+          amount
+        )
+      `)
+                .eq('trip_id', tripId);
+
+            if (error) throw error;
+
+            const items = (data || []).map((item: any) => ({
+                id: item.id,
+                tripId: item.trip_id,
+                type: item.type,
+                title: item.title,
+                location: item.location,
+                endLocation: item.end_location,
+                startDate: new Date(item.start_date),
+                endDate: item.end_date ? new Date(item.end_date) : undefined,
+                durationMinutes: item.duration_minutes,
+                cost: item.cost,
+                paidBy: item.paid_by,
+                createdBy: item.created_by,
+                isPrivate: item.is_private,
+                showInTimeline: item.show_in_timeline,
+                details: item.details,
+                mapUri: item.map_uri,
+                tags: item.tags || [],
+                originalAmount: item.original_amount,
+                currencyCode: item.currency_code,
+                exchangeRate: item.exchange_rate,
+                updatedAt: new Date(item.updated_at || Date.now()).getTime(),
+                splitWith: item.expense_splits.map((s: any) => s.user_id),
+                splitDetails: item.expense_splits.reduce((acc: any, s: any) => {
+                    acc[s.user_id] = s.amount;
+                    return acc;
+                }, {})
+            } as ItineraryItem));
+
+            // 2. Sync to Local DB
+            await db.items.bulkPut(items);
+            return items;
+
+        } catch (networkError) {
+            console.warn('[tripService] Network failed, falling back to local DB', networkError);
+            const cachedItems = await db.items.where('tripId').equals(tripId).toArray();
+            return cachedItems;
+        }
     },
 
     async createTrip(tripData: Omit<Trip, 'id' | 'items'>, creatorId: string): Promise<Trip> {
@@ -146,113 +221,117 @@ export const tripService = {
         if (error) throw error;
     },
 
-    // --- ITINERARY OPERATIONS ---
-
-    async fetchTripItinerary(tripId: string): Promise<ItineraryItem[]> {
-        const { data, error } = await supabase
-            .from('itinerary_items')
-            .select(`
-        *,
-        expense_splits (
-          user_id,
-          amount
-        )
-      `)
-            .eq('trip_id', tripId);
-
-        if (error) throw error;
-
-        return (data || []).map((item: any) => ({
-            id: item.id,
-            tripId: item.trip_id,
-            type: item.type,
-            title: item.title,
-            location: item.location,
-            endLocation: item.end_location,
-            startDate: new Date(item.start_date),
-            endDate: item.end_date ? new Date(item.end_date) : undefined,
-            durationMinutes: item.duration_minutes,
-            cost: item.cost,
-            paidBy: item.paid_by,
-            createdBy: item.created_by,
-            isPrivate: item.is_private,
-            showInTimeline: item.show_in_timeline,
-            details: item.details,
-            mapUri: item.map_uri,
-            tags: item.tags || [],
-            originalAmount: item.original_amount,
-            currencyCode: item.currency_code,
-            exchangeRate: item.exchange_rate,
-            splitWith: item.expense_splits.map((s: any) => s.user_id),
-            splitDetails: item.expense_splits.reduce((acc: any, s: any) => {
-                acc[s.user_id] = s.amount;
-                return acc;
-            }, {})
-        } as ItineraryItem));
-    },
+    // --- ITINERARY WRITES (Offline Aware) ---
 
     async saveItineraryItem(item: ItineraryItem): Promise<ItineraryItem> {
-        const isNew = !item.id || item.id.length < 10; // UUID vs mock ID
-
-        const dbItem = {
-            trip_id: item.tripId,
-            type: item.type,
-            title: item.title,
-            location: item.location,
-            end_location: item.endLocation,
-            start_date: new Date(item.startDate).toISOString(),
-            end_date: item.endDate ? new Date(item.endDate).toISOString() : null,
-            duration_minutes: item.durationMinutes,
-            cost: item.cost,
-            paid_by: item.paidBy,
-            created_by: item.createdBy,
-            is_private: item.isPrivate,
-            show_in_timeline: item.showInTimeline,
-            details: item.details,
-            map_uri: item.mapUri,
-            tags: item.tags,
-            original_amount: item.originalAmount,
-            currency_code: item.currencyCode,
-            exchange_rate: item.exchangeRate
+        const isNew = !item.id || item.id.length < 10;
+        const optimisticItem = {
+            ...item,
+            id: isNew ? `temp-${Date.now()}` : item.id,
+            updatedAt: Date.now()
         };
 
-        let resultId = item.id;
+        // 1. Update Local DB Immediately (Optimistic)
+        await db.items.put(optimisticItem);
 
-        if (isNew) {
-            const { data, error } = await supabase
-                .from('itinerary_items')
-                .insert(dbItem)
-                .select()
-                .single();
-            if (error) throw error;
-            resultId = data.id;
-        } else {
-            const { error } = await supabase
-                .from('itinerary_items')
-                .update(dbItem)
-                .eq('id', item.id);
-            if (error) throw error;
+        // 2. Try Sync
+        try {
+            const dbItem = {
+                trip_id: optimisticItem.tripId,
+                type: optimisticItem.type,
+                title: optimisticItem.title,
+                location: optimisticItem.location,
+                end_location: optimisticItem.endLocation,
+                start_date: new Date(optimisticItem.startDate).toISOString(),
+                end_date: optimisticItem.endDate ? new Date(optimisticItem.endDate).toISOString() : null,
+                duration_minutes: optimisticItem.durationMinutes,
+                cost: optimisticItem.cost,
+                paid_by: optimisticItem.paidBy,
+                created_by: optimisticItem.createdBy,
+                is_private: optimisticItem.isPrivate,
+                show_in_timeline: optimisticItem.showInTimeline,
+                details: optimisticItem.details,
+                map_uri: optimisticItem.mapUri,
+                tags: optimisticItem.tags,
+                original_amount: optimisticItem.originalAmount,
+                currency_code: optimisticItem.currencyCode,
+                exchange_rate: optimisticItem.exchangeRate
+            };
+
+            let resultId = optimisticItem.id;
+
+            if (isNew) {
+                const { data, error } = await supabase
+                    .from('itinerary_items')
+                    .insert(dbItem)
+                    .select()
+                    .single();
+                if (error) throw error;
+                resultId = data.id;
+            } else {
+                const { error } = await supabase
+                    .from('itinerary_items')
+                    .update(dbItem)
+                    .eq('id', optimisticItem.id);
+                if (error) throw error;
+            }
+
+            // Sync Splits
+            await supabase.from('expense_splits').delete().eq('item_id', resultId);
+            if (optimisticItem.splitWith && optimisticItem.splitWith.length > 0) {
+                const splits = optimisticItem.splitWith.map(userId => ({
+                    item_id: resultId,
+                    user_id: userId,
+                    amount: optimisticItem.splitDetails?.[userId] || (optimisticItem.cost / optimisticItem.splitWith.length)
+                }));
+                const { error: splitError } = await supabase.from('expense_splits').insert(splits);
+                if (splitError) throw splitError;
+            }
+
+            // Update local ID if it was temporary
+            if (isNew) {
+                await db.items.delete(optimisticItem.id);
+                const finalItem = { ...optimisticItem, id: resultId };
+                await db.items.put(finalItem);
+                return finalItem;
+            }
+
+            return optimisticItem;
+
+        } catch (err) {
+            console.warn('[tripService] Supabase write failed, enqueuing for background sync:', err);
+
+            // 3. Fallback to Sync Queue
+            const syncService = (await import('./SyncService')).syncService;
+            await syncService.enqueue(
+                'itinerary_items',
+                isNew ? 'INSERT' : 'UPDATE',
+                optimisticItem
+            );
+
+            return optimisticItem;
         }
-
-        // Update Splits
-        await supabase.from('expense_splits').delete().eq('item_id', resultId);
-
-        if (item.splitWith && item.splitWith.length > 0) {
-            const splits = item.splitWith.map(userId => ({
-                item_id: resultId,
-                user_id: userId,
-                amount: item.splitDetails?.[userId] || (item.cost / item.splitWith.length)
-            }));
-            const { error: splitError } = await supabase.from('expense_splits').insert(splits);
-            if (splitError) throw splitError;
-        }
-
-        return { ...item, id: resultId };
     },
 
     async deleteItineraryItem(itemId: string): Promise<void> {
-        const { error } = await supabase.from('itinerary_items').delete().eq('id', itemId);
-        if (error) throw error;
+        // 1. Update Local DB Immediately
+        await db.items.delete(itemId);
+
+        // 2. Try Sync
+        try {
+            const { error } = await supabase.from('itinerary_items').delete().eq('id', itemId);
+            if (error) throw error;
+        } catch (err) {
+            console.warn('[tripService] Supabase delete failed, enqueuing for background sync:', err);
+
+            // 3. Fallback to Sync Queue
+            const syncService = (await import('./SyncService')).syncService;
+            await syncService.enqueue(
+                'itinerary_items',
+                'DELETE',
+                { id: itemId }
+            );
+        }
     },
 
     // --- RECRUITMENT OPERATIONS ---

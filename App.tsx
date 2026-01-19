@@ -96,8 +96,6 @@ const App: React.FC = () => {
       }
     });
 
-    // ... (rest of initial session check with similar logic)
-
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
@@ -127,8 +125,36 @@ const App: React.FC = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []); // Remove pendingJoinTripId dependency to avoid double firing, handled in refs if needed inside, but simple state is fine here.
+    // --- Service Worker & Sync Registration ---
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('[App] ServiceWorker registered');
+        // Request periodic sync if supported (optional)
+      }).catch(err => {
+        console.error('[App] ServiceWorker registration failed', err);
+      });
+
+      // Listen for messages from SW
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.type === 'SYNC_REQUESTED') {
+          import('./services/SyncService').then(({ syncService }) => syncService.processQueue());
+        }
+      });
+    }
+
+    // Online Event Listener
+    const handleOnline = () => {
+      console.log('[App] Network back online, triggering sync...');
+      import('./services/SyncService').then(({ syncService }) => syncService.processQueue());
+    };
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('online', handleOnline);
+    };
+  }, []);
+  // Remove pendingJoinTripId dependency to avoid double firing, handled in refs if needed inside, but simple state is fine here.
 
   // Dedicated data loader - triggers only when identity actually changes
   useEffect(() => {
@@ -300,7 +326,8 @@ const App: React.FC = () => {
       // 3. Update Local State
       const finalTrip = {
         ...updatedTrip,
-        status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate)
+        status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate),
+        updatedAt: Date.now()
       };
       setTrips(trips.map(t => t.id === finalTrip.id ? finalTrip : t));
       setView('TIMELINE');
@@ -322,7 +349,7 @@ const App: React.FC = () => {
       m.id === memberId ? { ...m, role: newRole } : m
     );
 
-    const updatedTrip = { ...currentTrip, members: updatedMembers };
+    const updatedTrip = { ...currentTrip, members: updatedMembers, updatedAt: Date.now() };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
@@ -357,7 +384,7 @@ const App: React.FC = () => {
     const updatedMembers = currentTrip.members.map(m =>
       m.id === memberId ? { ...m, pendingPastExpensesInvitation: true } : m
     );
-    const updatedTrip = { ...currentTrip, members: updatedMembers };
+    const updatedTrip = { ...currentTrip, members: updatedMembers, updatedAt: Date.now() };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
@@ -377,7 +404,7 @@ const App: React.FC = () => {
       m.id === currentUser.id ? { ...m, pendingPastExpensesInvitation: false } : m
     );
 
-    const updatedTrip = { ...currentTrip, items: updatedItems, members: updatedMembers };
+    const updatedTrip = { ...currentTrip, items: updatedItems, members: updatedMembers, updatedAt: Date.now() };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
@@ -386,13 +413,13 @@ const App: React.FC = () => {
     const updatedMembers = currentTrip.members.map(m =>
       m.id === currentUser.id ? { ...m, pendingPastExpensesInvitation: false } : m
     );
-    const updatedTrip = { ...currentTrip, members: updatedMembers };
+    const updatedTrip = { ...currentTrip, members: updatedMembers, updatedAt: Date.now() };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
   const handleToggleBudgetMode = (mode: 'SMART' | 'DIRECT') => {
     if (!currentTrip) return;
-    const updatedTrip = { ...currentTrip, budgetViewMode: mode };
+    const updatedTrip = { ...currentTrip, budgetViewMode: mode, updatedAt: Date.now() };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
   };
 
@@ -421,7 +448,7 @@ const App: React.FC = () => {
 
       const updatedItems = [...currentTrip.items, savedItem];
       const sorted = semanticSort(updatedItems);
-      const updatedTrip = { ...currentTrip, items: sorted };
+      const updatedTrip = { ...currentTrip, items: sorted, updatedAt: Date.now() };
       setTrips(prevTrips => prevTrips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
     } catch (err) {
       console.error('Settlement failed:', err);
@@ -475,7 +502,7 @@ const App: React.FC = () => {
     try {
       await tripService.deleteItineraryItem(idToDelete);
       const updatedItems = currentTrip.items.filter(i => i.id !== idToDelete);
-      const updatedTrip = { ...currentTrip, items: updatedItems };
+      const updatedTrip = { ...currentTrip, items: updatedItems, updatedAt: Date.now() };
       setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
       setSelectedItem(null);
 
@@ -519,6 +546,9 @@ const App: React.FC = () => {
           startDate: itemData.startDate || new Date(),
           endDate: itemData.endDate,
           cost: itemData.cost || 0,
+          originalAmount: itemData.originalAmount,
+          currencyCode: itemData.currencyCode,
+          exchangeRate: itemData.exchangeRate,
           details: itemData.details,
           tags: itemData.tags || [],
           durationMinutes: itemData.durationMinutes || 0,
@@ -562,7 +592,7 @@ const App: React.FC = () => {
   const finishSave = (updatedItems: ItineraryItem[]) => {
     if (!currentTrip) return;
     const sorted = semanticSort(updatedItems);
-    const updatedTrip = { ...currentTrip, items: sorted };
+    const updatedTrip = { ...currentTrip, items: sorted, updatedAt: Date.now() };
     setTrips(trips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
 
     setSelectedItemType(null);

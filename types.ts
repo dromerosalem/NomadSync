@@ -50,6 +50,7 @@ export interface ItineraryItem {
   originalAmount?: number;
   currencyCode?: string;
   exchangeRate?: number;
+  updatedAt?: number;
 }
 
 export interface Trip {
@@ -65,6 +66,7 @@ export interface Trip {
   coverImage?: string;
   baseCurrency?: string; // Default 'USD'
   budgetViewMode?: 'SMART' | 'DIRECT'; // Shared view setting controlled by Pathfinder
+  updatedAt?: number;
 }
 
 export interface GroundingSource {

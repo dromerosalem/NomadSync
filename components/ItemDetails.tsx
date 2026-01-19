@@ -190,7 +190,14 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
                   <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">PAID BY</div>
                   <div className="text-white font-bold">{isPayer ? 'YOU' : payer?.name || 'Unknown'}</div>
                 </div>
-                <div className="font-mono text-lg text-white font-bold">{getCurrencySymbol(baseCurrency)}{totalCost.toFixed(2)}</div>
+                <div className="flex flex-col items-end">
+                  <div className="font-mono text-lg text-white font-bold">{getCurrencySymbol(baseCurrency)}{totalCost.toFixed(2)}</div>
+                  {item.currencyCode && item.currencyCode !== baseCurrency && item.originalAmount != null && (
+                    <div className="text-[10px] font-mono text-gray-500 leading-none">
+                      ({getCurrencySymbol(item.currencyCode)}{Number(item.originalAmount).toFixed(2)})
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Split List */}
@@ -273,7 +280,14 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
         <div className="bg-tactical-card p-6 border-t border-tactical-muted/20">
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">Total Cost Logged</span>
-            <span className="font-mono text-xl text-white font-bold">{getCurrencySymbol(baseCurrency)}{item.cost || 0}</span>
+            <div className="flex flex-col items-end">
+              <span className="font-mono text-xl text-white font-bold">{getCurrencySymbol(baseCurrency)}{(item.cost || 0).toFixed(2)}</span>
+              {item.currencyCode && item.currencyCode !== baseCurrency && item.originalAmount != null && (
+                <span className="text-xs font-mono text-gray-500">
+                  ({getCurrencySymbol(item.currencyCode)}{Number(item.originalAmount).toFixed(2)})
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
