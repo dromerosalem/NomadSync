@@ -1,11 +1,12 @@
-
 import React, { useState } from 'react';
-import { ArrowRightIcon, MapPinIcon, ChevronLeftIcon } from './Icons';
+import { ArrowRightIcon, ChevronLeftIcon } from './Icons';
 import { Member } from '../types';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import PlaceAutocomplete from './PlaceAutocomplete';
+import { LocationResult } from '../services/LocationService';
 
 interface CreateMissionProps {
-  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string) => void;
+  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }) => void;
   onBack: () => void;
   isLoading: boolean;
 }
@@ -18,6 +19,9 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
   const [budget, setBudget] = useState('2000');
   const [baseCurrency, setBaseCurrency] = useState('USD');
 
+  // Location Metadata
+  const [locationMetadata, setLocationMetadata] = useState<{ lat: number, lon: number, countryCode: string } | undefined>();
+
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -28,7 +32,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
       const mockMembers: Member[] = [];
 
       // Default to single day trip if no end date selected
-      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency);
+      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency, locationMetadata);
     }
   };
 
@@ -133,19 +137,19 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
               />
             </div>
 
-            {/* Target Location */}
+            {/* Base Location */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Target Location</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Enter primary destination"
-                  className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 pr-12 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
-                />
-                <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              </div>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Base Location (Departure)</label>
+              <PlaceAutocomplete
+                value={location}
+                onChange={(val, meta) => {
+                  setLocation(val);
+                  if (meta) {
+                    setLocationMetadata({ lat: meta.lat, lon: meta.lon, countryCode: meta.countryCode });
+                  }
+                }}
+                placeholder="Enter origin city"
+              />
             </div>
 
             {/* Budget */}

@@ -19,11 +19,19 @@ interface SyncLog {
     retries: number;
 }
 
+interface LocationCache {
+    id?: number;
+    query: string;
+    results: any;
+    timestamp: number;
+}
+
 const db = new Dexie('NomadSyncDB') as Dexie & {
     trips: EntityTable<Trip, 'id'>;
     items: EntityTable<ItineraryItem, 'id'>;
     calculated_balances: EntityTable<CachedBalance, 'cacheKey'>;
     sync_queue: EntityTable<SyncLog, 'id'>;
+    location_cache: EntityTable<LocationCache, 'id'>;
 };
 
 // Schema Definition
@@ -38,8 +46,15 @@ db.version(2).stores({
 });
 
 db.version(3).stores({
-    sync_queue: '++id, table, operation, status, timestamp'
+    sync_queue: '++id, status, table, timestamp'
+});
+
+db.version(4).stores({
+    trips: 'id, updatedAt',
+    items: 'id, tripId, updatedAt',
+    sync_queue: '++id, status, table, timestamp',
+    location_cache: '++id, query, timestamp'
 });
 
 export { db };
-export type { CachedBalance, SyncLog };
+export type { CachedBalance, SyncLog, LocationCache };

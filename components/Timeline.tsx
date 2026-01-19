@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Trip, ItineraryItem, ItemType } from '../types';
-import { PlusIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, ChevronLeftIcon, EyeOffIcon, WalletIcon, UsersIcon } from './Icons';
+import { PlusIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, ChevronLeftIcon, EyeOffIcon, WalletIcon, UsersIcon, GlobeIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import MissionGlobe from './MissionGlobe';
 
 interface TimelineProps {
   trip: Trip;
@@ -366,6 +367,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
 
 const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, currentUserId, onAddItem, onEditTrip, onManageTeam, onItemClick, onBackToBase, onAcceptPastExpenses, onDeclinePastExpenses, onNavigateBudget }) => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [showGlobe, setShowGlobe] = useState(false);
 
   // Filter for Visibility: 
   // 1. Privacy Check (Public OR Private & Created by Current User)
@@ -472,8 +474,17 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
               </button>
             )}
+            <button
+              onClick={() => setShowGlobe(true)}
+              className="p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg text-tactical-accent hover:text-white hover:border-tactical-accent transition-all"
+              title="View Mission Globe"
+            >
+              <GlobeIcon className="w-4 h-4" />
+            </button>
           </div>
         </div>
+
+        {/* Globe was here - moved to bottom for z-index fix */}
 
         <div className="space-y-1">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
@@ -519,35 +530,37 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
       </div>
 
       {/* INVITE BANNER */}
-      {hasPendingInvite && (
-        <div className="mx-6 mt-4 p-4 bg-blue-900/20 border border-blue-500/50 rounded-xl animate-pulse">
-          <div className="flex items-start gap-3">
-            <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-              <WalletIcon className="w-6 h-6" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-display font-bold text-white uppercase text-sm mb-1">Share Past Expenses?</h3>
-              <p className="text-xs text-blue-200 mb-3">
-                The Pathfinder has shared all past expenses with you. Do you accept the shared costs?
-              </p>
-              <div className="flex gap-2">
-                <button
-                  onClick={onAcceptPastExpenses}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase rounded-lg transition-colors"
-                >
-                  Accept & Split
-                </button>
-                <button
-                  onClick={onDeclinePastExpenses}
-                  className="px-4 py-2 bg-transparent border border-blue-500/30 text-blue-300 hover:text-white text-xs font-bold uppercase rounded-lg transition-colors"
-                >
-                  Decline
-                </button>
+      {
+        hasPendingInvite && (
+          <div className="mx-6 mt-4 p-4 bg-blue-900/20 border border-blue-500/50 rounded-xl animate-pulse">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                <WalletIcon className="w-6 h-6" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-display font-bold text-white uppercase text-sm mb-1">Share Past Expenses?</h3>
+                <p className="text-xs text-blue-200 mb-3">
+                  The Pathfinder has shared all past expenses with you. Do you accept the shared costs?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={onAcceptPastExpenses}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold uppercase rounded-lg transition-colors"
+                  >
+                    Accept & Split
+                  </button>
+                  <button
+                    onClick={onDeclinePastExpenses}
+                    className="px-4 py-2 bg-transparent border border-blue-500/30 text-blue-300 hover:text-white text-xs font-bold uppercase rounded-lg transition-colors"
+                  >
+                    Decline
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       <div className="flex-1 overflow-y-auto p-6 pb-24 relative scrollbar-hide">
         <div className="absolute left-[39px] top-0 bottom-0 w-px bg-tactical-muted/20"></div>
@@ -580,17 +593,21 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
         )}
       </div>
 
-      {canEdit && (
-        <div className="absolute bottom-6 right-6 z-20">
-          <button
-            onClick={onAddItem}
-            className="w-14 h-14 bg-tactical-accent hover:bg-yellow-400 text-black rounded-full shadow-[0_0_20px_rgba(255,215,0,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
-          >
-            <PlusIcon className="w-8 h-8" />
-          </button>
-        </div>
-      )}
-    </div>
+      {
+        canEdit && (
+          <div className="absolute bottom-6 right-6 z-20">
+            <button
+              onClick={onAddItem}
+              className="w-14 h-14 bg-tactical-accent hover:bg-yellow-400 text-black rounded-full shadow-[0_0_20px_rgba(255,215,0,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95"
+            >
+              <PlusIcon className="w-8 h-8" />
+            </button>
+          </div>
+        )
+      }
+      {/* Mission Globe - Rendered last to ensure Z-Index Dominance */}
+      {showGlobe && <MissionGlobe trip={trip} onClose={() => setShowGlobe(false)} />}
+    </div >
   );
 };
 

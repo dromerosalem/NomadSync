@@ -34,6 +34,12 @@ export interface ItineraryItem {
   startDate: Date;
   endDate?: Date;
   details?: string;
+  latitude?: number;
+  longitude?: number;
+  countryCode?: string;
+  endLatitude?: number;
+  endLongitude?: number;
+  endCountryCode?: string;
   cost: number; // Making it mandatory for budget logic
   mapUri?: string; // Google Maps URL from grounding
   rating?: string; // From Maps grounding
@@ -57,6 +63,9 @@ export interface Trip {
   id: string;
   name: string;
   destination: string;
+  latitude?: number;
+  longitude?: number;
+  countryCode?: string;
   startDate: Date;
   endDate: Date;
   budget: number; // Kept as reference or default

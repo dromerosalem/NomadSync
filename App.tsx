@@ -300,7 +300,7 @@ const App: React.FC = () => {
     });
   };
 
-  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string) => {
+  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }) => {
     setIsLoading(true);
     try {
       const creatorMember = { ...currentUser, budget: budget };
@@ -309,6 +309,9 @@ const App: React.FC = () => {
       const newTripData: Omit<Trip, 'id' | 'items'> = {
         name,
         destination: location,
+        latitude: metadata?.lat,
+        longitude: metadata?.lon,
+        countryCode: metadata?.countryCode,
         startDate,
         endDate,
         budget,
@@ -339,6 +342,9 @@ const App: React.FC = () => {
       await tripService.updateTrip(updatedTrip.id, {
         name: updatedTrip.name,
         destination: updatedTrip.destination,
+        latitude: updatedTrip.latitude,
+        longitude: updatedTrip.longitude,
+        countryCode: updatedTrip.countryCode,
         startDate: updatedTrip.startDate,
         endDate: updatedTrip.endDate,
         baseCurrency: updatedTrip.baseCurrency,
@@ -588,7 +594,14 @@ const App: React.FC = () => {
           splitWith: itemData.splitWith || defaultSplitWith,
           splitDetails: itemData.splitDetails,
           paidBy: itemData.paidBy || currentUser.id,
-          showInTimeline: itemData.showInTimeline !== undefined ? itemData.showInTimeline : true
+          showInTimeline: itemData.showInTimeline !== undefined ? itemData.showInTimeline : true,
+          // Geolocation Persistence
+          latitude: itemData.latitude,
+          longitude: itemData.longitude,
+          countryCode: itemData.countryCode,
+          endLatitude: itemData.endLatitude,
+          endLongitude: itemData.endLongitude,
+          endCountryCode: itemData.endCountryCode
         } as ItineraryItem;
       }
 

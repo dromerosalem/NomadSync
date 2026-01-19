@@ -18,7 +18,9 @@
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-leaflet": "^5.0.0"
+    "react-globe.gl": "^2.37.0",
+    "react-leaflet": "^5.0.0",
+    "three": "^0.182.0"
   },
   "devDependencies": {
     "@types/decimal.js": "^0.0.32",

@@ -2,7 +2,7 @@
 import { Trip, ItineraryItem } from '../types';
 
 const FRANKFURTER_API = 'https://api.frankfurter.app';
-const EXCHANGE_RATE_API_KEY = '5aecdd0e0d6bb013b6849c05';
+const EXCHANGE_RATE_API_KEY = import.meta.env.VITE_EXCHANGE_RATE_API_KEY;
 const EXCHANGE_RATE_API_BASE = 'https://v6.exchangerate-api.com/v6';
 
 // List of currencies supported by Frankfurter (Free & Unlimited)

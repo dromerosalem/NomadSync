@@ -50,6 +50,9 @@ export const tripService = {
                     id: trip.id,
                     name: trip.name,
                     destination: trip.destination,
+                    latitude: trip.latitude,
+                    longitude: trip.longitude,
+                    countryCode: trip.country_code,
                     startDate: new Date(trip.start_date),
                     endDate: new Date(trip.end_date),
                     budget: trip.budget,
@@ -110,6 +113,12 @@ export const tripService = {
                 title: item.title,
                 location: item.location,
                 endLocation: item.end_location,
+                latitude: item.latitude,
+                longitude: item.longitude,
+                countryCode: item.country_code,
+                endLatitude: item.end_latitude,
+                endLongitude: item.end_longitude,
+                endCountryCode: item.end_country_code,
                 startDate: new Date(item.start_date),
                 endDate: item.end_date ? new Date(item.end_date) : undefined,
                 durationMinutes: item.duration_minutes,
@@ -150,6 +159,9 @@ export const tripService = {
             .insert({
                 name: tripData.name,
                 destination: tripData.destination,
+                latitude: tripData.latitude,
+                longitude: tripData.longitude,
+                country_code: tripData.countryCode,
                 start_date: new Date(tripData.startDate).toISOString(),
                 end_date: new Date(tripData.endDate).toISOString(),
                 budget: tripData.budget,
@@ -197,6 +209,9 @@ export const tripService = {
         const dbUpdates: any = {};
         if (updates.name) dbUpdates.name = updates.name;
         if (updates.destination) dbUpdates.destination = updates.destination;
+        if (updates.latitude !== undefined) dbUpdates.latitude = updates.latitude;
+        if (updates.longitude !== undefined) dbUpdates.longitude = updates.longitude;
+        if (updates.countryCode) dbUpdates.country_code = updates.countryCode;
         if (updates.startDate) dbUpdates.start_date = new Date(updates.startDate).toISOString();
         if (updates.endDate) dbUpdates.end_date = new Date(updates.endDate).toISOString();
         if (updates.status) dbUpdates.status = updates.status;
@@ -245,6 +260,12 @@ export const tripService = {
                 title: optimisticItem.title,
                 location: optimisticItem.location,
                 end_location: optimisticItem.endLocation,
+                latitude: optimisticItem.latitude,
+                longitude: optimisticItem.longitude,
+                country_code: optimisticItem.countryCode,
+                end_latitude: optimisticItem.endLatitude,
+                end_longitude: optimisticItem.endLongitude,
+                end_country_code: optimisticItem.endCountryCode,
                 start_date: new Date(optimisticItem.startDate).toISOString(),
                 end_date: optimisticItem.endDate ? new Date(optimisticItem.endDate).toISOString() : null,
                 duration_minutes: optimisticItem.durationMinutes,

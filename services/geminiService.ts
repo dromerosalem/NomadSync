@@ -1,14 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 import { ItineraryItem, ItemType } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 export const generateMissionSuggestions = async (
   destination: string
 ): Promise<{ items: Partial<ItineraryItem>[], rawText: string }> => {
   try {
     const modelId = "gemini-2.5-flash"; // Required for Maps grounding
-    
+
     // We ask for a structured-like text response because responseSchema 
     // is not supported with googleMaps tool.
     const prompt = `
@@ -32,40 +32,40 @@ export const generateMissionSuggestions = async (
     });
 
     const text = response.text || "";
-    
+
     // Process Grounding Metadata to get map links
     // The structure returned by the SDK for grounding chunks varies, we try to extract useful info
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-    
+
     const suggestedItems: Partial<ItineraryItem>[] = [];
 
     // Simple heuristic parser since we can't use JSON schema with Maps tool yet
     // We rely on the grounding chunks to be the source of truth for "Real" places
-    
+
     groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri) return; // Skip web search results, we want maps
-        
-        const mapData = chunk.web?.uri ? null : (chunk.map || chunk.maps); // SDK structure variation handling
-        
-        // If we found a map entity
-        if (chunk.source?.title || (mapData && mapData.title)) {
-           const title = chunk.source?.title || mapData?.title || "Unknown Location";
-           const uri = chunk.source?.uri || mapData?.uri || "";
-           
-           // Heuristic to guess type based on title (very basic, but sufficient for demo)
-           let type = ItemType.ACTIVITY;
-           if (title.toLowerCase().includes('hotel') || title.toLowerCase().includes('resort')) type = ItemType.STAY;
-           else if (title.toLowerCase().includes('restaurant') || title.toLowerCase().includes('cafe')) type = ItemType.FOOD;
-           
-           suggestedItems.push({
-               title: title,
-               location: title, // Use title as location for now
-               type: type,
-               mapUri: uri,
-               details: "Intelligence retrieved via satellite scan.",
-               startDate: new Date() // Default to today, user assigns later
-           });
-        }
+      if (chunk.web?.uri) return; // Skip web search results, we want maps
+
+      const mapData = chunk.web?.uri ? null : (chunk.map || chunk.maps); // SDK structure variation handling
+
+      // If we found a map entity
+      if (chunk.source?.title || (mapData && mapData.title)) {
+        const title = chunk.source?.title || mapData?.title || "Unknown Location";
+        const uri = chunk.source?.uri || mapData?.uri || "";
+
+        // Heuristic to guess type based on title (very basic, but sufficient for demo)
+        let type = ItemType.ACTIVITY;
+        if (title.toLowerCase().includes('hotel') || title.toLowerCase().includes('resort')) type = ItemType.STAY;
+        else if (title.toLowerCase().includes('restaurant') || title.toLowerCase().includes('cafe')) type = ItemType.FOOD;
+
+        suggestedItems.push({
+          title: title,
+          location: title, // Use title as location for now
+          type: type,
+          mapUri: uri,
+          details: "Intelligence retrieved via satellite scan.",
+          startDate: new Date() // Default to today, user assigns later
+        });
+      }
     });
 
     return {
@@ -81,13 +81,13 @@ export const generateMissionSuggestions = async (
 
 export const analyzeReceipt = async (base64Data: string, mimeType: string = "image/jpeg", tripStartDate?: Date): Promise<Partial<ItineraryItem>[] | null> => {
   try {
-     const modelId = "gemini-2.5-flash";
+    const modelId = "gemini-2.5-flash";
 
-     const contextPrompt = tripStartDate 
-        ? `CONTEXT: The trip is scheduled to start on ${tripStartDate.toISOString().split('T')[0]}. Use this year (and subsequent year if dates cross year boundary) to correctly infer the year of any dates found in the document.` 
-        : `CONTEXT: Use the current year for any ambiguous dates.`;
+    const contextPrompt = tripStartDate
+      ? `CONTEXT: The trip is scheduled to start on ${tripStartDate.toISOString().split('T')[0]}. Use this year (and subsequent year if dates cross year boundary) to correctly infer the year of any dates found in the document.`
+      : `CONTEXT: Use the current year for any ambiguous dates.`;
 
-     const prompt = `
+    const prompt = `
        ${contextPrompt}
        Analyze this image or document (invoice, receipt, ticket, or booking confirmation).
        Extract the relevant travel itinerary details into a JSON Array of objects.
@@ -111,39 +111,39 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        
        Return strictly a JSON Array.
      `;
-     
-     const response = await ai.models.generateContent({
-       model: modelId,
-       contents: {
-         parts: [
-           { inlineData: { mimeType: mimeType, data: base64Data } },
-           { text: prompt }
-         ]
-       },
-       config: {
-         responseMimeType: "application/json",
-       }
-     });
-     
-     const text = response.text;
-     if (!text) return null;
-     
-     const parsed = JSON.parse(text);
-     
-     // Ensure result is an array
-     const dataArray = Array.isArray(parsed) ? parsed : [parsed];
-     
-     return dataArray.map((data: any) => ({
-       type: data.type, 
-       title: data.title,
-       location: data.location,
-       endLocation: data.endLocation,
-       startDate: data.startDate ? new Date(data.startDate) : undefined,
-       endDate: data.endDate ? new Date(data.endDate) : undefined,
-       cost: typeof data.cost === 'number' ? data.cost : (parseFloat(data.cost) || 0),
-       details: typeof data.details === 'string' ? data.details : undefined,
-       durationMinutes: typeof data.durationMinutes === 'number' ? data.durationMinutes : undefined
-     }));
+
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: {
+        parts: [
+          { inlineData: { mimeType: mimeType, data: base64Data } },
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+      }
+    });
+
+    const text = response.text;
+    if (!text) return null;
+
+    const parsed = JSON.parse(text);
+
+    // Ensure result is an array
+    const dataArray = Array.isArray(parsed) ? parsed : [parsed];
+
+    return dataArray.map((data: any) => ({
+      type: data.type,
+      title: data.title,
+      location: data.location,
+      endLocation: data.endLocation,
+      startDate: data.startDate ? new Date(data.startDate) : undefined,
+      endDate: data.endDate ? new Date(data.endDate) : undefined,
+      cost: typeof data.cost === 'number' ? data.cost : (parseFloat(data.cost) || 0),
+      details: typeof data.details === 'string' ? data.details : undefined,
+      durationMinutes: typeof data.durationMinutes === 'number' ? data.durationMinutes : undefined
+    }));
   } catch (e) {
     console.error("Analysis failed", e);
     return null;

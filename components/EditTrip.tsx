@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { Trip } from '../types';
 import { MapPinIcon, ChevronLeftIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import PlaceAutocomplete from './PlaceAutocomplete';
+import { LocationResult } from '../services/LocationService';
 
 interface EditTripProps {
   trip: Trip;
@@ -16,6 +18,9 @@ import CurrencySelector from './CurrencySelector';
 const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUserId }) => {
   const [name, setName] = useState(trip.name);
   const [location, setLocation] = useState(trip.destination);
+  const [latitude, setLatitude] = useState(trip.latitude);
+  const [longitude, setLongitude] = useState(trip.longitude);
+  const [countryCode, setCountryCode] = useState(trip.countryCode);
   const [baseCurrency, setBaseCurrency] = useState(trip.baseCurrency || 'USD');
 
   // Initialize budget from Current User's Personal Budget
@@ -38,6 +43,9 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
         ...trip,
         name,
         destination: location,
+        latitude,
+        longitude,
+        countryCode,
         baseCurrency,
         startDate,
         endDate,
@@ -136,15 +144,18 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
           {/* Target Location */}
           <div className="space-y-2">
             <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Target Location</label>
-            <div className="relative">
-              <input
-                type="text"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 pr-12 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
-              />
-              <MapPinIcon className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-            </div>
+            <PlaceAutocomplete
+              value={location}
+              onChange={(val, meta) => {
+                setLocation(val);
+                if (meta) {
+                  setLatitude(meta.lat);
+                  setLongitude(meta.lon);
+                  setCountryCode(meta.countryCode);
+                }
+              }}
+              placeholder="Enter primary destination"
+            />
           </div>
 
           {/* Budget */}

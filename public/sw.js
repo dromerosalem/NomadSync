@@ -21,7 +21,17 @@ const MAP_CACHE = 'nomadsync-map-tiles-v1';
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Intercept Map Tile requests for Offline Sat-Link
+    // 0. Global Bypass for non-GET requests (Mutations/RPCs should never be cached)
+    if (event.request.method !== 'GET') {
+        return;
+    }
+
+    // 1. Bypass for specific API domains to avoid proxy overhead/timeouts
+    if (url.hostname.includes('googleapis.com') || url.hostname.includes('supabase.co') || url.hostname.includes('generativelanguage.googleapis.com')) {
+        return;
+    }
+
+    // 3. Intercept Map Tile requests for Offline Sat-Link
     if (url.hostname.includes('basemaps.cartocdn.com')) {
         event.respondWith(
             caches.open(MAP_CACHE).then((cache) => {
@@ -38,6 +48,7 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // 4. Default Cache-First strategy for static assets
     event.respondWith(
         caches.match(event.request).then((response) => {
             return response || fetch(event.request);

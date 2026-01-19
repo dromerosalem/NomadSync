@@ -25,6 +25,9 @@ create table public.trips (
   status text default 'PLANNING' check (status in ('PLANNING', 'IN_PROGRESS', 'COMPLETE')),
   budget_view_mode text default 'SMART' check (budget_view_mode in ('SMART', 'DIRECT')),
   base_currency text default 'USD',
+  latitude numeric,
+  longitude numeric,
+  country_code text,
   created_by uuid references public.profiles(id) on delete set null,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -63,6 +66,12 @@ create table public.itinerary_items (
   original_amount numeric,
   currency_code text,
   exchange_rate numeric,
+  latitude numeric,
+  longitude numeric,
+  country_code text,
+  end_latitude numeric,
+  end_longitude numeric,
+  end_country_code text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
