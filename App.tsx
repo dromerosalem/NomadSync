@@ -766,8 +766,9 @@ const App: React.FC = () => {
         {/* Modal Layers */}
         {view === 'INVITE_MEMBER' && currentTrip && (
           <InviteMember
-            tripId={currentTrip.id}
-            onClose={() => setView('MANAGE_TEAM')}
+            trip={currentTrip}
+            onBack={() => setView('MANAGE_TEAM')}
+            onInvite={handleInviteMember}
           />
         )}
 

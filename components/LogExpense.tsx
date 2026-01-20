@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ItemType, ItineraryItem, Member } from '../types';
+import { ItemType, ItineraryItem, Member, ReceiptItem } from '../types';
 import { ChevronLeftIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
 import { analyzeReceipt } from '../services/geminiService';
 import { currencyService } from '../services/CurrencyService';
@@ -68,8 +68,9 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const [paidBy, setPaidBy] = useState(initialItem?.paidBy || currentUserId);
     const [splitWith, setSplitWith] = useState<string[]>(initialItem?.splitWith || activeMembers.map(m => m.id));
 
-    const [splitMode, setSplitMode] = useState<'EQUAL' | 'CUSTOM'>('EQUAL');
+    const [splitMode, setSplitMode] = useState<'EQUAL' | 'CUSTOM' | 'ITEMIZED'>('EQUAL');
     const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
+    const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>(initialItem?.receiptItems || []);
 
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingRate, setIsLoadingRate] = useState(false);
@@ -142,6 +143,8 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 });
                 setCustomAmounts(newAmounts);
             }
+        } else if (splitMode === 'ITEMIZED') {
+            // We don't auto-calculate custom amounts here, we derive them from items on render/submit
         }
     }, [convertedCost, splitMode, splitWith.length]);
 
@@ -195,15 +198,19 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64Content = (reader.result as string).split(',')[1];
-                    const items = await analyzeReceipt(base64Content, file.type, tripStartDate);
+                    const item = await analyzeReceipt(base64Content, file.type, tripStartDate);
 
-                    if (items && items.length > 0) {
-                        const item = items[0];
+                    if (item) {
                         if (item.cost) setOriginalAmount(item.cost.toString());
-                        if (item.currencyCode) setCurrencyCode(item.currencyCode); // Gemini might detect currency
+                        if (item.currencyCode) setCurrencyCode(item.currencyCode);
                         if (item.title) setTitle(item.title);
                         if (item.type) setType(item.type);
                         if (item.startDate) setDate(new Date(item.startDate).toISOString().slice(0, 16));
+
+                        if (item.receiptItems && item.receiptItems.length > 0) {
+                            setReceiptItems(item.receiptItems);
+                            setSplitMode('ITEMIZED');
+                        }
                     } else {
                         alert('Could not read receipt data.');
                     }
@@ -232,9 +239,14 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             });
             // Allow 1 cent drift for manual entry, but ideally 0
             if (sum.subtract(totalMoney).abs().greaterThan(0.01)) return false;
+        } else if (splitMode === 'ITEMIZED') {
+            // For itemized, we mainly need to check if items are assigned? 
+            // Or maybe we allow unassigned items as "paid by payer but consumed by ?" -> defaulted to payer?
+            // For now, let's just validte that we have items.
+            if (receiptItems.length === 0) return false;
         }
 
-        if (splitWith.length === 0) return false;
+        if (splitWith.length === 0 && splitMode !== 'ITEMIZED') return false; // In itemized, splitWith is derived
 
         return true;
     };
@@ -249,6 +261,74 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             splitWith.forEach(id => {
                 splitDetails[id] = parseFloat(customAmounts[id] || '0');
             });
+        } else if (splitMode === 'ITEMIZED') {
+            // Calculate Itemized Splits
+            const memberMap: Record<string, number> = {};
+            let subtotal = 0;
+            const memberSubtotals: Record<string, number> = {};
+
+            // 1. Assign direct items
+            receiptItems.forEach(item => {
+                if (['tax', 'tip', 'service'].includes(item.type)) return;
+
+                subtotal += item.price;
+                const assigned = item.assignedTo || [];
+                if (assigned.length > 0) {
+                    const splitPrice = item.price / assigned.length;
+                    assigned.forEach(uid => {
+                        memberSubtotals[uid] = (memberSubtotals[uid] || 0) + splitPrice;
+                    });
+                } else {
+                    // Unassigned goes to Payer? Or remains unallocated? 
+                    // Let's assign to Payer for now to avoid "money loss"
+                    memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + item.price;
+                }
+            });
+
+            // 2. Distribute Tax/Tip/Service proportionally based on subtotal
+            receiptItems.forEach(item => {
+                if (['tax', 'tip', 'service'].includes(item.type)) {
+                    const price = item.price;
+                    // If subtotal is 0 (everything is tax/tip?), split equally among all members who have assignments, or just payer
+                    if (subtotal === 0) {
+                        memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + price;
+                    } else {
+                        // Proportional split
+                        Object.keys(memberSubtotals).forEach(uid => {
+                            const share = (memberSubtotals[uid] / subtotal) * price;
+                            memberSubtotals[uid] += share;
+                        });
+                    }
+                }
+            });
+
+            // Convert to base currency and save
+            Object.entries(memberSubtotals).forEach(([uid, amount]) => {
+                splitDetails[uid] = amount * exchangeRate;
+            });
+
+            // Replace splitWith with those who have amounts
+            const finalSplitWith = Object.keys(splitDetails);
+
+            onSave({
+                id: initialItem?.id,
+                title,
+                cost: totalMoney.toNumber(), // Store Base Currency Amount
+                originalAmount: parseFloat(originalAmount),
+                currencyCode,
+                exchangeRate,
+                type,
+                startDate: new Date(date),
+                location: initialItem?.location || 'Logged Expense',
+                splitWith: finalSplitWith,
+                splitDetails, // Always save explicit splits for integrity
+                paidBy,
+                isPrivate,
+                showInTimeline,
+                details: initialItem?.details || 'Expense logged via Budget Engine',
+                receiptItems: splitMode === 'ITEMIZED' ? receiptItems : undefined
+            });
+
         } else {
             // Even in EQUAL mode, we allocate explicitly to ensure no penny is lost (Remainder Allocation)
             // cost / 3 = 3.33, 3.33, 3.34
@@ -256,25 +336,26 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             splitWith.forEach((id, index) => {
                 splitDetails[id] = shares[index].toNumber();
             });
-        }
 
-        onSave({
-            id: initialItem?.id,
-            title,
-            cost: totalMoney.toNumber(), // Store Base Currency Amount
-            originalAmount: parseFloat(originalAmount),
-            currencyCode,
-            exchangeRate,
-            type,
-            startDate: new Date(date),
-            location: initialItem?.location || 'Logged Expense',
-            splitWith,
-            splitDetails, // Always save explicit splits for integrity
-            paidBy,
-            isPrivate,
-            showInTimeline,
-            details: initialItem?.details || 'Expense logged via Budget Engine'
-        });
+            onSave({
+                id: initialItem?.id,
+                title,
+                cost: totalMoney.toNumber(), // Store Base Currency Amount
+                originalAmount: parseFloat(originalAmount),
+                currencyCode,
+                exchangeRate,
+                type,
+                startDate: new Date(date),
+                location: initialItem?.location || 'Logged Expense',
+                splitWith,
+                splitDetails, // Always save explicit splits for integrity
+                paidBy,
+                isPrivate,
+                showInTimeline,
+                details: initialItem?.details || 'Expense logged via Budget Engine',
+                receiptItems: splitMode === 'ITEMIZED' ? receiptItems : undefined
+            });
+        }
     };
 
     const handleDeleteClick = () => {
@@ -501,6 +582,12 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                 >
                                     Custom
                                 </button>
+                                <button
+                                    onClick={() => setSplitMode('ITEMIZED')}
+                                    className={`text-[9px] font-bold uppercase px-3 py-1 rounded transition-colors ${splitMode === 'ITEMIZED' ? 'bg-tactical-accent text-black' : 'text-gray-500'}`}
+                                >
+                                    Itemized
+                                </button>
                             </div>
                         )}
                     </div>
@@ -550,86 +637,155 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                 </div>
                             </div>
 
-                            <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                        Split Among {splitMode === 'CUSTOM' && remaining !== 0 && (
-                                            <span className={remaining < 0 ? "text-red-500" : "text-yellow-500"}>
-                                                ({remaining > 0 ? `Left: ${getCurrencySymbol(baseCurrency)} ${remaining.toFixed(2)}` : `Over: ${getCurrencySymbol(baseCurrency)} ${Math.abs(remaining).toFixed(2)}`})
-                                            </span>
-                                        )}
-                                    </label>
-                                    <button
-                                        onClick={handleSelectAll}
-                                        className="text-[9px] font-bold text-tactical-accent uppercase hover:underline"
-                                    >
-                                        Select All
-                                    </button>
-                                </div>
-
-                                <div className="space-y-2">
-                                    {activeMembers.map(member => {
-                                        const isIncluded = splitWith.includes(member.id);
-                                        return (
-                                            <div
-                                                key={member.id}
-                                                onClick={() => {
-                                                    if (splitMode === 'EQUAL') toggleSplitMember(member.id);
-                                                }}
-                                                className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isIncluded
-                                                    ? 'bg-tactical-card border-tactical-muted/50'
-                                                    : 'bg-transparent border-transparent opacity-50'
-                                                    }`}
-                                            >
-                                                <div className="flex items-center gap-3 cursor-pointer" onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toggleSplitMember(member.id);
-                                                }}>
-                                                    <div className="relative">
-                                                        <img
-                                                            src={member.avatarUrl}
-                                                            className="w-10 h-10 rounded-full border border-gray-600"
-                                                        />
-                                                        {isIncluded && (
-                                                            <div className="absolute -bottom-1 -right-1 bg-tactical-accent text-black rounded-full p-0.5">
-                                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                            {splitMode === 'ITEMIZED' ? (
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Receipt Items</label>
+                                        <div className="text-[10px] text-gray-400">
+                                            Tap avatars to assign items
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        {receiptItems.map((item) => (
+                                            <div key={item.id} className="bg-tactical-card/50 p-3 rounded-lg border border-white/5">
+                                                <div className="flex justify-between items-start mb-2">
                                                     <div>
-                                                        <div className={`font-bold uppercase text-sm ${isIncluded ? 'text-white' : 'text-gray-500'}`}>
-                                                            {member.name}
+                                                        <div className="font-bold text-white text-sm">{item.name}</div>
+                                                        <div className="text-[10px] text-gray-500 flex gap-2">
+                                                            <span>{item.quantity}x</span>
+                                                            <span className="uppercase badge bg-gray-800 px-1 rounded text-[8px]">{item.type}</span>
                                                         </div>
+                                                    </div>
+                                                    <div className="font-mono font-bold text-tactical-accent">
+                                                        {getCurrencySymbol(currencyCode)}{item.price.toFixed(2)}
                                                     </div>
                                                 </div>
 
-                                                {/* Amount (Always in Base Currency) */}
-                                                {isIncluded && (
-                                                    <div className="text-right">
-                                                        {splitMode === 'EQUAL' ? (
-                                                            <div className="text-sm font-mono text-tactical-accent font-bold">
-                                                                {getCurrencySymbol(baseCurrency)} {equalShare}
+                                                {/* Assignment Avatars */}
+                                                <div className="flex gap-2">
+                                                    {['tax', 'tip', 'service'].includes(item.type) ? (
+                                                        <div className="flex items-center gap-2 w-full">
+                                                            <div className="text-[10px] font-bold text-yellow-500 uppercase border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 rounded w-full text-center">
+                                                                Shared Proportionally
                                                             </div>
-                                                        ) : (
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-tactical-accent text-sm font-bold">{getCurrencySymbol(baseCurrency)}</span>
-                                                                <input
-                                                                    type="number"
-                                                                    value={customAmounts[member.id] || ''}
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                    onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
-                                                                    className="w-20 bg-black/30 border border-gray-700 rounded p-1 text-right text-white font-mono text-sm outline-none focus:border-tactical-accent"
-                                                                    placeholder="0.00"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                                        </div>
+                                                    ) : (
+                                                        activeMembers.map(m => {
+                                                            const isAssigned = item.assignedTo?.includes(m.id);
+                                                            return (
+                                                                <button
+                                                                    key={m.id}
+                                                                    onClick={() => {
+                                                                        const newItems = receiptItems.map(ri => {
+                                                                            if (ri.id !== item.id) return ri;
+                                                                            const assigned = ri.assignedTo || [];
+                                                                            const newAssigned = assigned.includes(m.id)
+                                                                                ? assigned.filter(id => id !== m.id)
+                                                                                : [...assigned, m.id];
+                                                                            return { ...ri, assignedTo: newAssigned };
+                                                                        });
+                                                                        setReceiptItems(newItems);
+                                                                    }}
+                                                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isAssigned ? 'border-tactical-accent opacity-100 scale-110' : 'border-transparent opacity-40 grayscale hover:opacity-70'}`}
+                                                                >
+                                                                    <img src={m.avatarUrl} className="w-full h-full rounded-full" />
+                                                                </button>
+                                                            );
+                                                        })
+                                                    )}
+                                                </div>
                                             </div>
-                                        )
-                                    })}
+                                        ))}
+
+                                        {receiptItems.length === 0 && (
+                                            <div className="text-center p-8 border border-dashed border-gray-700 rounded-xl text-gray-500 text-xs">
+                                                No items scanned. Upload a receipt or add items manually (coming soon).
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                                            Split Among {splitMode === 'CUSTOM' && remaining !== 0 && (
+                                                <span className={remaining < 0 ? "text-red-500" : "text-yellow-500"}>
+                                                    ({remaining > 0 ? `Left: ${getCurrencySymbol(baseCurrency)} ${remaining.toFixed(2)}` : `Over: ${getCurrencySymbol(baseCurrency)} ${Math.abs(remaining).toFixed(2)}`})
+                                                </span>
+                                            )}
+                                        </label>
+                                        <button
+                                            onClick={handleSelectAll}
+                                            className="text-[9px] font-bold text-tactical-accent uppercase hover:underline"
+                                        >
+                                            Select All
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {activeMembers.map(member => {
+                                            const isIncluded = splitWith.includes(member.id);
+                                            return (
+                                                <div
+                                                    key={member.id}
+                                                    onClick={() => {
+                                                        if (splitMode === 'EQUAL') toggleSplitMember(member.id);
+                                                    }}
+                                                    className={`flex items-center justify-between p-3 rounded-lg border transition-all ${isIncluded
+                                                        ? 'bg-tactical-card border-tactical-muted/50'
+                                                        : 'bg-transparent border-transparent opacity-50'
+                                                        }`}
+                                                >
+                                                    <div className="flex items-center gap-3 cursor-pointer" onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        toggleSplitMember(member.id);
+                                                    }}>
+                                                        <div className="relative">
+                                                            <img
+                                                                src={member.avatarUrl}
+                                                                className="w-10 h-10 rounded-full border border-gray-600"
+                                                            />
+                                                            {isIncluded && (
+                                                                <div className="absolute -bottom-1 -right-1 bg-tactical-accent text-black rounded-full p-0.5">
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div>
+                                                            <div className={`font-bold uppercase text-sm ${isIncluded ? 'text-white' : 'text-gray-500'}`}>
+                                                                {member.name}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Amount (Always in Base Currency) */}
+                                                    {isIncluded && (
+                                                        <div className="text-right">
+                                                            {splitMode === 'EQUAL' ? (
+                                                                <div className="text-sm font-mono text-tactical-accent font-bold">
+                                                                    {getCurrencySymbol(baseCurrency)} {equalShare}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-1">
+                                                                    <span className="text-tactical-accent text-sm font-bold">{getCurrencySymbol(baseCurrency)}</span>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={customAmounts[member.id] || ''}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
+                                                                        className="w-20 bg-black/30 border border-gray-700 rounded p-1 text-right text-white font-mono text-sm outline-none focus:border-tactical-accent"
+                                                                        placeholder="0.00"
+                                                                    />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
@@ -680,7 +836,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

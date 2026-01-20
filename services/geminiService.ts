@@ -79,7 +79,7 @@ export const generateMissionSuggestions = async (
   }
 };
 
-export const analyzeReceipt = async (base64Data: string, mimeType: string = "image/jpeg", tripStartDate?: Date): Promise<Partial<ItineraryItem>[] | null> => {
+export const analyzeReceipt = async (base64Data: string, mimeType: string = "image/jpeg", tripStartDate?: Date): Promise<Partial<ItineraryItem> | null> => {
   try {
     const modelId = "gemini-2.5-flash";
 
@@ -90,26 +90,36 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
     const prompt = `
        ${contextPrompt}
        Analyze this image or document (invoice, receipt, ticket, or booking confirmation).
-       Extract the relevant travel itinerary details into a JSON Array of objects.
+       Extract the relevant travel itinerary details into a JSON Object.
        
-       If the document contains multiple distinct events (e.g., a round-trip flight with two legs, a hotel booking plus a flight, or multiple train tickets), create a separate object for each event.
+       MANDATORY: Return a SINGLE JSON Object.
        
-       For TRANSPORT (Flights/Trains):
-       1. Look for 'Travel Time' or 'Duration' text (e.g., '8 h 29 m'). Calculate total minutes and include as 'durationMinutes'. This is critical for accurate timelines.
-       2. Extract the LOCAL dates and times as printed on the ticket. Return them in ISO 8601 format (YYYY-MM-DDTHH:mm) WITHOUT timezone offsets (e.g. do not use 'Z' or '-06:00'). We want the "Wall Clock" time at the location.
+       For RECEIPTS/INVOICES (Food, Shopping, Services):
+       1. Extract individual line items into a 'receiptItems' array.
+       2. For EACH item, provide:
+          - name: Item name
+          - quantity: Number of units (default to 1)
+          - price: Total price for this line item
+          - type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'other'
+       3. If taxes are included in item prices, DO NOT extract them as separate items. Only extract 'tax' if it is a separate line item added to the subtotal.
+       4. Extract the 'total' amount.
        
-       Each object in the array should have these fields:
-       - type: One of "STAY", "TRANSPORT", "ACTIVITY", "FOOD", "ESSENTIALS". Use "ESSENTIALS" for groceries, pharmacy, or general supplies.
-       - title: Name of the hotel, airline, restaurant, store or activity provider.
-       - location: City, address, or airport code (Origin for transport).
-       - endLocation: (Optional) Destination city/airport for TRANSPORT types.
-       - startDate: Local ISO 8601 string (YYYY-MM-DDTHH:mm) with NO offset.
-       - endDate: (Optional) Local ISO 8601 string with NO offset.
-       - cost: Total amount as a number. Split total across items if appropriate (e.g. divide by 2) or assign to first item.
-       - details: Notes, seat number, confirmation code, ticket number, or list of items purchased.
-       - durationMinutes: (Number) Explicit duration in minutes if stated on document.
+       For TRANSPORT/TICKETS:
+       1. Look for 'Travel Time' or 'Duration' text (e.g., '8 h 29 m'). Calculate total minutes and include as 'durationMinutes'.
+       2. Extract distinct events if possible, but primarily return the MAIN event details.
        
-       Return strictly a JSON Array.
+       The JSON Object must have these fields:
+       - type: One of "STAY", "TRANSPORT", "ACTIVITY", "FOOD", "ESSENTIALS", "SETTLEMENT".
+       - title: Name of the vendor, airline, hotel, etc.
+       - location: City, address, or airport code.
+       - startDate: Local ISO 8601 string (YYYY-MM-DDTHH:mm).
+       - cost: Total amount as a number.
+       - currencyCode: 3-letter currency code (e.g. USD, EUR, JPY) inferred from symbol or text.
+       - details: Notes or confirmation codes.
+       - durationMinutes: (Number) for transport.
+       - receiptItems: Array of { name, quantity, price, type } objects.
+       
+       Return strictly a JSON Object.
      `;
 
     const response = await ai.models.generateContent({
@@ -128,12 +138,18 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
     const text = response.text;
     if (!text) return null;
 
-    const parsed = JSON.parse(text);
+    const data = JSON.parse(text);
 
-    // Ensure result is an array
-    const dataArray = Array.isArray(parsed) ? parsed : [parsed];
+    // Post-process receipt items to add IDs
+    const receiptItems = Array.isArray(data.receiptItems)
+      ? data.receiptItems.map((item: any) => ({
+        ...item,
+        id: crypto.randomUUID(), // Generate ID for UI handling
+        assignedTo: [] // Default unassigned
+      }))
+      : undefined;
 
-    return dataArray.map((data: any) => ({
+    return {
       type: data.type,
       title: data.title,
       location: data.location,
@@ -141,9 +157,11 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
       startDate: data.startDate ? new Date(data.startDate) : undefined,
       endDate: data.endDate ? new Date(data.endDate) : undefined,
       cost: typeof data.cost === 'number' ? data.cost : (parseFloat(data.cost) || 0),
+      currencyCode: data.currencyCode,
       details: typeof data.details === 'string' ? data.details : undefined,
-      durationMinutes: typeof data.durationMinutes === 'number' ? data.durationMinutes : undefined
-    }));
+      durationMinutes: typeof data.durationMinutes === 'number' ? data.durationMinutes : undefined,
+      receiptItems: receiptItems
+    };
   } catch (e) {
     console.error("Analysis failed", e);
     return null;

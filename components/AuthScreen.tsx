@@ -17,34 +17,55 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
         // Initialize Google One Tap
         const initializeGoogleOneTap = () => {
-            if (!window.google) return;
+            if (!window.google || !clientId) return;
 
-            /* global google */
-            google.accounts.id.initialize({
-                client_id: '115085525445-uff7tlrs2ps28r6jb03s12c4be7cdmvp.apps.googleusercontent.com', // Replace with real Client ID
-                callback: handleGoogleCredentialResponse,
-                cancel_on_tap_outside: false,
-            });
+            try {
+                /* global google */
+                google.accounts.id.initialize({
+                    client_id: clientId,
+                    callback: handleGoogleCredentialResponse,
+                    auto_select: false,
+                    use_fedcm_for_prompt: true,
+                    cancel_on_tap_outside: false,
+                });
 
-            google.accounts.id.prompt((notification) => {
-                if (notification.isNotDisplayed()) {
-                    console.log('One Tap not displayed:', notification.getNotDisplayedReason());
+                google.accounts.id.prompt((notification) => {
+                    const momentType = notification.getMomentType();
+
+                    if (momentType === 'skipped') {
+                        const reason = notification.getSkippedReason();
+                        if (reason === 'unregistered_origin') {
+                            console.warn('[NomadSync] Google One Tap: Local origin (localhost) is not registered in the Google Cloud Console. Login will still work via the "Continue with Google" button.');
+                        } else {
+                            console.log('One Tap skipped:', reason);
+                        }
+                    } else if (momentType === 'dismissed') {
+                        console.log('One Tap dismissed:', notification.getDismissedReason());
+                    }
+                });
+            } catch (err) {
+                console.warn('[NomadSync] Google One Tap initialization failed. Check your VITE_GOOGLE_CLIENT_ID.');
+            }
+        };
+
+        if (clientId && clientId !== 'YOUR_GOOGLE_CLIENT_ID') {
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = true;
+            script.defer = true;
+            script.onload = initializeGoogleOneTap;
+            document.head.appendChild(script);
+
+            return () => {
+                if (document.head.contains(script)) {
+                    document.head.removeChild(script);
                 }
-            });
-        };
-
-        const script = document.createElement('script');
-        script.src = 'https://accounts.google.com/gsi/client';
-        script.async = true;
-        script.defer = true;
-        script.onload = initializeGoogleOneTap;
-        document.head.appendChild(script);
-
-        return () => {
-            document.head.removeChild(script);
-        };
+            };
+        }
     }, []);
 
     const handleGoogleCredentialResponse = async (response: any) => {

@@ -57,9 +57,9 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
 
           // Pass the file type (e.g., application/pdf or image/png)
           // Pass tripStartDate to assist with Year Inference
-          const items = await analyzeReceipt(base64Content, file.type, tripStartDate);
-          if (items && items.length > 0) {
-            onScannedItem(items);
+          const item = await analyzeReceipt(base64Content, file.type, tripStartDate);
+          if (item) {
+            onScannedItem([item]);
           } else {
             alert('Could not extract intelligence from this document.');
           }

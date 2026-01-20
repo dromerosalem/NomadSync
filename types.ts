@@ -24,6 +24,15 @@ export interface Member {
   pendingPastExpensesInvitation?: boolean; // Flag for late joiners invited to share past expenses
 }
 
+export interface ReceiptItem {
+  id: string; // generated UUID for internal tracking
+  name: string;
+  quantity: number;
+  price: number;
+  type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'other';
+  assignedTo?: string[]; // IDs of members responsible
+}
+
 export interface ItineraryItem {
   id: string;
   tripId: string;
@@ -56,6 +65,10 @@ export interface ItineraryItem {
   originalAmount?: number;
   currencyCode?: string;
   exchangeRate?: number;
+  
+  // Receipt Breakdown
+  receiptItems?: ReceiptItem[];
+  
   updatedAt?: number;
 }
 
