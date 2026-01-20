@@ -174,7 +174,8 @@ class SyncService {
                 tags: dbItem.tags,
                 original_amount: dbItem.originalAmount,
                 currency_code: dbItem.currencyCode,
-                exchange_rate: dbItem.exchangeRate
+                exchange_rate: dbItem.exchangeRate,
+                receipt_items: dbItem.receiptItems
             };
 
             let resultId = item.id;
@@ -219,9 +220,9 @@ class SyncService {
                                     details: serverState.details,
                                     mapUri: serverState.map_uri,
                                     tags: serverState.tags || [],
-                                    originalAmount: serverState.original_amount,
                                     currencyCode: serverState.currency_code,
                                     exchangeRate: serverState.exchange_rate,
+                                    receiptItems: serverState.receipt_items,
                                     updatedAt: serverTime
                                 };
 
@@ -246,7 +247,8 @@ class SyncService {
                                         tags: merged.tags,
                                         original_amount: merged.originalAmount,
                                         currency_code: merged.currencyCode,
-                                        exchange_rate: merged.exchangeRate
+                                        exchange_rate: merged.exchangeRate,
+                                        receipt_items: merged.receiptItems
                                     });
                                 } else {
                                     console.warn(`[SyncService] Smart Merge failed for item ${item.id}. Overlapping changes detected.`);
@@ -298,7 +300,7 @@ class SyncService {
             'title', 'location', 'endLocation', 'startDate', 'endDate',
             'durationMinutes', 'cost', 'paidBy', 'isPrivate',
             'showInTimeline', 'details', 'mapUri', 'tags',
-            'originalAmount', 'currencyCode', 'exchangeRate'
+            'originalAmount', 'currencyCode', 'exchangeRate', 'receiptItems'
         ];
 
         for (const field of fields) {

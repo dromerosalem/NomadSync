@@ -27,6 +27,8 @@ export interface Member {
 export interface ReceiptItem {
   id: string; // generated UUID for internal tracking
   name: string;
+  nameRomanized?: string; // Latin characters representation (e.g. for Pinyin, Cyrillic Transliteration)
+  nameEnglish?: string; // English translation
   quantity: number;
   price: number;
   type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'other';
@@ -65,10 +67,10 @@ export interface ItineraryItem {
   originalAmount?: number;
   currencyCode?: string;
   exchangeRate?: number;
-  
+
   // Receipt Breakdown
   receiptItems?: ReceiptItem[];
-  
+
   updatedAt?: number;
 }
 

@@ -203,33 +203,103 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
                 </div>
               </div>
 
-              {/* Split List */}
-              <div className="flex flex-col gap-2 mb-4 pl-1">
-                {item.splitWith?.map(memberId => {
-                  const m = members.find(mem => mem.id === memberId);
-                  let share = totalCost / (splitCount || 1);
-                  if (item.splitDetails && item.splitDetails[memberId] !== undefined) {
-                    share = item.splitDetails[memberId];
-                  }
+              {/* Receipt View for Itemized Splits */}
+              {item.receiptItems && item.receiptItems.length > 0 ? (
+                <div className="bg-black/30 rounded-xl border-2 border-white/5 p-4 mb-4 relative overflow-hidden">
+                  {/* Receipt ragged top edge decoration (CSS or SVG) could go here */}
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-tactical-accent/20 to-transparent opacity-50"></div>
 
-                  return (
-                    <div key={memberId} className="flex items-center justify-between bg-white/5 p-2 rounded">
-                      <div className="flex items-center gap-2">
-                        <AtmosphericAvatar
-                          userId={memberId}
-                          avatarUrl={m?.avatarUrl}
-                          name={m?.name || 'Unknown'}
-                          size="xs"
-                        />
-                        <span className="text-xs text-gray-300 font-bold uppercase">{m?.name}</span>
-                      </div>
-                      <div className="font-mono text-xs text-tactical-accent font-bold">
-                        {getCurrencySymbol(baseCurrency)}{share.toFixed(2)}
-                      </div>
+                  <div className="flex justify-between items-end mb-4 border-b border-dashed border-gray-700 pb-2">
+                    <div className="text-xs font-bold text-white uppercase tracking-widest">
+                      Official Receipt
                     </div>
-                  );
-                })}
-              </div>
+                    <div className="text-[10px] text-gray-500 font-mono">
+                      ID: {item.id.slice(0, 8).toUpperCase()}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {item.receiptItems.map((rItem, idx) => {
+                      const isShared = ['tax', 'tip', 'service'].includes(rItem.type);
+                      return (
+                        <div key={idx} className="flex flex-col gap-1 border-b border-white/5 pb-2 last:border-0">
+                          <div className="flex justify-between items-start text-sm">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-gray-300 font-bold truncate">{rItem.name}</span>
+                                <div className="flex -space-x-1 shrink-0">
+                                  {rItem.assignedTo?.map(uid => {
+                                    const m = members.find(mem => mem.id === uid);
+                                    return (
+                                      <AtmosphericAvatar key={uid} userId={uid} avatarUrl={m?.avatarUrl} name={m?.name || ''} size="xs" className="w-4 h-4 border border-black/50" />
+                                    );
+                                  })}
+                                  {isShared && (
+                                    <div className="w-4 h-4 rounded-full bg-yellow-500 flex items-center justify-center text-[8px] text-black font-black border border-black/50">S</div>
+                                  )}
+                                </div>
+                              </div>
+                              {(rItem.nameRomanized || rItem.nameEnglish) && (
+                                <div className="text-[10px] text-gray-500 space-x-1 italic truncate">
+                                  {rItem.nameRomanized && <span>{rItem.nameRomanized}</span>}
+                                  {rItem.nameRomanized && rItem.nameEnglish && <span>•</span>}
+                                  {rItem.nameEnglish && <span>{rItem.nameEnglish}</span>}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0 ml-4">
+                              <div className="font-mono text-white">
+                                {item.currencyCode ? getCurrencySymbol(item.currencyCode) : getCurrencySymbol(baseCurrency)}
+                                {rItem.price.toFixed(2)}
+                              </div>
+                              <div className="text-[9px] text-gray-600 uppercase">{rItem.quantity}x • {rItem.type}</div>
+                            </div>
+                          </div>
+                          {isShared && (
+                            <div className="text-[8px] text-yellow-500 uppercase tracking-wider font-bold opacity-60">Shared Proportionally</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 pt-2 border-t border-dashed border-gray-700 flex justify-between items-center">
+                    <span className="text-xs font-bold text-gray-500 uppercase">Subtotal (Original)</span>
+                    <div className="font-mono text-lg text-tactical-accent font-bold">
+                      {item.currencyCode ? getCurrencySymbol(item.currencyCode) : getCurrencySymbol(baseCurrency)}
+                      {item.originalAmount?.toFixed(2) || item.cost.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Standard List for Non-Itemized */
+                <div className="flex flex-col gap-2 mb-4 pl-1">
+                  {item.splitWith?.map(memberId => {
+                    const m = members.find(mem => mem.id === memberId);
+                    let share = totalCost / (splitCount || 1);
+                    if (item.splitDetails && item.splitDetails[memberId] !== undefined) {
+                      share = item.splitDetails[memberId];
+                    }
+
+                    return (
+                      <div key={memberId} className="flex items-center justify-between bg-white/5 p-2 rounded">
+                        <div className="flex items-center gap-2">
+                          <AtmosphericAvatar
+                            userId={memberId}
+                            avatarUrl={m?.avatarUrl}
+                            name={m?.name || 'Unknown'}
+                            size="xs"
+                          />
+                          <span className="text-xs text-gray-300 font-bold uppercase">{m?.name}</span>
+                        </div>
+                        <div className="font-mono text-xs text-tactical-accent font-bold">
+                          {getCurrencySymbol(baseCurrency)}{share.toFixed(2)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Your Share Card */}
               {isUserIncluded ? (

@@ -97,7 +97,9 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        For RECEIPTS/INVOICES (Food, Shopping, Services):
        1. Extract individual line items into a 'receiptItems' array.
        2. For EACH item, provide:
-          - name: Item name
+          - name: The item name EXACTLY as it appears on the document (e.g. in Chinese, Cyrillic, etc).
+          - nameRomanized: If the 'name' is in a non-latin script (Chinese, Japanese, Russian, etc.), provide the phonetic transliteration in Latin characters (e.g. Pinyin for Chinese). Leave null if already in Latin script.
+          - nameEnglish: If the 'name' is not in English, provide an accurate English translation.
           - quantity: Number of units (default to 1)
           - price: Total price for this line item
           - type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'other'
@@ -117,7 +119,7 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        - currencyCode: 3-letter currency code (e.g. USD, EUR, JPY) inferred from symbol or text.
        - details: Notes or confirmation codes.
        - durationMinutes: (Number) for transport.
-       - receiptItems: Array of { name, quantity, price, type } objects.
+       - receiptItems: Array of { name, nameRomanized, nameEnglish, quantity, price, type } objects.
        
        Return strictly a JSON Object.
      `;

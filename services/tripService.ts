@@ -133,6 +133,7 @@ export const tripService = {
                 originalAmount: item.original_amount,
                 currencyCode: item.currency_code,
                 exchangeRate: item.exchange_rate,
+                receiptItems: item.receipt_items,
                 updatedAt: new Date(item.updated_at || Date.now()).getTime(),
                 splitWith: item.expense_splits.map((s: any) => s.user_id),
                 splitDetails: item.expense_splits.reduce((acc: any, s: any) => {
@@ -243,7 +244,7 @@ export const tripService = {
         // 1. Capture base state for merging before optimistic update
         const basePayload = isNew ? null : await db.items.get(item.id);
 
-        const optimisticItem = {
+        const optimisticItem: ItineraryItem = {
             ...item,
             id: isNew ? `temp-${Date.now()}` : item.id,
             updatedAt: Date.now()
@@ -279,7 +280,8 @@ export const tripService = {
                 tags: optimisticItem.tags,
                 original_amount: optimisticItem.originalAmount,
                 currency_code: optimisticItem.currencyCode,
-                exchange_rate: optimisticItem.exchangeRate
+                exchange_rate: optimisticItem.exchangeRate,
+                receipt_items: optimisticItem.receiptItems
             };
 
             let resultId = optimisticItem.id;

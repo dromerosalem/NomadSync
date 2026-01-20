@@ -566,7 +566,8 @@ const App: React.FC = () => {
           ...existing,
           ...itemData,
           startDate: itemData.startDate || existing.startDate,
-          endDate: 'endDate' in itemData ? itemData.endDate : existing.endDate
+          endDate: 'endDate' in itemData ? itemData.endDate : existing.endDate,
+          receiptItems: (itemData as any).receiptItems !== undefined ? (itemData as any).receiptItems : existing.receiptItems
         } as ItineraryItem;
       } else {
         const defaultSplitWith = currentTrip.members
@@ -601,7 +602,8 @@ const App: React.FC = () => {
           countryCode: itemData.countryCode,
           endLatitude: itemData.endLatitude,
           endLongitude: itemData.endLongitude,
-          endCountryCode: itemData.endCountryCode
+          endCountryCode: itemData.endCountryCode,
+          receiptItems: (itemData as any).receiptItems
         } as ItineraryItem;
       }
 

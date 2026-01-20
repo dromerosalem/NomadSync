@@ -122,7 +122,10 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
 
     // Initialize Split Mode and Custom Amounts if editing
     useEffect(() => {
-        if (initialItem?.splitDetails && Object.keys(initialItem.splitDetails).length > 0) {
+        if (initialItem?.receiptItems && initialItem.receiptItems.length > 0) {
+            setSplitMode('ITEMIZED');
+            setReceiptItems(initialItem.receiptItems);
+        } else if (initialItem?.splitDetails && Object.keys(initialItem.splitDetails).length > 0) {
             setSplitMode('CUSTOM');
             const stringAmounts: Record<string, string> = {};
             Object.entries(initialItem.splitDetails).forEach(([id, amt]) => {
@@ -199,7 +202,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64Content = (reader.result as string).split(',')[1];
-                    const item = await analyzeReceipt(base64Content, file.type, tripStartDate) as (Partial<ItineraryItem> | null);
+                    const item = await analyzeReceipt(base64Content, file.type, tripStartDate) as (Partial<ItineraryItem> & { receiptItems?: any[] } | null);
 
                     if (item) {
                         if (item.cost) setOriginalAmount(item.cost.toString());
@@ -241,10 +244,15 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             // Allow 1 cent drift for manual entry, but ideally 0
             if (sum.subtract(totalMoney).abs().greaterThan(0.01)) return false;
         } else if (splitMode === 'ITEMIZED') {
-            // For itemized, we mainly need to check if items are assigned? 
-            // Or maybe we allow unassigned items as "paid by payer but consumed by ?" -> defaulted to payer?
-            // For now, let's just validte that we have items.
+            // Validate that all assignable items (not tax/tip/service) have at least one assignee
             if (receiptItems.length === 0) return false;
+
+            const hasUnassignedItems = receiptItems.some(item => {
+                if (['tax', 'tip', 'service'].includes(item.type)) return false;
+                return !item.assignedTo || item.assignedTo.length === 0;
+            });
+
+            if (hasUnassignedItems) return false;
         }
 
         if (splitWith.length === 0 && splitMode !== 'ITEMIZED') return false; // In itemized, splitWith is derived
@@ -652,62 +660,74 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                         </div>
                                     </div>
                                     <div className="flex flex-col gap-3">
-                                        {receiptItems.map((item) => (
-                                            <div key={item.id} className="bg-tactical-card/50 p-3 rounded-lg border border-white/5">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <div>
-                                                        <div className="font-bold text-white text-sm">{item.name}</div>
-                                                        <div className="text-[10px] text-gray-500 flex gap-2">
-                                                            <span>{item.quantity}x</span>
-                                                            <span className="uppercase badge bg-gray-800 px-1 rounded text-[8px]">{item.type}</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="font-mono font-bold text-tactical-accent">
-                                                        {getCurrencySymbol(currencyCode)}{item.price.toFixed(2)}
-                                                    </div>
-                                                </div>
+                                        {receiptItems.map((item) => {
+                                            const isAssignable = !['tax', 'tip', 'service'].includes(item.type);
+                                            const isUnassigned = isAssignable && (!item.assignedTo || item.assignedTo.length === 0);
 
-                                                {/* Assignment Avatars */}
-                                                <div className="flex gap-2">
-                                                    {['tax', 'tip', 'service'].includes(item.type) ? (
-                                                        <div className="flex items-center gap-2 w-full">
-                                                            <div className="text-[10px] font-bold text-yellow-500 uppercase border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 rounded w-full text-center">
-                                                                Shared Proportionally
+                                            return (
+                                                <div key={item.id} className={`bg-tactical-card/50 p-3 rounded-lg border ${isUnassigned ? 'border-red-500/50 shadow-[0_0_10px_rgba(255,0,0,0.1)]' : 'border-white/5'}`}>
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <div className="font-bold text-white text-sm">{item.name}</div>
+                                                            {(item.nameRomanized || item.nameEnglish) && (
+                                                                <div className="text-[10px] text-gray-400 mt-0.5 space-x-1 italic">
+                                                                    {item.nameRomanized && <span>{item.nameRomanized}</span>}
+                                                                    {item.nameRomanized && item.nameEnglish && <span>•</span>}
+                                                                    {item.nameEnglish && <span>{item.nameEnglish}</span>}
+                                                                </div>
+                                                            )}
+                                                            <div className="text-[10px] text-gray-500 flex gap-2">
+                                                                <span>{item.quantity}x</span>
+                                                                <span className="uppercase badge bg-gray-800 px-1 rounded text-[8px]">{item.type}</span>
                                                             </div>
                                                         </div>
-                                                    ) : (
-                                                        activeMembers.map(m => {
-                                                            const isAssigned = item.assignedTo?.includes(m.id);
-                                                            return (
-                                                                <button
-                                                                    key={m.id}
-                                                                    onClick={() => {
-                                                                        const newItems = receiptItems.map(ri => {
-                                                                            if (ri.id !== item.id) return ri;
-                                                                            const assigned = ri.assignedTo || [];
-                                                                            const newAssigned = assigned.includes(m.id)
-                                                                                ? assigned.filter(id => id !== m.id)
-                                                                                : [...assigned, m.id];
-                                                                            return { ...ri, assignedTo: newAssigned };
-                                                                        });
-                                                                        setReceiptItems(newItems);
-                                                                    }}
-                                                                    className={`transition-all ${isAssigned ? 'opacity-100 scale-110' : 'opacity-40 grayscale hover:opacity-70'}`}
-                                                                >
-                                                                    <AtmosphericAvatar
-                                                                        userId={m.id}
-                                                                        avatarUrl={m.avatarUrl}
-                                                                        name={m.name}
-                                                                        size="sm"
-                                                                        isPathfinder={isAssigned}
-                                                                    />
-                                                                </button>
-                                                            );
-                                                        })
-                                                    )}
+                                                        <div className="font-mono font-bold text-tactical-accent">
+                                                            {getCurrencySymbol(currencyCode)}{item.price.toFixed(2)}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Assignment Avatars */}
+                                                    <div className="flex gap-2">
+                                                        {['tax', 'tip', 'service'].includes(item.type) ? (
+                                                            <div className="flex items-center gap-2 w-full">
+                                                                <div className="text-[10px] font-bold text-yellow-500 uppercase border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 rounded w-full text-center">
+                                                                    Shared Proportionally
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            activeMembers.map(m => {
+                                                                const isAssigned = item.assignedTo?.includes(m.id);
+                                                                return (
+                                                                    <button
+                                                                        key={m.id}
+                                                                        onClick={() => {
+                                                                            const newItems = receiptItems.map(ri => {
+                                                                                if (ri.id !== item.id) return ri;
+                                                                                const assigned = ri.assignedTo || [];
+                                                                                const newAssigned = assigned.includes(m.id)
+                                                                                    ? assigned.filter(id => id !== m.id)
+                                                                                    : [...assigned, m.id];
+                                                                                return { ...ri, assignedTo: newAssigned };
+                                                                            });
+                                                                            setReceiptItems(newItems);
+                                                                        }}
+                                                                        className={`transition-all ${isAssigned ? 'opacity-100 scale-110' : 'opacity-40 grayscale hover:opacity-70'}`}
+                                                                    >
+                                                                        <AtmosphericAvatar
+                                                                            userId={m.id}
+                                                                            avatarUrl={m.avatarUrl}
+                                                                            name={m.name}
+                                                                            size="sm"
+                                                                            isPathfinder={isAssigned}
+                                                                        />
+                                                                    </button>
+                                                                );
+                                                            })
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
 
                                         {receiptItems.length === 0 && (
                                             <div className="text-center p-8 border border-dashed border-gray-700 rounded-xl text-gray-500 text-xs">
