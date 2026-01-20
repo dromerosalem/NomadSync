@@ -1,5 +1,7 @@
 import React from 'react';
 import { Trip, ItineraryItem, ItemType, Member } from '../types';
+import { sanitizeAsset } from '../utils/assetUtils';
+import AtmosphericAvatar from './AtmosphericAvatar';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, EyeOffIcon, UserIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import MapComponent from './MapComponent';
@@ -213,9 +215,11 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
                   return (
                     <div key={memberId} className="flex items-center justify-between bg-white/5 p-2 rounded">
                       <div className="flex items-center gap-2">
-                        <img
-                          src={m?.avatarUrl || `https://ui-avatars.com/api/?name=U`}
-                          className="w-6 h-6 rounded-full border border-gray-600"
+                        <AtmosphericAvatar
+                          userId={memberId}
+                          avatarUrl={m?.avatarUrl}
+                          name={m?.name || 'Unknown'}
+                          size="xs"
                         />
                         <span className="text-xs text-gray-300 font-bold uppercase">{m?.name}</span>
                       </div>

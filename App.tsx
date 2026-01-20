@@ -25,7 +25,7 @@ const INITIAL_USER: Member = {
   name: 'Ghost Operative',
   email: 'ghost@nomad.com',
   role: 'PATHFINDER',
-  avatarUrl: 'https://i.pravatar.cc/150?u=ghost',
+  avatarUrl: null, // Sanitized in UI
   isCurrentUser: true,
   status: 'ACTIVE'
 };
@@ -95,7 +95,7 @@ const App: React.FC = () => {
           name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Ghost Operative',
           email: user.email!,
           role: 'PATHFINDER',
-          avatarUrl: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email!)}&background=random`,
+          avatarUrl: user.user_metadata.avatar_url || null,
           isCurrentUser: true,
           status: 'ACTIVE'
         };
@@ -127,7 +127,7 @@ const App: React.FC = () => {
           name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Ghost Operative',
           email: user.email!,
           role: 'PATHFINDER',
-          avatarUrl: user.user_metadata.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.email!)}&background=random`,
+          avatarUrl: user.user_metadata.avatar_url || null,
           isCurrentUser: true,
           status: 'ACTIVE'
         };
@@ -319,7 +319,7 @@ const App: React.FC = () => {
         members,
         status: calculateTripStatus(startDate, endDate),
         budgetViewMode: 'SMART',
-        coverImage: `https://picsum.photos/seed/${Date.now()}/800/400`
+        coverImage: null
       };
 
       const createdTrip = await tripService.createTrip(newTripData, currentUser.id);

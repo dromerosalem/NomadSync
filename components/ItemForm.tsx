@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member } from '../types';
 import { ChevronLeftIcon, MapPinIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, UserIcon, WalletIcon } from './Icons';
 import PlaceAutocomplete from './PlaceAutocomplete';
+import { sanitizeAsset } from '../utils/assetUtils';
 import { LocationResult } from '../services/LocationService';
 
 interface ItemFormProps {
@@ -355,7 +355,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                           : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-500'
                           }`}
                       >
-                        <img src={member.avatarUrl} className="w-4 h-4 rounded-full" />
+                        <img src={sanitizeAsset(member.avatarUrl, member.id)} className="w-4 h-4 rounded-full" />
                         {member.isCurrentUser ? 'Me' : member.name.split(' ')[0]}
                       </button>
                     ))}
@@ -371,7 +371,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                     <div key={member.id} className="flex items-center justify-between p-2 rounded hover:bg-white/5">
                       <div className="flex items-center gap-3">
                         <img
-                          src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`}
+                          src={sanitizeAsset(member.avatarUrl, member.id)}
                           alt={member.name}
                           className="w-8 h-8 rounded-full border border-gray-600"
                         />

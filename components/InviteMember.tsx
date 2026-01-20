@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Trip, Role, Member } from '../types';
 import { ChevronLeftIcon, LinkIcon, CopyIcon, SendIcon, EditIcon, EyeIcon, PlusIcon, SearchIcon } from './Icons';
 import { tripService } from '../services/tripService';
+import { sanitizeAsset } from '../utils/assetUtils';
+import AtmosphericAvatar from './AtmosphericAvatar';
 
 interface InviteMemberProps {
     trip: Trip;
@@ -40,7 +42,12 @@ const SearchList: React.FC<{ query: string, onSelect: (user: Member) => void, ex
                     onClick={() => onSelect(user)}
                     className="w-full p-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
                 >
-                    <img src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`} className="w-8 h-8 rounded-full bg-gray-700" />
+                    <AtmosphericAvatar
+                        userId={user.id}
+                        avatarUrl={user.avatarUrl}
+                        name={user.name}
+                        size="sm"
+                    />
                     <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-white truncate">{user.name}</div>
                         <div className="text-[10px] text-gray-500 truncate">{user.email}</div>
@@ -211,16 +218,13 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                         {trip.members.map(member => (
                             <div key={member.id} className="flex flex-col items-center gap-1 min-w-[60px]">
                                 <div className="relative">
-                                    <img
-                                        src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`}
-                                        alt={member.name}
-                                        className={`w-14 h-14 rounded-full object-cover border-2 ${member.role === 'PATHFINDER' ? 'border-tactical-accent' : 'border-gray-700'}`}
+                                    <AtmosphericAvatar
+                                        userId={member.id}
+                                        avatarUrl={member.avatarUrl}
+                                        name={member.name}
+                                        size="xl"
+                                        isPathfinder={member.role === 'PATHFINDER'}
                                     />
-                                    {member.role === 'PATHFINDER' && (
-                                        <div className="absolute bottom-0 right-0 bg-tactical-accent text-black p-0.5 rounded-full border border-tactical-bg">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                        </div>
-                                    )}
                                 </div>
                                 <span className="text-[10px] text-gray-400 font-medium truncate w-full text-center">
                                     {member.name.split(' ')[0]} {member.name.split(' ')[1]?.[0]}.

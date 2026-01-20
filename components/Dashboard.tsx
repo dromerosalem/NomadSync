@@ -2,6 +2,8 @@
 import React from 'react';
 import { Trip } from '../types';
 import { MenuIcon, BellIcon, GridIcon, GlobeIcon, SendIcon, UserIcon, MapPinIcon, PlusIcon, WalletIcon } from './Icons';
+import { getMissionCover, sanitizeAsset } from '../utils/assetUtils';
+import AtmosphericGradient from './AtmosphericGradient';
 
 interface DashboardProps {
     trips: Trip[];
@@ -132,13 +134,13 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                                 className="relative rounded-2xl overflow-hidden h-64 group cursor-pointer border border-transparent hover:border-tactical-accent/50 transition-all active:scale-[0.98]"
                             >
                                 {/* Background Image */}
-                                <img
-                                    src={trip.coverImage || `https://picsum.photos/seed/${trip.id}/800/600`}
-                                    alt={trip.name}
-                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                {/* Background Gradient */}
+                                <AtmosphericGradient
+                                    trip={trip}
+                                    className="absolute inset-0 w-full h-full transition-transform duration-700 group-hover:scale-105"
                                 />
                                 {/* Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/10"></div>
+                                {/* Overlay - Removed standard gradient, using specific glass area below */}
 
                                 {/* Passport Stamp Seal for Complete Trips */}
                                 {isComplete && (
@@ -172,39 +174,40 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                                 )}
 
                                 {/* Content */}
-                                <div className="absolute inset-0 p-5 flex flex-col justify-between">
-                                    <div className="flex justify-between items-start">
-                                        <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${getStatusStyle(trip.status)}`}>
-                                            STATUS: {trip.status?.replace('_', ' ')}
-                                        </span>
-                                        <div className="flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full border border-white/10">
-                                            <UserIcon className="w-3 h-3 text-tactical-accent" />
-                                            <span className="text-xs font-bold text-white">{trip.members.length}</span>
-                                        </div>
+                                {/* Top Content (Status + Members) */}
+                                <div className="absolute top-0 inset-x-0 p-5 flex justify-between items-start z-10">
+                                    <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest border ${getStatusStyle(trip.status)} shadow-sm`}>
+                                        STATUS: {trip.status?.replace('_', ' ')}
+                                    </span>
+                                    <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full border border-white/10 shadow-sm">
+                                        <UserIcon className="w-3 h-3 text-tactical-accent" />
+                                        <span className="text-xs font-bold text-white">{trip.members.length}</span>
+                                    </div>
+                                </div>
+
+                                {/* Bottom Content with Glass Overlay */}
+                                <div className="absolute bottom-0 inset-x-0 p-5 pt-12 flex flex-col justify-end bg-gradient-to-t from-black/80 via-black/40 to-transparent backdrop-blur-[4px]">
+                                    <div className="flex items-center gap-2 text-gray-300 text-[10px] font-bold uppercase tracking-widest mb-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
+                                        {formatDateRange(trip.startDate, trip.endDate)}
+                                    </div>
+                                    <h3 className="font-display font-bold text-2xl uppercase leading-tight mb-1 shadow-sm text-white">
+                                        {trip.name}
+                                    </h3>
+                                    <div className="text-gray-400 text-xs font-medium flex items-center gap-1">
+                                        <MapPinIcon className="w-3 h-3" />
+                                        {trip.destination}
                                     </div>
 
-                                    <div>
-                                        <div className="flex items-center gap-2 text-gray-300 text-[10px] font-bold uppercase tracking-widest mb-1">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>
-                                            {formatDateRange(trip.startDate, trip.endDate)}
+                                    {/* Progress Bar for Active */}
+                                    {trip.status === 'IN_PROGRESS' && (
+                                        <div className="mt-4 w-full h-1.5 bg-gray-700 rounded-full overflow-hidden border border-white/10">
+                                            <div
+                                                className="h-full bg-tactical-accent shadow-[0_0_10px_rgba(255,215,0,0.8)] transition-all duration-1000 ease-out"
+                                                style={{ width: `${progressPercent}%` }}
+                                            ></div>
                                         </div>
-                                        <h3 className="font-display font-bold text-2xl uppercase leading-tight mb-1 shadow-sm text-white">
-                                            {trip.name}
-                                        </h3>
-                                        <div className="text-gray-400 text-xs font-medium flex items-center gap-1">
-                                            {trip.destination}
-                                        </div>
-
-                                        {/* Progress Bar for Active */}
-                                        {trip.status === 'IN_PROGRESS' && (
-                                            <div className="mt-4 w-full h-1.5 bg-gray-700 rounded-full overflow-hidden border border-white/10">
-                                                <div
-                                                    className="h-full bg-tactical-accent shadow-[0_0_10px_rgba(255,215,0,0.8)] transition-all duration-1000 ease-out"
-                                                    style={{ width: `${progressPercent}%` }}
-                                                ></div>
-                                            </div>
-                                        )}
-                                    </div>
+                                    )}
                                 </div>
                             </div>
                         );
@@ -246,7 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                     <span className="text-[9px] font-bold uppercase tracking-widest">Profile</span>
                 </button>
             </div>
-        </div>
+        </div >
     );
 };
 

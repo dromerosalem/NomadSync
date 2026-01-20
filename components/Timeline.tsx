@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { getMissionCover } from '../utils/assetUtils';
 import { Trip, ItineraryItem, ItemType } from '../types';
 import { PlusIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, ChevronLeftIcon, EyeOffIcon, WalletIcon, UsersIcon, GlobeIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import MissionGlobe from './MissionGlobe';
+import TacticalImage from './TacticalImage';
 
 interface TimelineProps {
   trip: Trip;
@@ -185,7 +187,11 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
             <>
               {/* Header Image */}
               <div className="h-28 w-full bg-gray-800 relative overflow-hidden">
-                <img src={`https://picsum.photos/seed/${item.id}/400/200`} alt={item.title} className={`w-full h-full object-cover ${item.isPrivate ? 'opacity-30 grayscale' : 'opacity-50'}`} />
+                <TacticalImage
+                  src={getMissionCover(item.id)}
+                  alt={item.title}
+                  className={`w-full h-full ${item.isPrivate ? 'opacity-30 grayscale' : 'opacity-50'}`}
+                />
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-tactical-card via-transparent to-black/40"></div>
 
@@ -250,7 +256,11 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
             <>
               {/* Image placeholder */}
               <div className="h-24 w-full bg-gray-800 relative">
-                <img src={`https://picsum.photos/seed/${item.id}/400/200`} alt={item.title} className={`w-full h-full object-cover ${item.isPrivate ? 'opacity-30 grayscale' : 'opacity-60'}`} />
+                <TacticalImage
+                  src={getMissionCover(item.id)}
+                  alt={item.title}
+                  className={`w-full h-full ${item.isPrivate ? 'opacity-30 grayscale' : 'opacity-60'}`}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-tactical-card to-transparent"></div>
 
                 <div className="absolute bottom-2 left-3 z-10 flex flex-col gap-1">
@@ -311,7 +321,11 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
             <>
               {/* Image placeholder */}
               <div className="h-24 w-full bg-gray-800 relative">
-                <img src={`https://picsum.photos/seed/${item.id}/400/200`} alt={item.title} className={`w-full h-full object-cover ${item.isPrivate ? 'opacity-30 grayscale' : 'opacity-60'}`} />
+                <TacticalImage
+                  src={getMissionCover(item.id)}
+                  alt={item.title}
+                  className={`w-full h-full ${item.isPrivate ? 'opacity-30 grayscale' : 'opacity-60'}`}
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-tactical-card to-transparent"></div>
 
                 <div className="absolute bottom-2 left-3 z-10 flex flex-col gap-1">

@@ -142,16 +142,58 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     if (mode === 'LANDING') {
         return (
             <div className="flex flex-col h-full bg-tactical-bg relative overflow-hidden animate-fade-in">
-                {/* Background Image */}
-                <div className="absolute inset-0 z-0">
-                    <img
-                        src="https://images.unsplash.com/photo-1542359649-31e03cd4d909?q=80&w=1974&auto=format&fit=crop"
-                        className="w-full h-full object-cover opacity-30 grayscale"
-                        alt="Desert Recon"
+                {/* Background Atmospheric Gradient (Desert Sunset Vibe) */}
+                <div className="absolute inset-0 z-0 bg-[#020617] overflow-hidden">
+                    {/* The "Glow" - Sunset Horizon */}
+                    <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[150%] h-[60%] bg-[radial-gradient(ellipse_at_center,_#b45309_0%,_#7c2d12_40%,_transparent_75%)] opacity-60 blur-3xl"></div>
+
+                    {/* Linear Gradient for base layering */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#0f172a] via-transparent to-[#020617]"></div>
+
+                    {/* SVG Noise Texture for Premium Feel */}
+                    <div
+                        className="absolute inset-0 opacity-[0.25] mix-blend-overlay pointer-events-none"
+                        style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")`
+                        }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-tactical-bg/40 via-tactical-bg/80 to-tactical-bg"></div>
+
+                    {/* Giant Compass Watermark (High Visibility) */}
+                    <div className="absolute -bottom-20 -left-20 transform rotate-12 opacity-30 mix-blend-overlay pointer-events-none text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+                        </svg>
+                    </div>
+
+                    {/* Giant NomadSync Logo Watermark */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform opacity-[0.08] mix-blend-screen pointer-events-none text-tactical-accent">
+                        <svg width="800" height="800" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            {/* Outer Tactical Circle */}
+                            <circle cx="50" cy="50" r="48" stroke="currentColor" strokeWidth="1.5" />
+
+                            {/* Broken Chain Ring */}
+                            <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="4" strokeDasharray="8 4" />
+
+                            {/* Compass Rose - Vertical */}
+                            <path d="M50 2 L56 50 L50 98 L44 50 Z" fill="currentColor" />
+                            {/* Compass Rose - Horizontal */}
+                            <path d="M2 50 L50 44 L98 50 L50 56 Z" fill="currentColor" />
+
+                            {/* Inner Details */}
+                            <circle cx="50" cy="50" r="6" fill="currentColor" />
+                            <circle cx="50" cy="50" r="2" fill="black" />
+
+                            {/* Subtle 45-degree points */}
+                            <path d="M25 25 L50 48 L75 75 L48 50 Z" fill="currentColor" opacity="0.4" />
+                            <path d="M75 25 L52 50 L25 75 L50 52 Z" fill="currentColor" opacity="0.4" />
+                        </svg>
+                    </div>
+
                     {/* Grid Overlay */}
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==')] opacity-30"></div>
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==')] opacity-50"></div>
+
+                    {/* Vignette */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30"></div>
                 </div>
 
                 <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 text-center w-full max-w-md mx-auto">

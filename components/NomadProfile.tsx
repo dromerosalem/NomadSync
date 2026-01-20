@@ -1,7 +1,9 @@
-
 import React, { useMemo } from 'react';
+import { sanitizeAsset } from '../utils/assetUtils';
 import { Member, Trip, ItemType } from '../types';
 import { ChevronLeftIcon, GearIcon, SwordsIcon, NetworkIcon, WalletIcon, ListCheckIcon, EditIcon, PlusIcon, MapPinIcon, CompassIcon, WalkIcon } from './Icons';
+import TacticalImage from './TacticalImage';
+import AtmosphericAvatar from './AtmosphericAvatar';
 
 interface NomadProfileProps {
     user: Member;
@@ -119,13 +121,13 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                     </div>
 
                     <div className="relative mb-4">
-                        <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-b from-tactical-muted to-tactical-bg border border-tactical-muted/30 relative z-10">
-                            <img
-                                src={user.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}`}
-                                alt={user.name}
-                                className="w-full h-full rounded-full object-cover border-4 border-tactical-bg"
-                            />
-                        </div>
+                        <AtmosphericAvatar
+                            userId={user.id}
+                            avatarUrl={user.avatarUrl}
+                            name={user.name}
+                            size="xl"
+                            className="w-32 h-32"
+                        />
                         <button className="absolute bottom-1 right-1 z-20 bg-tactical-accent text-black p-2 rounded-full border-4 border-tactical-bg shadow-lg hover:bg-yellow-400 transition-colors">
                             <EditIcon className="w-4 h-4" />
                         </button>
@@ -251,10 +253,10 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                         <div className="space-y-3">
                             {completedTrips.length > 0 ? completedTrips.slice(0, 3).map(trip => (
                                 <div key={trip.id} className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-3 flex items-center gap-4">
-                                    <img
-                                        src={trip.coverImage || `https://picsum.photos/seed/${trip.id}/100/100`}
+                                    <TacticalImage
+                                        src={sanitizeAsset(trip.coverImage, trip.id)}
                                         alt={trip.name}
-                                        className="w-12 h-12 rounded-lg object-cover grayscale opacity-70"
+                                        className="w-12 h-12 rounded-lg grayscale opacity-70"
                                     />
                                     <div className="flex-1">
                                         <div className="font-display font-bold text-white uppercase text-sm">{trip.name}</div>

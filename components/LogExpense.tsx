@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member, ReceiptItem } from '../types';
 import { ChevronLeftIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
+import AtmosphericAvatar from './AtmosphericAvatar';
 import { analyzeReceipt } from '../services/geminiService';
 import { currencyService } from '../services/CurrencyService';
 import { getCurrencySymbol } from '../utils/currencyUtils';
@@ -198,7 +199,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64Content = (reader.result as string).split(',')[1];
-                    const item = await analyzeReceipt(base64Content, file.type, tripStartDate);
+                    const item = await analyzeReceipt(base64Content, file.type, tripStartDate) as (Partial<ItineraryItem> | null);
 
                     if (item) {
                         if (item.cost) setOriginalAmount(item.cost.toString());
@@ -599,7 +600,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                 <div className="flex flex-col items-center gap-3">
                                     <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Sender</span>
                                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-600 bg-tactical-card">
-                                        <img src={sender?.avatarUrl} className="w-5 h-5 rounded-full" />
+                                        <AtmosphericAvatar userId={paidBy} avatarUrl={sender?.avatarUrl} name={sender?.name || ''} size="xs" />
                                         <span className="text-xs font-bold text-white uppercase">{sender?.name.split(' ')[0]}</span>
                                     </div>
                                 </div>
@@ -610,7 +611,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                 <div className="flex flex-col items-center gap-3">
                                     <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Receiver</span>
                                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-600 bg-tactical-card">
-                                        <img src={receiver?.avatarUrl} className="w-5 h-5 rounded-full" />
+                                        <AtmosphericAvatar userId={receiverId} avatarUrl={receiver?.avatarUrl} name={receiver?.name || ''} size="xs" />
                                         <span className="text-xs font-bold text-white uppercase">{receiver?.name.split(' ')[0]}</span>
                                     </div>
                                 </div>
@@ -630,7 +631,12 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                                 : 'bg-transparent border-gray-600 text-gray-400 hover:border-gray-500'
                                                 }`}
                                         >
-                                            <img src={member.avatarUrl} className="w-4 h-4 rounded-full" />
+                                            <AtmosphericAvatar
+                                                userId={member.id}
+                                                avatarUrl={member.avatarUrl}
+                                                name={member.name}
+                                                size="xs"
+                                            />
                                             {member.isCurrentUser ? 'Me' : member.name.split(' ')[0]}
                                         </button>
                                     ))}
@@ -686,9 +692,15 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                                                         });
                                                                         setReceiptItems(newItems);
                                                                     }}
-                                                                    className={`w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${isAssigned ? 'border-tactical-accent opacity-100 scale-110' : 'border-transparent opacity-40 grayscale hover:opacity-70'}`}
+                                                                    className={`transition-all ${isAssigned ? 'opacity-100 scale-110' : 'opacity-40 grayscale hover:opacity-70'}`}
                                                                 >
-                                                                    <img src={m.avatarUrl} className="w-full h-full rounded-full" />
+                                                                    <AtmosphericAvatar
+                                                                        userId={m.id}
+                                                                        avatarUrl={m.avatarUrl}
+                                                                        name={m.name}
+                                                                        size="sm"
+                                                                        isPathfinder={isAssigned}
+                                                                    />
                                                                 </button>
                                                             );
                                                         })
@@ -741,15 +753,13 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                                         toggleSplitMember(member.id);
                                                     }}>
                                                         <div className="relative">
-                                                            <img
-                                                                src={member.avatarUrl}
-                                                                className="w-10 h-10 rounded-full border border-gray-600"
+                                                            <AtmosphericAvatar
+                                                                userId={member.id}
+                                                                avatarUrl={member.avatarUrl}
+                                                                name={member.name}
+                                                                size="md"
+                                                                isPathfinder={isIncluded}
                                                             />
-                                                            {isIncluded && (
-                                                                <div className="absolute -bottom-1 -right-1 bg-tactical-accent text-black rounded-full p-0.5">
-                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                                                </div>
-                                                            )}
                                                         </div>
                                                         <div>
                                                             <div className={`font-bold uppercase text-sm ${isIncluded ? 'text-white' : 'text-gray-500'}`}>

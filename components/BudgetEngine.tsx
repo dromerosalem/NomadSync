@@ -1,7 +1,8 @@
-
 import React, { useMemo, useState } from 'react';
 import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
 import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon } from './Icons';
+import { sanitizeAsset } from '../utils/assetUtils';
+import AtmosphericAvatar from './AtmosphericAvatar';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import { Money } from '../utils/money';
 import { useCachedCalculation } from '../hooks/useCachedCalculation';
@@ -509,10 +510,11 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                         className="p-4 flex items-center justify-between hover:bg-white/5 transition-colors cursor-pointer active:bg-white/10"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <img
-                                                src={member.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}`}
-                                                alt={member.name}
-                                                className="w-10 h-10 rounded-full object-cover border border-gray-600"
+                                            <AtmosphericAvatar
+                                                userId={member.id}
+                                                avatarUrl={member.avatarUrl}
+                                                name={member.name}
+                                                size="md"
                                             />
                                             <div>
                                                 <div className="font-bold text-white text-sm">{member.name}</div>
@@ -598,9 +600,12 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                     </header>
 
                     <div className="p-6 bg-tactical-card/50 border-b border-tactical-muted/10 text-center relative">
-                        <img
-                            src={selectedMember.avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedMember.name)}`}
-                            className="w-20 h-20 rounded-full mx-auto mb-4 border-2 border-tactical-muted/50"
+                        <AtmosphericAvatar
+                            userId={selectedMember.id}
+                            avatarUrl={selectedMember.avatarUrl}
+                            name={selectedMember.name}
+                            size="xl"
+                            className="mb-4"
                         />
                         <h2 className="font-bold text-xl text-white uppercase mb-1">{selectedMember.name}</h2>
 
