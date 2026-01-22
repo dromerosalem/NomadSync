@@ -21,7 +21,7 @@ const getGroqClient = () => {
     return groqClient;
 };
 
-export const analyzeReceiptWithGroq = async (base64Data: string, tripStartDate?: Date): Promise<{ item: Partial<ItineraryItem> | null, confidence: number }> => {
+export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: string, tripStartDate?: Date, textInput?: string): Promise<{ item: Partial<ItineraryItem> | null, confidence: number }> => {
     try {
         const groq = getGroqClient();
         if (!groq) return { item: null, confidence: 0 };
@@ -52,24 +52,30 @@ export const analyzeReceiptWithGroq = async (base64Data: string, tripStartDate?:
         }
         `;
 
+        const messageContent: any[] = [{ type: 'text', text: prompt }];
+
+        if (textInput) {
+            console.log("Using extracted text for Groq analysis");
+            messageContent.push({ type: 'text', text: `\n\nRECEIPT TEXT_CONTENT:\n${textInput}` });
+        } else {
+            messageContent.push({
+                type: 'image_url',
+                image_url: {
+                    url: `data:${mimeType};base64,${base64Data}`
+                }
+            });
+        }
+
         const completion = await groq.chat.completions.create({
             messages: [
                 {
                     role: 'user',
-                    content: [
-                        { type: 'text', text: prompt },
-                        {
-                            type: 'image_url',
-                            image_url: {
-                                url: `data:image/jpeg;base64,${base64Data}`
-                            }
-                        }
-                    ]
+                    content: messageContent as any
                 }
             ],
             model: MODEL_ID,
             temperature: 0.1,
-            response_format: { type: "json_object" } // Enforce JSON mode if supported, otherwise prompt relies on it
+            response_format: { type: "json_object" }
         });
 
         const content = completion.choices[0]?.message?.content;

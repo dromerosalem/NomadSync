@@ -6,7 +6,7 @@ const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 const DEFAULT_MODEL = "gemini-2.5-flash-lite"; // Specified version 2.5
 
 
-export const analyzeReceipt = async (base64Data: string, mimeType: string = "image/jpeg", tripStartDate?: Date): Promise<Partial<ItineraryItem> | null> => {
+export const analyzeReceipt = async (base64Data: string, mimeType: string = "image/jpeg", tripStartDate?: Date, textInput?: string): Promise<Partial<ItineraryItem> | null> => {
   try {
     const modelId = DEFAULT_MODEL;
 
@@ -57,13 +57,20 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        Return strictly a JSON Object.
      `;
 
+    const parts: any[] = [{ text: prompt }];
+
+    // If we have extracted text, use that INSTEAD of the image/pdf binary
+    // This saves tokens and is generally faster.
+    if (textInput) {
+      parts.unshift({ text: `RECEIPT CONTENT (Parsed Text):\n${textInput}` });
+    } else {
+      parts.unshift({ inlineData: { mimeType: mimeType, data: base64Data } });
+    }
+
     const response = await ai.models.generateContent({
       model: modelId,
       contents: {
-        parts: [
-          { inlineData: { mimeType: mimeType, data: base64Data } },
-          { text: prompt }
-        ]
+        parts: parts
       },
       config: {
         responseMimeType: "application/json",

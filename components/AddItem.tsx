@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { ItemType, ItineraryItem } from '../types';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, ScanIcon } from './Icons';
-import { analyzeReceipt } from '../services/geminiService';
+import { scanOrchestrator } from '../services/ScanOrchestrator';
 
 interface AddItemProps {
   onClose: () => void;
@@ -57,7 +57,8 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
 
           // Pass the file type (e.g., application/pdf or image/png)
           // Pass tripStartDate to assist with Year Inference
-          const item = await analyzeReceipt(base64Content, file.type, tripStartDate);
+          // Pass tripStartDate to assist with Year Inference
+          const item = await scanOrchestrator.scanReceipt(base64Content, file.type, tripStartDate);
           if (item) {
             onScannedItem([item]);
           } else {
