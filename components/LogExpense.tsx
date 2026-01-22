@@ -4,6 +4,7 @@ import { ItemType, ItineraryItem, Member, ReceiptItem } from '../types';
 import { ChevronLeftIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { analyzeReceipt } from '../services/geminiService';
+import { scanOrchestrator } from '../services/ScanOrchestrator';
 import { currencyService } from '../services/CurrencyService';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import { Money } from '../utils/money';
@@ -202,7 +203,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64Content = (reader.result as string).split(',')[1];
-                    const item = await analyzeReceipt(base64Content, file.type, tripStartDate) as (Partial<ItineraryItem> & { receiptItems?: any[] } | null);
+                    const item = await scanOrchestrator.scanReceipt(base64Content, file.type, tripStartDate) as (Partial<ItineraryItem> & { receiptItems?: any[] } | null);
 
                     if (item) {
                         if (item.cost) setOriginalAmount(item.cost.toString());

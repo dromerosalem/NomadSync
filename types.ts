@@ -92,8 +92,3 @@ export interface Trip {
   budgetViewMode?: 'SMART' | 'DIRECT'; // Shared view setting controlled by Pathfinder
   updatedAt?: number;
 }
-
-export interface GroundingSource {
-  title: string;
-  uri: string;
-}

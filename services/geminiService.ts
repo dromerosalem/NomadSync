@@ -3,85 +3,12 @@ import { ItineraryItem, ItemType } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
-export const generateMissionSuggestions = async (
-  destination: string
-): Promise<{ items: Partial<ItineraryItem>[], rawText: string }> => {
-  try {
-    const modelId = "gemini-2.5-flash"; // Required for Maps grounding
+const DEFAULT_MODEL = "gemini-2.5-flash-lite"; // Specified version 2.5
 
-    // We ask for a structured-like text response because responseSchema 
-    // is not supported with googleMaps tool.
-    const prompt = `
-      I am planning a trip to ${destination}. 
-      Identify 3 top-rated, specific places to visit or stay (hotels, landmarks, or restaurants).
-      
-      For each place, provide:
-      1. Name
-      2. Type (Accommodation, Transport, Activity, or Food)
-      3. A short one-sentence description.
-      
-      Make sure the places are real and use Google Maps to verify.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: modelId,
-      contents: prompt,
-      config: {
-        tools: [{ googleMaps: {} }],
-      },
-    });
-
-    const text = response.text || "";
-
-    // Process Grounding Metadata to get map links
-    // The structure returned by the SDK for grounding chunks varies, we try to extract useful info
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-
-    const suggestedItems: Partial<ItineraryItem>[] = [];
-
-    // Simple heuristic parser since we can't use JSON schema with Maps tool yet
-    // We rely on the grounding chunks to be the source of truth for "Real" places
-
-    groundingChunks.forEach((chunk: any) => {
-      if (chunk.web?.uri) return; // Skip web search results, we want maps
-
-      const mapData = chunk.web?.uri ? null : (chunk.map || chunk.maps); // SDK structure variation handling
-
-      // If we found a map entity
-      if (chunk.source?.title || (mapData && mapData.title)) {
-        const title = chunk.source?.title || mapData?.title || "Unknown Location";
-        const uri = chunk.source?.uri || mapData?.uri || "";
-
-        // Heuristic to guess type based on title (very basic, but sufficient for demo)
-        let type = ItemType.ACTIVITY;
-        if (title.toLowerCase().includes('hotel') || title.toLowerCase().includes('resort')) type = ItemType.STAY;
-        else if (title.toLowerCase().includes('restaurant') || title.toLowerCase().includes('cafe')) type = ItemType.FOOD;
-
-        suggestedItems.push({
-          title: title,
-          location: title, // Use title as location for now
-          type: type,
-          mapUri: uri,
-          details: "Intelligence retrieved via satellite scan.",
-          startDate: new Date() // Default to today, user assigns later
-        });
-      }
-    });
-
-    return {
-      items: suggestedItems,
-      rawText: text
-    };
-
-  } catch (error) {
-    console.error("Gemini Mission Intel Error:", error);
-    return { items: [], rawText: "Communication disrupted." };
-  }
-};
 
 export const analyzeReceipt = async (base64Data: string, mimeType: string = "image/jpeg", tripStartDate?: Date): Promise<Partial<ItineraryItem> | null> => {
   try {
-    const modelId = "gemini-2.5-flash";
+    const modelId = DEFAULT_MODEL;
 
     const contextPrompt = tripStartDate
       ? `CONTEXT: The trip is scheduled to start on ${tripStartDate.toISOString().split('T')[0]}. Use this year (and subsequent year if dates cross year boundary) to correctly infer the year of any dates found in the document.`
@@ -94,19 +21,25 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        
        MANDATORY: Return a SINGLE JSON Object.
        
+       CRITICAL RULES FOR ITEM EXTRACTION:
+       1. **IGNORE FISCAL SUMMARIES**: Do NOT extract lines that represent tax bases, tax groups, or subtotals (e.g., "Sprzedaż opodatkowana", "PTU", "VAT", "Taxable amount", "Net amount", "Total tax"). only extract the actual products/services scanned.
+       2. **GROSS VS NET DETECTION**:
+          - **Europe/Asia/LatAm**: Prices usually INCLUDE tax (Gross). If the receipt shows "Suma PTU" or "VAT" at the bottom but individual items sum up to the total, DO NOT create a separate line item for tax.
+          - **USA/Canada**: Prices are usually Net (Tax added at end). If the subtotal of items < Total Paid, AND there is a distinct "Tax" line added to the subtotal, THEN extract "Tax" as a separate line item.
+       3. **sanity Check**: The sum of all 'receiptItems' prices MUST equal the 'cost' (Total).
+       
        For RECEIPTS/INVOICES (Food, Shopping, Services):
        1. Extract individual line items into a 'receiptItems' array.
        2. For EACH item, provide:
-          - name: The item name EXACTLY as it appears on the document (e.g. in Chinese, Cyrillic, etc).
-          - nameRomanized: If the 'name' is in a non-latin script (Chinese, Japanese, Russian, etc.), provide the phonetic transliteration in Latin characters (e.g. Pinyin for Chinese). Leave null if already in Latin script.
-          - nameEnglish: If the 'name' is not in English, provide an accurate English translation.
-          - quantity: Number of units (default to 1)
-          - price: Total price for this line item
+          - name: The item name EXACTLY as it appears on the document.
+          - nameRomanized/nameEnglish: Transliterate/Translate if non-Latin/non-English.
+          - quantity: Number of units.
+          - price: Total price for this line item (e.g. if 2x 10.00, price is 20.00).
           - type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'other'
-       3. If taxes are included in item prices, DO NOT extract them as separate items. Only extract 'tax' if it is a separate line item added to the subtotal.
-       4. Extract the 'total' amount.
        
        For TRANSPORT/TICKETS:
+       ... (keep existing logic)
+
        1. Look for 'Travel Time' or 'Duration' text (e.g., '8 h 29 m'). Calculate total minutes and include as 'durationMinutes'.
        2. Extract distinct events if possible, but primarily return the MAIN event details.
        
