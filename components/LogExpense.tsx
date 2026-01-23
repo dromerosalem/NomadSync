@@ -9,6 +9,7 @@ import { currencyService } from '../services/CurrencyService';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import { Money } from '../utils/money';
 import CurrencySelector from './CurrencySelector';
+import { compressImage } from '../utils/imageCompression';
 
 interface LogExpenseProps {
     onClose: () => void;
@@ -200,10 +201,18 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         if (file) {
             setIsScanning(true);
             try {
+                // Compress Image (if it's an image)
+                let processedFile = file;
+                if (file.type.startsWith('image/')) {
+                    // Update UI or Logger to show compression
+                    console.log('Compressing image...');
+                    processedFile = await compressImage(file);
+                }
+
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64Content = (reader.result as string).split(',')[1];
-                    const item = await scanOrchestrator.scanReceipt(base64Content, file.type, tripStartDate) as (Partial<ItineraryItem> & { receiptItems?: any[] } | null);
+                    const item = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate) as (Partial<ItineraryItem> & { receiptItems?: any[] } | null);
 
                     if (item) {
                         if (item.cost) setOriginalAmount(item.cost.toString());
@@ -221,9 +230,9 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                     }
                     setIsScanning(false);
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(processedFile);
             } catch (error) {
-                console.error("Scan error", error);
+                console.error("Scan/Compression error", error);
                 setIsScanning(false);
             }
         }

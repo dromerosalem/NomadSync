@@ -14,8 +14,29 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
       ? `CONTEXT: The trip is scheduled to start on ${tripStartDate.toISOString().split('T')[0]}. Use this year (and subsequent year if dates cross year boundary) to correctly infer the year of any dates found in the document.`
       : `CONTEXT: Use the current year for any ambiguous dates.`;
 
-    const prompt = `
-       ${contextPrompt}
+    const promptInstructions = textInput ? `
+       TASK: Parse extracted receipt text into JSON.
+       
+       CRITICAL LOGIC OVERRIDES:
+       1. **US/CA**: Items are NET. If (Subtotal < Total), create "Tax" item for difference.
+       2. **EU/Global**: Items are GROSS. IGNORE "VAT"/"PTU" lines.
+       3. **Sanity**: Sum(receiptItems.price) must equal cost.
+       
+       OUTPUT SCHEMA (JSON Only):
+       {
+         "type": "STAY"|"TRANSPORT"|"ACTIVITY"|"FOOD"|"ESSENTIALS",
+         "title": "Vendor Name",
+         "location": "City",
+         "startDate": "YYYY-MM-DDTHH:mm",
+         "cost": Number,
+         "currencyCode": "USD"|"EUR"|etc,
+         "details": "Notes/Confirmation Codes",
+         "durationMinutes": Number,
+         "receiptItems": [
+           { "name": "Item Name", "quantity": Number, "price": Number (Total), "type": "food"|"drink"|"service"|"tip"|"tax" }
+         ]
+       }
+    ` : `
        Analyze this image or document (invoice, receipt, ticket, or booking confirmation).
        Extract the relevant travel itinerary details into a JSON Object.
        
@@ -56,6 +77,8 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        
        Return strictly a JSON Object.
      `;
+
+    const prompt = `${contextPrompt}\n${promptInstructions}`;
 
     const parts: any[] = [{ text: prompt }];
 

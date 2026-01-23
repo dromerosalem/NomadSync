@@ -88,25 +88,18 @@ export class CurrencyService {
     }
 
     private async fetchExchangeRateAPI(from: string, to: string, date: string): Promise<number> {
-        // ExchangeRate-API free tier often only allows 'latest' with base USD?
-        // Wait, the key provided is likely a free key. Free tier typically allows limited base currencies? 
-        // Actually, ExchangeRate-API (standard) usually allows any base.
-        // However, historical data requires a paid plan on some APIs.
-        // The PROMPT says: "Primary (Frankfurter API)... Fallback (ExchangeRate-API)".
-        // If historical fails on free tier, we might have to use 'latest' as a fallback, 
-        // but ideally we try historical first.
-        // Docs: https://www.exchangerate-api.com/docs/historical-data-requests (Paid only for historical?)
-        // "Historical exchange rates are available on the Pro and Business plans." -> Limitation.
-        // So for free tier, we might ONLY be able to get `latest`.
-        // STRATEGY: Try historical call, if 403/error, fall back to `latest` and warn.
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isTodayOrFuture = date >= todayStr;
 
-        const year = date.split('-')[0];
-        const month = date.split('-')[1];
-        const day = date.split('-')[2];
+        if (isTodayOrFuture) {
+            console.log(`[CurrencyService] Date ${date} is today or future. Using LATEST.`);
+            return this.fetchLatestFromExchangeRateAPI(from, to);
+        }
+
+        const [year, month, day] = date.split('-');
 
         try {
             // Try historical first (Standard request format: /v6/key/history/code/year/month/day)
-            // Check specific URL format for historical: https://v6.exchangerate-api.com/v6/YOUR-API-KEY/history/USD/2020/4/30
             const url = `${EXCHANGE_RATE_API_BASE}/${EXCHANGE_RATE_API_KEY}/history/${from}/${year}/${month}/${day}`;
             const res = await fetch(url);
 
@@ -115,17 +108,22 @@ export class CurrencyService {
                 if (data.conversion_rates && data.conversion_rates[to]) {
                     return data.conversion_rates[to];
                 }
+            } else {
+                const errorData = await res.json().catch(() => ({}));
+                console.warn(`[CurrencyService] Historical API returned ${res.status}:`, errorData['error-type'] || res.statusText);
             }
         } catch (e) {
-            // Ignore and fallback
+            console.warn(`[CurrencyService] Historical fetch failed:`, e);
         }
 
-        console.warn(`[CurrencyService] Historical data unavailable for ${from} on ${date} (Free Tier limitation). Using LATEST.`);
+        console.warn(`[CurrencyService] Historical data unavailable for ${from} on ${date}. Falling back to LATEST.`);
+        return this.fetchLatestFromExchangeRateAPI(from, to);
+    }
 
-        // Fallback to Latest
+    private async fetchLatestFromExchangeRateAPI(from: string, to: string): Promise<number> {
         const urlValues = `${EXCHANGE_RATE_API_BASE}/${EXCHANGE_RATE_API_KEY}/latest/${from}`;
         const res = await fetch(urlValues);
-        if (!res.ok) throw new Error('ExchangeRate-API Error');
+        if (!res.ok) throw new Error(`ExchangeRate-API Error: ${res.status}`);
         const data = await res.json();
         return data.conversion_rates[to];
     }
