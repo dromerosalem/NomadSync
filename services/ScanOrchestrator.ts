@@ -1,6 +1,7 @@
 import { analyzeReceipt as analyzeWithGemini } from './geminiService';
 import { analyzeReceiptWithGroq } from './GroqService';
 import { ItineraryItem } from '../types';
+import { UploadSecurityService } from './UploadSecurityService';
 
 const STORAGE_KEY_SCAN_COUNT = 'nomadsync_scan_count';
 const CONFIDENCE_THRESHOLD = 0.7;
@@ -8,15 +9,13 @@ const CONFIDENCE_THRESHOLD = 0.7;
 type ModelType = 'GEMINI' | 'GROQ';
 
 interface ScanResult {
-    item: Partial<ItineraryItem> | null;
+    items: Partial<ItineraryItem>[] | null;
     usedModel: ModelType;
     confidence: number;
 }
 
 export const scanOrchestrator = {
-    async scanReceipt(base64Data: string, mimeType: string, tripStartDate?: Date): Promise<Partial<ItineraryItem> | null> {
-        // 1. Determine Model (Round Robin)
-        // Even = Gemini, Odd = Groq
+    async scanReceipt(base64Data: string, mimeType: string, tripStartDate?: Date): Promise<Partial<ItineraryItem>[] | null> {
         // 1. Determine Model (Round Robin)
         // Even = Gemini, Odd = Groq
         const currentCount = parseInt(localStorage.getItem(STORAGE_KEY_SCAN_COUNT) || '0', 10);
@@ -38,13 +37,21 @@ export const scanOrchestrator = {
             }
         }
 
+        // SECURITY CHECK: Token Budget
+        const tokenCheck = UploadSecurityService.checkTokenBudget(extractedText?.length || 0, mimeType.startsWith('image/'));
+        if (!tokenCheck.isValid) {
+            console.warn('[ScanOrchestrator] Token Budget Exceeded:', tokenCheck.error);
+            alert(tokenCheck.error || "Document is too complex for AI processing.");
+            return null;
+        }
+
         console.log(`[ScanOrchestrator] Scan #${currentCount}. Selected Primary: ${primaryModel}`);
 
         let result: ScanResult = await this.executeScan(primaryModel, base64Data, mimeType, tripStartDate, extractedText);
 
 
         // 2. Check Confidence & Retry if needed
-        if (result.confidence < CONFIDENCE_THRESHOLD || !result.item) {
+        if (result.confidence < CONFIDENCE_THRESHOLD || !result.items || result.items.length === 0) {
             const secondaryModel: ModelType = primaryModel === 'GEMINI' ? 'GROQ' : 'GEMINI';
             console.warn(`[ScanOrchestrator] Low confidence (${result.confidence}). Retrying with ${secondaryModel}...`);
 
@@ -62,23 +69,23 @@ export const scanOrchestrator = {
 
         // 3. Increment Counter & Return
         localStorage.setItem(STORAGE_KEY_SCAN_COUNT, (currentCount + 1).toString());
-        return result.item;
+        return result.items;
     },
 
     async executeScan(model: ModelType, base64Data: string, mimeType: string, tripStartDate?: Date, extractedText?: string): Promise<ScanResult> {
         try {
             if (model === 'GEMINI') {
-                const item = await analyzeWithGemini(base64Data, mimeType, tripStartDate, extractedText);
+                const items = await analyzeWithGemini(base64Data, mimeType, tripStartDate, extractedText);
                 // Gemini service doesn't return explicit confidence yet, so we infer high confidence if parsing succeeded
-                const confidence = item ? 0.9 : 0;
-                return { item, usedModel: 'GEMINI', confidence };
+                const confidence = items && items.length > 0 ? 0.9 : 0;
+                return { items, usedModel: 'GEMINI', confidence };
             } else {
-                const { item, confidence } = await analyzeReceiptWithGroq(base64Data, mimeType, tripStartDate, extractedText);
-                return { item, usedModel: 'GROQ', confidence };
+                const { items, confidence } = await analyzeReceiptWithGroq(base64Data, mimeType, tripStartDate, extractedText);
+                return { items, usedModel: 'GROQ', confidence };
             }
         } catch (e) {
             console.error(`[ScanOrchestrator] Error scanning with ${model}`, e);
-            return { item: null, usedModel: model, confidence: 0 };
+            return { items: null, usedModel: model, confidence: 0 };
         }
     }
 };

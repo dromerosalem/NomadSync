@@ -10,6 +10,8 @@ import { getCurrencySymbol } from '../utils/currencyUtils';
 import { Money } from '../utils/money';
 import CurrencySelector from './CurrencySelector';
 import { compressImage } from '../utils/imageCompression';
+import { UploadSecurityService } from '../services/UploadSecurityService';
+import { TacticalAlert } from './TacticalAlert';
 
 interface LogExpenseProps {
     onClose: () => void;
@@ -25,6 +27,7 @@ interface LogExpenseProps {
 const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, tripStartDate, currentUserId, members, initialItem, baseCurrency }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [alertState, setAlertState] = useState<{ title: string; message: string; type: 'error' | 'success' | 'warning' } | null>(null);
 
     // Date Formatting Helper
     const formatDateForInput = (date: Date) => {
@@ -199,12 +202,25 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            // 1. Initial Security Check (Hard Limits)
+            const securityCheck = UploadSecurityService.validateFile(file);
+            if (!securityCheck.isValid) {
+                setAlertState({ title: 'Security Alert', message: securityCheck.error || 'Invalid file.', type: 'error' });
+                return;
+            }
+
+            // 2. Preliminary Abuse Check (Filenames)
+            const abuseCheck = UploadSecurityService.preliminaryAbuseCheck(file);
+            if (!abuseCheck.isValid) {
+                setAlertState({ title: 'Protocol Violation', message: abuseCheck.error || 'Abusive content detected.', type: 'warning' });
+                return;
+            }
+
             setIsScanning(true);
             try {
                 // Compress Image (if it's an image)
                 let processedFile = file;
                 if (file.type.startsWith('image/')) {
-                    // Update UI or Logger to show compression
                     console.log('Compressing image...');
                     processedFile = await compressImage(file);
                 }
@@ -212,9 +228,32 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 const reader = new FileReader();
                 reader.onloadend = async () => {
                     const base64Content = (reader.result as string).split(',')[1];
-                    const item = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate) as (Partial<ItineraryItem> & { receiptItems?: any[] } | null);
 
-                    if (item) {
+                    // 3. PDF Deep Security Check
+                    if (file.type === 'application/pdf') {
+                        const { analyzePdfSecurity } = await import('../services/PdfService');
+                        const pdfCheck = await analyzePdfSecurity(base64Content);
+
+                        if (!pdfCheck.isSafe) {
+                            setIsScanning(false);
+                            setAlertState({ title: 'Security Alert', message: pdfCheck.error || 'PDF rejected.', type: 'error' });
+                            return;
+                        }
+
+                        // Log density for debugging
+                        console.log(`[LogExpense] PDF Security Pass. Pages: ${pdfCheck.pageCount}, Density: ${pdfCheck.textDensity}`);
+                    }
+
+                    const items = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate);
+
+                    if (items && items.length > 0) {
+                        // LogExpense is single item mode, so we just take the first one
+                        const item = items[0];
+
+                        if (items.length > 1) {
+                            setAlertState({ title: 'Multiple Items Found', message: `Found ${items.length} items. Using the first one: ${item.title}`, type: 'warning' });
+                        }
+
                         if (item.cost) setOriginalAmount(item.cost.toString());
                         if (item.currencyCode) setCurrencyCode(item.currencyCode);
                         if (item.title) setTitle(item.title);
@@ -226,7 +265,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                             setSplitMode('ITEMIZED');
                         }
                     } else {
-                        alert('Could not read receipt data.');
+                        setAlertState({ title: 'Scan Failed', message: 'Could not read receipt data.', type: 'error' });
                     }
                     setIsScanning(false);
                 };
@@ -416,6 +455,14 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
 
     return (
         <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative">
+            {alertState && (
+                <TacticalAlert
+                    title={alertState.title}
+                    message={alertState.message}
+                    type={alertState.type}
+                    onClose={() => setAlertState(null)}
+                />
+            )}
             {isScanning && (
                 <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
                     <ScanIcon className="w-16 h-16 text-tactical-accent animate-pulse mb-4" />

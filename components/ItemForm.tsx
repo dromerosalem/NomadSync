@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member } from '../types';
-import { ChevronLeftIcon, MapPinIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, UserIcon, WalletIcon } from './Icons';
+import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, WalletIcon } from './Icons';
 import PlaceAutocomplete from './PlaceAutocomplete';
 import { sanitizeAsset } from '../utils/assetUtils';
-import { LocationResult } from '../services/LocationService';
 
 interface ItemFormProps {
   type: ItemType;
@@ -17,84 +16,61 @@ interface ItemFormProps {
   members: Member[]; // Passed to select split
 }
 
+// Helper to parse the rich details string into key-value pairs for the UI
+const parseIntel = (detailsStr: string, excludeKeys: string[] = []) => {
+  if (!detailsStr) return [];
+  const normalizedExcludes = excludeKeys.map(k => k.toLowerCase());
+
+  // Split by newlines and then split each line by first colon
+  return detailsStr.split('\n')
+    .map(line => {
+      const colonIndex = line.indexOf(':');
+      if (colonIndex === -1) return null;
+      const key = line.slice(0, colonIndex).trim();
+      const value = line.slice(colonIndex + 1).trim();
+
+      if (normalizedExcludes.includes(key.toLowerCase())) return null;
+
+      return { key, value };
+    })
+    .filter((pair): pair is { key: string; value: string } => pair !== null && pair.value !== '');
+};
+
+const IntelGrid: React.FC<{ details: string; type?: ItemType }> = ({ details, type }) => {
+  const excludeKeys = type === ItemType.TRANSPORT ? ['Flight Number', 'Seat', 'Flight', 'Assigned Seat'] : [];
+  const pairs = parseIntel(details, excludeKeys);
+  if (pairs.length === 0) return null;
+
+  return (
+    <div className="grid grid-cols-1 gap-y-4 mt-2">
+      {pairs.map((pair, idx) => (
+        <div key={idx} className="flex flex-col border-l-2 border-white/20 pl-4 bg-white/5 p-3 rounded-r-lg">
+          <span className="text-[10px] font-bold text-white/50 uppercase tracking-widest leading-none mb-1.5">
+            {pair.key}
+          </span>
+          <span className="text-sm font-mono font-bold text-white uppercase break-words leading-tight">
+            {pair.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDate, initialItem, availableTags = [], queueLength, currentUserId, members = [] }) => {
   // Filter helper: Active or undefined (legacy) members only. Exclude Blocked/Pending.
   const activeMembers = members.filter(m => m.status === 'ACTIVE' || !m.status);
-
-  // Reset state when initialItem changes (important for the queue flow)
-  useEffect(() => {
-    if (initialItem) {
-      setTitle(initialItem.title || '');
-      setLocation(initialItem.location || '');
-      setEndLocation(initialItem.endLocation || '');
-      setStartDate(initialItem.startDate
-        ? formatDateForInput(initialItem.startDate)
-        : new Date(tripStartDate).toISOString().slice(0, 16)
-      );
-      setEndDate(initialItem.endDate
-        ? formatDateForInput(initialItem.endDate)
-        : new Date(tripStartDate).toISOString().slice(0, 16)
-      );
-      setCost(initialItem.cost?.toString() || '');
-      setDetails(extractCleanDetails(initialItem.details));
-      setSeat(extractSeat(initialItem.details));
-      setTags(initialItem.tags || []);
-      setDurationMinutes(initialItem.durationMinutes);
-      setIsPrivate(initialItem.isPrivate || false);
-
-      // Default to all active members if no split list exists (new item default)
-      const defaultSplit = activeMembers.map(m => m.id);
-      setSplitWith(initialItem.splitWith || defaultSplit);
-
-      // Default Payer
-      setPaidBy(initialItem.paidBy || currentUserId);
-
-      // Coordinates
-      setLatitude(initialItem.latitude);
-      setLongitude(initialItem.longitude);
-      setCountryCode(initialItem.countryCode);
-      setEndLatitude(initialItem.endLatitude);
-      setEndLongitude(initialItem.endLongitude);
-      setEndCountryCode(initialItem.endCountryCode);
-    } else {
-      // Initialize new item defaults
-      const defaultSplit = activeMembers.map(m => m.id);
-      setSplitWith(defaultSplit);
-      setPaidBy(currentUserId);
-    }
-  }, [initialItem, tripStartDate, members, currentUserId]);
-
-  // Helper to extract seat from details if present (Format: "Seat: XX | Details...")
-  const extractSeat = (detailsStr?: string | null) => {
-    if (!detailsStr) return '';
-    const seatMatch = detailsStr.match(/Seat:\s*(.*?)\s*\|/);
-    return seatMatch ? seatMatch[1] : '';
-  };
-
-  const extractCleanDetails = (detailsStr?: string | null) => {
-    if (!detailsStr) return '';
-    return detailsStr.replace(/Seat:\s*.*?\s*\|\s*/, '');
-  };
-
-  // Date formatting for input type="datetime-local"
-  const formatDateForInput = (date: Date) => {
-    // Handling timezone offset to keep local time in input
-    const d = new Date(date);
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 16);
-  };
-
-  const formatDuration = (mins?: number) => {
-    if (!mins) return '';
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${h}h ${m}m`;
-  };
 
   // Form State
   const [title, setTitle] = useState(initialItem?.title || '');
   const [location, setLocation] = useState(initialItem?.location || '');
   const [endLocation, setEndLocation] = useState(initialItem?.endLocation || '');
+
+  const formatDateForInput = (date: Date) => {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+  };
 
   const [startDate, setStartDate] = useState(
     initialItem?.startDate
@@ -110,12 +86,57 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
   const [cost, setCost] = useState(initialItem?.cost?.toString() || '');
 
+  const extractCleanDetails = (detailsStr?: string | null) => {
+    if (!detailsStr) return '';
+    // Remove pattern formats like "Seat: 12A |" or "Flight: BA123 |"
+    let cleaned = detailsStr
+      .replace(/Seat:\s*.*?\s*\|\s*/gi, '')
+      .replace(/Flight:\s*.*?\s*\|\s*/gi, '');
+
+    // Also remove raw multiline entries like "Flight Number: BA123" or "Seat: 12A" 
+    // to avoid redundancy in the IntelGrid/textarea
+    return cleaned.split('\n')
+      .filter(line => {
+        const lower = line.toLowerCase();
+        return !lower.startsWith('flight number:') &&
+          !lower.startsWith('seat:') &&
+          !lower.startsWith('assigned seat:') &&
+          !lower.startsWith('flight:');
+      })
+      .join('\n')
+      .trim();
+  };
+
+  const extractSeat = (detailsStr?: string | null) => {
+    if (!detailsStr) return '';
+    // Try the formatted pipe version first
+    const pipeMatch = detailsStr.match(/Seat:\s*(.*?)\s*\|/i);
+    if (pipeMatch) return pipeMatch[1];
+    // Try the raw multiline version next
+    const multilineMatch = detailsStr.match(/(?:Seat|Assigned Seat):\s*([^\n\r]*)/i);
+    return multilineMatch ? multilineMatch[1].trim() : '';
+  };
+
+  const extractFlightNumber = (detailsStr?: string | null) => {
+    if (!detailsStr) return '';
+    // Try the formatted pipe version first
+    const pipeMatch = detailsStr.match(/Flight:\s*(.*?)\s*\|/i);
+    if (pipeMatch) return pipeMatch[1];
+    // Try the raw multiline version next
+    const multilineMatch = detailsStr.match(/(?:Flight Number|Flight):\s*([^\n\r]*)/i);
+    return multilineMatch ? multilineMatch[1].trim() : '';
+  };
+
   const [details, setDetails] = useState(
     initialItem ? extractCleanDetails(initialItem.details) : ''
   );
 
   const [seat, setSeat] = useState(
     initialItem ? extractSeat(initialItem.details) : ''
+  );
+
+  const [flightNumber, setFlightNumber] = useState(
+    initialItem ? extractFlightNumber(initialItem.details) : ''
   );
 
   const [durationMinutes, setDurationMinutes] = useState<number | undefined>(initialItem?.durationMinutes);
@@ -137,6 +158,45 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
   // Tag State
   const [tags, setTags] = useState<string[]>(initialItem?.tags || []);
   const [tagInput, setTagInput] = useState('');
+
+  // Reset state when initialItem changes
+  useEffect(() => {
+    if (initialItem) {
+      setTitle(initialItem.title || '');
+      setLocation(initialItem.location || '');
+      setEndLocation(initialItem.endLocation || '');
+      setStartDate(initialItem.startDate
+        ? formatDateForInput(initialItem.startDate)
+        : new Date(tripStartDate).toISOString().slice(0, 16)
+      );
+      setEndDate(initialItem.endDate
+        ? formatDateForInput(initialItem.endDate)
+        : new Date(tripStartDate).toISOString().slice(0, 16)
+      );
+      setCost(initialItem.cost?.toString() || '');
+      setDetails(extractCleanDetails(initialItem.details));
+      setSeat(extractSeat(initialItem.details));
+      setFlightNumber(extractFlightNumber(initialItem.details));
+      setTags(initialItem.tags || []);
+      setDurationMinutes(initialItem.durationMinutes);
+      setIsPrivate(initialItem.isPrivate || false);
+
+      const defaultSplit = activeMembers.map(m => m.id);
+      setSplitWith(initialItem.splitWith || defaultSplit);
+      setPaidBy(initialItem.paidBy || currentUserId);
+
+      setLatitude(initialItem.latitude);
+      setLongitude(initialItem.longitude);
+      setCountryCode(initialItem.countryCode);
+      setEndLatitude(initialItem.endLatitude);
+      setEndLongitude(initialItem.endLongitude);
+      setEndCountryCode(initialItem.endCountryCode);
+    } else {
+      const defaultSplit = activeMembers.map(m => m.id);
+      setSplitWith(defaultSplit);
+      setPaidBy(currentUserId);
+    }
+  }, [initialItem, tripStartDate, currentUserId]);
 
   const handleAddTag = (tagToAdd: string) => {
     const trimmed = tagToAdd.trim();
@@ -170,28 +230,32 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
   const handleSubmit = () => {
     if (!title) return;
 
+    let finalDetails = details;
+    if (seat) finalDetails = `Seat: ${seat} | ` + finalDetails;
+    if (flightNumber) finalDetails = `Flight: ${flightNumber} | ` + finalDetails;
+
     onSave({
-      id: initialItem?.id, // Pass back ID if editing
+      id: initialItem?.id,
       title,
       location,
       endLocation: type === ItemType.TRANSPORT ? endLocation : undefined,
       startDate: new Date(startDate),
       endDate: type === ItemType.STAY || type === ItemType.TRANSPORT ? new Date(endDate) : undefined,
       cost: parseFloat(cost) || 0,
-      details: seat ? `Seat: ${seat} | ${details}` : details,
+      details: finalDetails,
       type,
       tags,
-      durationMinutes, // IMPORTANT: Pass this back to parent
-      latitude,      // Added
-      longitude,     // Added
-      countryCode,   // Added
-      endLatitude,   // Added
-      endLongitude,  // Added
-      endCountryCode,// Added
+      durationMinutes,
+      latitude,
+      longitude,
+      countryCode,
+      endLatitude,
+      endLongitude,
+      endCountryCode,
       isPrivate,
       splitWith,
       paidBy,
-      showInTimeline: true // Standard items added via this form always appear on Timeline
+      showInTimeline: true
     });
   };
 
@@ -224,15 +288,16 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
     }
   };
 
-  // Ownership Check
-  // New items are owned by current user. Existing items check createdBy.
-  // If no createdBy exists on initialItem (legacy), assume editable or public.
   const isOwner = !initialItem || !initialItem.id || (initialItem.createdBy === currentUserId);
-
-  // Calculate cost per person for preview
   const costNum = parseFloat(cost) || 0;
-  const costPerPerson = splitWith.length > 0 ? (costNum / splitWith.length).toFixed(2) : '0.00';
   const payer = members.find(m => m.id === paidBy);
+
+  const formatDuration = (mins?: number) => {
+    if (!mins) return '';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${h}h ${m}m`;
+  };
 
   return (
     <div className="flex flex-col h-full bg-tactical-bg animate-fade-in overflow-y-auto">
@@ -256,7 +321,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         </button>
       </header>
 
-      <div className="p-6 space-y-8 pb-32 w-full max-w-2xl mx-auto flex-1">
+      <div className="p-6 space-y-8 pb-48 w-full max-w-2xl mx-auto flex-1">
         {/* Title Section */}
         <div>
           <h1 className={`font-display text-3xl font-bold uppercase leading-tight mb-6 ${getTypeColor()}`}>
@@ -313,7 +378,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           )}
         </div>
 
-        {/* Expense Split & Payer Configuration - Only if NOT Private */}
+        {/* Financial Config */}
         {!isPrivate && (
           <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl overflow-hidden">
             <div
@@ -340,7 +405,6 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
             {showFinancialOptions && (
               <div className="p-4 pt-0 border-t border-tactical-muted/10 bg-black/10">
-                {/* 1. Paid By Section */}
                 <div className="mt-4 mb-6">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">
                     Who Paid?
@@ -362,7 +426,6 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                   </div>
                 </div>
 
-                {/* 2. Split With Section */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">
                     Split Among
@@ -398,7 +461,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           </div>
         )}
 
-        {/* Date / Time Section */}
+        {/* Date / Time */}
         <div className="grid grid-cols-2 gap-4 border-t border-b border-tactical-muted/10 py-6">
           <div>
             <label className="text-[10px] font-bold text-tactical-muted uppercase tracking-widest border-l-2 border-tactical-accent pl-2 mb-2 block">
@@ -423,8 +486,6 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                 onChange={(e) => setEndDate(e.target.value)}
                 className="bg-tactical-card text-white text-sm p-2 rounded w-full border border-tactical-muted/30 focus:border-tactical-accent outline-none"
               />
-
-              {/* Display Detected Duration for verification */}
               {durationMinutes && (
                 <div className="mt-2 text-[10px] text-tactical-accent font-bold uppercase tracking-wider flex items-center gap-1">
                   <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
@@ -441,20 +502,18 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">
               {type === ItemType.TRANSPORT ? 'Origin Coordinates' : 'Target Coordinates'}
             </label>
-            <div className="relative">
-              <PlaceAutocomplete
-                value={location}
-                onChange={(val, meta) => {
-                  setLocation(val);
-                  if (meta) {
-                    setLatitude(meta.lat);
-                    setLongitude(meta.lon);
-                    setCountryCode(meta.countryCode);
-                  }
-                }}
-                placeholder="Address or City"
-              />
-            </div>
+            <PlaceAutocomplete
+              value={location}
+              onChange={(val, meta) => {
+                setLocation(val);
+                if (meta) {
+                  setLatitude(meta.lat);
+                  setLongitude(meta.lon);
+                  setCountryCode(meta.countryCode);
+                }
+              }}
+              placeholder="Address or City"
+            />
           </div>
 
           {type === ItemType.TRANSPORT && (
@@ -462,31 +521,25 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">
                 Target Coordinates (Destination)
               </label>
-              <div className="relative">
-                <PlaceAutocomplete
-                  value={endLocation}
-                  onChange={(val, meta) => {
-                    setEndLocation(val);
-                    if (meta) {
-                      setEndLatitude(meta.lat);
-                      setEndLongitude(meta.lon);
-                      setEndCountryCode(meta.countryCode);
-                    }
-                  }}
-                  placeholder="Destination City"
-                />
-              </div>
+              <PlaceAutocomplete
+                value={endLocation}
+                onChange={(val, meta) => {
+                  setEndLocation(val);
+                  if (meta) {
+                    setEndLatitude(meta.lat);
+                    setEndLongitude(meta.lon);
+                    setEndCountryCode(meta.countryCode);
+                  }
+                }}
+                placeholder="Destination City"
+              />
             </div>
           )}
         </div>
 
-        {/* Tags / Labels Section */}
+        {/* Tags Section */}
         <div className="mt-6">
-          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">
-            Tactical Labels
-          </label>
-
-          {/* Available Tags Helper */}
+          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Tactical Labels</label>
           {availableTags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {availableTags.map(tag => (
@@ -504,124 +557,159 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
               ))}
             </div>
           )}
-
           <div className="flex gap-2 mb-2">
             <input
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Add tag (e.g., 'Work', 'Chill')"
+              placeholder="Add tag..."
               className="flex-1 bg-tactical-card p-3 rounded-lg border border-tactical-muted/30 text-white text-sm outline-none focus:border-tactical-accent"
             />
-            <button
-              onClick={() => handleAddTag(tagInput)}
-              className="bg-tactical-muted/20 hover:bg-tactical-accent/20 text-tactical-accent p-3 rounded-lg transition-colors"
-            >
-              <PlusIcon className="w-5 h-5" />
-            </button>
           </div>
-
-          {tags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => (
-                <div key={tag} className="bg-tactical-accent/10 border border-tactical-accent/30 text-tactical-accent text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
-                  <span>{tag}</span>
-                  <button onClick={() => handleRemoveTag(tag)} className="hover:text-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {tags.map(tag => (
+              <div key={tag} className="bg-tactical-accent/10 border border-tactical-accent/30 text-tactical-accent text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
+                <span>{tag}</span>
+                <button onClick={() => handleRemoveTag(tag)} className="hover:text-white">&times;</button>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Specialized Cards */}
+        {/* Specialized Intel Cards - REDESIGNED FOR VERTICAL SPACE */}
 
-        {/* Boarding Pass Style for Transport */}
+        {/* TRANSPORT CARD */}
         {type === ItemType.TRANSPORT && (
-          <div className="bg-[#A0522D] rounded-xl p-0 overflow-hidden relative shadow-lg mt-4">
-            {/* Notches */}
-            <div className="absolute top-1/2 -left-3 w-6 h-6 rounded-full bg-tactical-bg"></div>
-            <div className="absolute top-1/2 -right-3 w-6 h-6 rounded-full bg-tactical-bg"></div>
+          <div className="bg-[#A0522D] rounded-2xl overflow-hidden relative shadow-[0_20px_40px_rgba(0,0,0,0.6)] mt-8 group flex flex-col">
+            <div className="absolute top-1/2 -left-4 w-8 h-8 rounded-full bg-tactical-bg shadow-inner z-10"></div>
+            <div className="absolute top-1/2 -right-4 w-8 h-8 rounded-full bg-tactical-bg shadow-inner z-10"></div>
 
-            <div className="p-4 border-b border-dashed border-black/20">
-              <div className="flex justify-between items-end mb-2">
+            <div className="p-6 border-b border-dashed border-black/30 bg-white/5">
+              <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-[10px] font-bold text-white/60 uppercase">Passenger</span>
-                  <div className="font-display font-bold text-xl text-white">THE TRAVELER</div>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1">Operative</span>
+                  <div className="font-display font-bold text-2xl text-white tracking-tight">THE TRAVELER</div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] font-bold text-white/60 uppercase">Class</span>
-                  <div className="font-display font-bold text-white">ECONOMY</div>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1">Sector</span>
+                  <div className="font-display font-bold text-white text-xl">TRANSIT</div>
                 </div>
               </div>
             </div>
 
-            <div className="p-4 flex gap-4">
-              <div className="flex-1 bg-black/20 rounded p-2">
-                <span className="text-[10px] font-bold text-white/60 uppercase block">Details</span>
-                <input
+            <div className="p-6 space-y-8">
+              {/* Top Row: Seat and Class in bigger vertical blocks */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-black/25 rounded-xl p-4 border border-white/5">
+                  <span className="text-[10px] font-bold text-white/30 uppercase block mb-2 tracking-widest">Assigned Seat</span>
+                  <input
+                    value={seat}
+                    onChange={(e) => setSeat(e.target.value)}
+                    placeholder="04A"
+                    className="bg-transparent w-full text-white font-mono font-bold text-3xl placeholder-white/10 outline-none"
+                  />
+                </div>
+                <div className="bg-black/25 rounded-xl p-4 border border-white/5 text-center">
+                  <span className="text-[10px] font-bold text-white/30 uppercase block mb-2 tracking-widest">Flight Number</span>
+                  <input
+                    value={flightNumber}
+                    onChange={(e) => setFlightNumber(e.target.value)}
+                    placeholder="E.G. BA1530"
+                    className="bg-transparent w-full text-white font-mono font-bold text-2xl text-center placeholder-white/10 outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Middle Section: Extracted Intel using Grid */}
+              <div className="bg-black/15 rounded-xl p-5 border border-white/5">
+                <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-4 border-b border-white/10 pb-2">Scanned Extraction Data</label>
+                <IntelGrid details={details} type={type} />
+              </div>
+
+              {/* Bottom Section: Full-Width Manual Override */}
+              <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+                <label className="text-[10px] font-bold text-white/40 uppercase block mb-3 tracking-widest">Manual Override / Extraction Notes</label>
+                <textarea
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
-                  placeholder="Flight # / Train #"
-                  className="bg-transparent w-full text-white font-mono placeholder-white/40 outline-none"
-                />
-              </div>
-              <div className="w-24 bg-black/20 rounded p-2">
-                <span className="text-[10px] font-bold text-white/60 uppercase block">Seat</span>
-                <input
-                  value={seat}
-                  onChange={(e) => setSeat(e.target.value)}
-                  placeholder="04A"
-                  className="bg-transparent w-full text-white font-mono font-bold text-center placeholder-white/40 outline-none"
+                  placeholder="Enter flight details, reservation numbers, or special instructions..."
+                  className="bg-black/20 w-full text-white font-mono text-sm p-4 rounded-lg placeholder-white/10 outline-none resize-none min-h-[120px] focus:bg-black/30 transition-all border border-white/5 focus:border-white/20"
                 />
               </div>
             </div>
           </div>
         )}
 
-        {/* Notes / Details for Non-Transport (Includes Food) */}
-        {type !== ItemType.TRANSPORT && (
-          <div className="space-y-2 mt-4">
-            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">
-              {type === ItemType.FOOD ? 'Reservation Details & Notes' : 'Mission Notes'}
-            </label>
-            <textarea
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              placeholder={type === ItemType.FOOD ? "Reservation time, dress code, booking reference..." : "Additional intelligence or details..."}
-              className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-white placeholder-gray-600 focus:border-tactical-accent outline-none min-h-[100px]"
-            />
+        {/* STAY CARD */}
+        {type === ItemType.STAY && (
+          <div className="bg-tactical-muted/10 border border-tactical-accent/30 rounded-2xl overflow-hidden shadow-2xl mt-8">
+            <div className="bg-tactical-accent/15 p-4 border-b border-tactical-accent/30 flex justify-between items-center">
+              <span className="text-xs font-extrabold text-tactical-accent uppercase tracking-[0.2em]">Safehouse Identification</span>
+              <BedIcon className="w-5 h-5 text-tactical-accent animate-pulse" />
+            </div>
+            <div className="p-6 space-y-8">
+              <div className="bg-black/20 rounded-xl p-5 border border-tactical-accent/10">
+                <label className="text-[10px] font-bold text-tactical-accent/60 uppercase tracking-widest block mb-4">Confirmed Details</label>
+                <IntelGrid details={details} type={type} />
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block ml-1">Mission Log / Reservations</label>
+                <textarea
+                  value={details}
+                  onChange={(e) => setDetails(e.target.value)}
+                  placeholder="Add booking reference, security codes, or check-in instructions..."
+                  className="w-full bg-black/40 border border-tactical-muted/40 rounded-xl p-4 text-white text-sm placeholder-gray-700 focus:border-tactical-accent outline-none min-h-[120px] shadow-inner transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* OTHER TYPES */}
+        {type !== ItemType.TRANSPORT && type !== ItemType.STAY && (
+          <div className="space-y-6 mt-8">
+            <div className="bg-tactical-card border border-tactical-muted/20 rounded-2xl p-6 shadow-xl">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-4 border-b border-tactical-muted/10 pb-2">Analysis Results</label>
+              <IntelGrid details={details} type={type} />
+            </div>
+            <div className="space-y-3">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block ml-1">
+                {type === ItemType.FOOD ? 'Refueling Logistics' : 'Mission Reconnaissance'}
+              </label>
+              <textarea
+                value={details}
+                onChange={(e) => setDetails(e.target.value)}
+                placeholder="Document your findings here..."
+                className="w-full bg-tactical-card border border-tactical-muted/30 rounded-2xl p-5 text-white text-md placeholder-gray-700 focus:border-tactical-accent outline-none min-h-[150px] transition-all"
+              />
+            </div>
           </div>
         )}
 
       </div>
 
-      {/* Footer / Cost / Save */}
-      <div className="mt-auto sticky bottom-0 bg-tactical-bg p-6 border-t border-tactical-muted/20 z-20 w-full max-w-2xl mx-auto">
+      {/* Footer */}
+      <div className="mt-auto sticky bottom-0 bg-tactical-bg p-6 border-t border-tactical-muted/20 z-20 w-full max-w-2xl mx-auto backdrop-blur-md bg-opacity-95">
         <div className="flex items-end justify-between mb-4">
-          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Financial Toll</span>
+          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">Financial Liability</span>
           <div className="flex items-baseline text-tactical-accent">
-            <span className="text-lg font-bold mr-1">$</span>
+            <span className="text-xl font-bold mr-1.5 opacity-60">$</span>
             <input
               type="number"
               value={cost}
               onChange={(e) => setCost(e.target.value)}
+              className="bg-transparent w-40 text-5xl font-display font-bold text-right outline-none placeholder-tactical-muted/20 selection:bg-tactical-accent selection:text-black"
               placeholder="0.00"
-              className="bg-transparent w-32 text-4xl font-display font-bold text-right outline-none placeholder-tactical-muted/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
         </div>
-
         <button
           onClick={handleSubmit}
           disabled={!title}
-          className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl shadow-[0_0_15px_rgba(255,215,0,0.2)] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-black text-xl py-5 rounded-2xl shadow-[0_0_30px_rgba(255,215,0,0.15)] active:scale-[0.98] disabled:opacity-30 transition-all uppercase tracking-[0.15em]"
         >
-          {queueLength && queueLength > 1
-            ? 'CONFIRM & NEXT INTEL'
-            : (initialItem?.id ? 'UPDATE MISSION' : (type === ItemType.FOOD ? 'LOG RECEIPT' : 'CONFIRM MISSION'))
-          }
+          {queueLength && queueLength > 1 ? 'CONFIRM & NEXT INTEL' : (initialItem?.id ? 'UPDATE INTEL' : 'CONFIRM MISSION')}
         </button>
       </div>
     </div>

@@ -3,6 +3,9 @@ import React, { useRef, useState } from 'react';
 import { ItemType, ItineraryItem } from '../types';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, ScanIcon } from './Icons';
 import { scanOrchestrator } from '../services/ScanOrchestrator';
+import { UploadSecurityService } from '../services/UploadSecurityService';
+import { compressImage } from '../utils/imageCompression';
+import { TacticalAlert } from './TacticalAlert';
 
 interface AddItemProps {
   onClose: () => void;
@@ -37,46 +40,89 @@ const OptionCard: React.FC<{
 const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem, tripStartDate }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [alertState, setAlertState] = useState<{ title: string; message: string; type: 'error' | 'success' | 'warning' } | null>(null);
 
   const handleScanClick = () => {
     fileInputRef.current?.click();
   };
 
-
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // 1. Initial Security Check (Hard Limits)
+      const securityCheck = UploadSecurityService.validateFile(file);
+      if (!securityCheck.isValid) {
+        setAlertState({ title: 'Security Alert', message: securityCheck.error || 'Invalid file.', type: 'error' });
+        return;
+      }
+
+      // 2. Preliminary Abuse Check (Filenames)
+      const abuseCheck = UploadSecurityService.preliminaryAbuseCheck(file);
+      if (!abuseCheck.isValid) {
+        setAlertState({ title: 'Protocol Violation', message: abuseCheck.error || 'Abusive content detected.', type: 'warning' });
+        return;
+      }
+
       setIsScanning(true);
       try {
+        // Compress Image (if it's an image)
+        let processedFile = file;
+        if (file.type.startsWith('image/')) {
+          console.log('Compressing image...');
+          processedFile = await compressImage(file);
+        }
+
         const reader = new FileReader();
         reader.onloadend = async () => {
           const base64String = reader.result as string;
           // Remove data:image/...;base64, prefix for API
           const base64Content = base64String.split(',')[1];
 
+          // 3. PDF Deep Security Check
+          if (file.type === 'application/pdf') {
+            const { analyzePdfSecurity } = await import('../services/PdfService');
+            const pdfCheck = await analyzePdfSecurity(base64Content);
+
+            if (!pdfCheck.isSafe) {
+              setIsScanning(false);
+              setAlertState({ title: 'Security Alert', message: pdfCheck.error || 'PDF rejected.', type: 'error' });
+              return;
+            }
+
+            console.log(`[AddItem] PDF Security Pass. Pages: ${pdfCheck.pageCount}, Density: ${pdfCheck.textDensity}`);
+          }
+
           // Pass the file type (e.g., application/pdf or image/png)
           // Pass tripStartDate to assist with Year Inference
-          // Pass tripStartDate to assist with Year Inference
-          const item = await scanOrchestrator.scanReceipt(base64Content, file.type, tripStartDate);
-          if (item) {
-            onScannedItem([item]);
+          const items = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate);
+          if (items && items.length > 0) {
+            onScannedItem(items);
           } else {
-            alert('Could not extract intelligence from this document.');
+            setAlertState({ title: 'Scan Failed', message: 'Could not extract intelligence from this document.', type: 'error' });
           }
           setIsScanning(false);
         };
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(processedFile);
       } catch (error) {
         console.error("Scan error", error);
         setIsScanning(false);
-        alert('Scan failed.');
+        setAlertState({ title: 'System Error', message: 'Scan failed due to an internal error.', type: 'error' });
       }
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-tactical-bg p-6 animate-fade-in relative">
+      {/* Alert System */}
+      {alertState && (
+        <TacticalAlert
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+          onClose={() => setAlertState(null)}
+        />
+      )}
+
       {/* Loading Overlay */}
       {isScanning && (
         <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">

@@ -21,36 +21,48 @@ const getGroqClient = () => {
     return groqClient;
 };
 
-export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: string, tripStartDate?: Date, textInput?: string): Promise<{ item: Partial<ItineraryItem> | null, confidence: number }> => {
+export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: string, tripStartDate?: Date, textInput?: string): Promise<{ items: Partial<ItineraryItem>[], confidence: number }> => {
     try {
         const groq = getGroqClient();
-        if (!groq) return { item: null, confidence: 0 };
+        if (!groq) return { items: [], confidence: 0 };
 
         const contextPrompt = tripStartDate
             ? `CONTEXT: The trip starts on ${tripStartDate.toISOString().split('T')[0]}. Use this year.`
             : `CONTEXT: Use current year.`;
 
-        const prompt = `
-        ${contextPrompt}
-        Analyze this receipt image. Extract data into a VALID JSON Object. 
-        CRITICAL: Do NOT return markdown formatting (no \`\`\`json). Just the raw JSON string.
+        const promptInstructions = `
+        TASK: Parse the travel document into a JSON ARRAY of objects.
         
-        Rules:
-        1. Ignore tax summaries/subtotals. Items include tax (Gross) unless it's clearly US style Net + Tax.
-        2. Extract line items strictly.
-        
+        **MULTI-ITEM EXTRACTION**: 
+        - If the document contains multiple distinct events (e.g. Outbound + Return Flight), extract EACH as a separate object.
+        - **SAME EVENT, MULTIPLE TICKETS**: If the document contains multiple tickets/guests for the SAME event (e.g. 2 concert tickets, 2 passengers), return ONE object representing the entire order. 
+        - The 'cost' field must represent the **TOTAL ORDER AMOUNT** (Sum of all tickets + fees).
+        - Detail the breakdown (unit price x quantity) in the 'details' string and 'receiptItems' array.
+
+        **CRITICAL RULES FOR NUMBERS & CURRENCY**:
+        1. **TRANSCRIBE EXACTLY**: Do NOT divide values by 100 or 10.
+        2. **CURRENCY**: For CRC, JPY, KRW, numbers are large. 6000 is 6000, NOT 60.
+        3. **SANITY CHECK**: Sum of item prices MUST ≈ Total Cost.
+
         Required JSON Structure:
-        {
-            "type": "FOOD" | "TRANSPORT" | etc,
-            "title": "Vendor Name",
-            "cost": 0.00,
-            "currencyCode": "USD",
-            "startDate": "YYYY-MM-DDTHH:mm",
-            "receiptItems": [
-                { "name": "Item Name", "quantity": 1, "price": 0.00, "type": "food" }
-            ]
-        }
+        [
+            {
+                "type": "STAY" | "TRANSPORT" | "ACTIVITY" | "FOOD" | "ESSENTIALS",
+                "title": "Vendor/Event Name",
+                "location": "City/Address",
+                "startDate": "YYYY-MM-DDTHH:mm",
+                "cost": 0.0, // TOTAL order amount.
+                "currencyCode": "String",
+                "details": "Pedantic, rich multiline summary: include Order #, Unit Prices, specific Guest Names, Venue Address, Gate/Seat info, and any unique metadata found.",
+                "durationMinutes": 0,
+                "receiptItems": [
+                    { "name": "String", "quantity": 1, "price": 0.0, "type": "ticket" | "food" | "drink" | "service" | "tax" }
+                ]
+            }
+        ]
         `;
+
+        const prompt = `${contextPrompt}\n${promptInstructions}`;
 
         const messageContent: any[] = [{ type: 'text', text: prompt }];
 
@@ -79,34 +91,43 @@ export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: strin
         });
 
         const content = completion.choices[0]?.message?.content;
-        if (!content) return { item: null, confidence: 0 };
+        if (!content) return { items: [], confidence: 0 };
 
-        const data = JSON.parse(content);
+        let data = JSON.parse(content);
 
-        // Map to ItineraryItem
-        const item: Partial<ItineraryItem> = {
-            type: data.type,
-            title: data.title,
-            location: data.location || data.title,
-            cost: data.cost,
-            currencyCode: data.currencyCode,
-            startDate: data.startDate ? new Date(data.startDate) : undefined,
-            receiptItems: Array.isArray(data.receiptItems) ? data.receiptItems.map((ri: any) => ({
+        // Handle if API returns wrapped object { "items": [...] } or just [...] or just {...}
+        if (data.items && Array.isArray(data.items)) {
+            data = data.items;
+        } else if (!Array.isArray(data)) {
+            data = [data];
+        }
+
+        const items: Partial<ItineraryItem>[] = data.map((d: any) => ({
+            type: d.type,
+            title: d.title,
+            location: d.location || d.title,
+            cost: d.cost,
+            currencyCode: d.currencyCode,
+            details: d.details,
+            startDate: d.startDate ? new Date(d.startDate) : undefined,
+            receiptItems: Array.isArray(d.receiptItems) ? d.receiptItems.map((ri: any) => ({
                 ...ri,
                 id: crypto.randomUUID(),
                 assignedTo: []
             })) : []
-        };
+        }));
 
-        // Basic confidence heuristic: Did we get a title and cost?
+        // Basic confidence heuristic: Did we get a title and cost on the first item?
         let confidence = 0.5;
-        if (item.title && item.cost) confidence += 0.3;
-        if (item.receiptItems && item.receiptItems.length > 0) confidence += 0.15;
+        if (items.length > 0) {
+            if (items[0].title && items[0].cost) confidence += 0.3;
+            if (items[0].receiptItems && items[0].receiptItems.length > 0) confidence += 0.15;
+        }
 
-        return { item, confidence };
+        return { items, confidence };
 
     } catch (error) {
         console.error("Groq Analysis Failed:", error);
-        return { item: null, confidence: 0 };
+        return { items: [], confidence: 0 };
     }
 };
