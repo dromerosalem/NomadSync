@@ -73,6 +73,11 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
           - taxAmount: Total tax.
           - tipAmount: Tip/Gratuity.
 
+       **TAX HANDLING (CRITICAL)**:
+       - **DO NOT EXTRACT TAX SUMMARIES AS ITEMS**: Lines like "VAT 20%", "PTU A 23%", "Taxable Base", "Gross Amount", "Net Amount", "Subtotal" or "Total" MUST NOT be included in the 'receiptItems' array.
+       - **ONLY BILLABLE ITEMS**: 'receiptItems' should only contain physical goods (food, drink, tickets) or valid surcharges (Service Charge, Delivery Fee).
+       - **TAX IS NOT AN ITEM**: Taxes are part of the cost, not a separate line item to be split.
+
        CRITICAL RULES:
        1. **CROSS-REFERENCE TOTALS**: Always compare detected unit prices with the document's Final Total. If Total = 2x Unit Price, you MUST set quantity to 2 and title it accordingly.
        2. **RETURN NULL** for missing fields, do NOT guess.

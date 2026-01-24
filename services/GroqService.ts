@@ -44,7 +44,12 @@ export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: strin
         2. **CURRENCY**: For CRC, JPY, KRW, numbers are large. 6000 is 6000, NOT 60.
         3. **SANITY CHECK**: Sum of item prices MUST ≈ Total Cost.
 
-        Required JSON Structure:
+        **TAX HANDLING (CRITICAL)**:
+        - **DO NOT EXTRACT TAX SUMMARIES AS ITEMS**: Lines like "VAT 20%", "PTU A 23%", "Taxable Base", "Gross Amount", "Net Amount", "Subtotal" MUST NOT be included in the 'receiptItems' array.
+        - **ONLY BILLABLE ITEMS**: 'receiptItems' should only contain physical goods (food, drink, tickets) or valid surcharges (Service Charge, Delivery Fee).
+        - **TAX IS NOT AN ITEM**: Taxes are part of the cost, not a separate line item to be split.
+
+        required JSON Structure:
         [
             {
                 "type": "STAY" | "TRANSPORT" | "ACTIVITY" | "FOOD" | "ESSENTIALS",
