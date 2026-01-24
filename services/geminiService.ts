@@ -24,6 +24,16 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
        - **AGGREGATE COST**: The 'cost' field MUST be the final **TOTAL ORDER AMOUNT** (Sum of all items + fees + taxes). 
        - Detail the breakdown (e.g. "Unit Price: $24.95 x 2") in the 'details' string and 'receiptItems' array.
 
+       **CURRENCY EXTRACTION (STRICT)**:
+       - **ISO 4217 CODES ONLY**: You MUST return a 3-letter currency code (e.g. "USD", "EUR", "CRC").
+       - **SYMBOL MAPPING**: You MUST map symbols to their correct ISO codes based on the context:
+         - "₡" or "C" or "Colones" -> "CRC" (Costa Rican Colón)
+         - "€" -> "EUR"
+         - "£" -> "GBP"
+         - "$" -> "USD" (Default), unless context implies otherwise (e.g. "MX$" -> "MXN", "C$" -> "CAD").
+       - **CONTEXTUAL INFERENCE**: If the document has an address in Costa Rica and uses "₡" or "C", it is "CRC".
+       - **MAGNITUDE CHECK**: If the amount is high (e.g. 6000+) for a meal, it is likely NOT USD. Use common sense based on the location.
+
        MASTER DATA INVENTORY (EXTRACT EVERYTHING LISTED IF PRESENT):
        
        1. UNIVERSAL METADATA
@@ -31,7 +41,7 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
           - providerName: Name of airline, hotel brand, or merchant.
           - bookingReference: PNR, Order #, or Confirmation Code.
           - totalAmount: Number.
-          - currency: 3-letter code.
+          - currency: 3-letter ISO code (e.g. "CRC", "USD").
           - paymentStatus: "paid"|"pending"|"pay-at-property".
        
        2. FLIGHT (Type: TRANSPORT)
@@ -80,7 +90,7 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
            "startDate": "ISO String",
            "endDate": "ISO String",
            "cost": Number, // TOTAL amount for the entire order/object.
-           "currencyCode": "String",
+           "currencyCode": "String", // 3-letter ISO code e.g. "CRC"
            "details": "String (Pedantic, rich multiline summary: include Order #, Unit Prices, specific Guest Names, Venue Address, Gate/Seat info, and any unique metadata found)",
            "tags": ["String"],
            "durationMinutes": Number,
