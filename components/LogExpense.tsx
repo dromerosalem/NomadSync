@@ -1,9 +1,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member, ReceiptItem } from '../types';
-import { ChevronLeftIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
+import { ChevronLeftIcon, ChevronDownIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
 import AtmosphericAvatar from './AtmosphericAvatar';
-import { analyzeReceipt } from '../services/geminiService';
 import { scanOrchestrator } from '../services/ScanOrchestrator';
 import { currencyService } from '../services/CurrencyService';
 import { getCurrencySymbol } from '../utils/currencyUtils';
@@ -80,6 +79,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
 
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingRate, setIsLoadingRate] = useState(false);
+    const [expandedSharedItems, setExpandedSharedItems] = useState<Set<string>>(new Set());
 
     // Settlement Check
     const isSettlement = initialItem?.type === ItemType.SETTLEMENT;
@@ -297,11 +297,21 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             if (receiptItems.length === 0) return false;
 
             const hasUnassignedItems = receiptItems.some(item => {
-                if (['tax', 'tip', 'service'].includes(item.type)) return false;
+                if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) return false;
                 return !item.assignedTo || item.assignedTo.length === 0;
             });
 
             if (hasUnassignedItems) return false;
+
+            // Validate that assigned items total matches the top-level bill total (within tolerance)
+            const billTotal = parseFloat(originalAmount);
+            const itemizedAssignedTotal = receiptItems.reduce((sum, item) => {
+                const lineTotal = item.price * item.quantity;
+                if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) return sum + lineTotal;
+                if (item.assignedTo && item.assignedTo.length > 0) return sum + lineTotal;
+                return sum;
+            }, 0);
+            if (Math.abs(billTotal - itemizedAssignedTotal) > 0.01) return false;
         }
 
         if (splitWith.length === 0 && splitMode !== 'ITEMIZED') return false; // In itemized, splitWith is derived
@@ -329,31 +339,32 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             receiptItems.forEach(item => {
                 if (['tax', 'tip', 'service'].includes(item.type)) return;
 
-                subtotal += item.price;
+                const lineTotal = item.price * item.quantity;
+                subtotal += lineTotal;
                 const assigned = item.assignedTo || [];
                 if (assigned.length > 0) {
-                    const splitPrice = item.price / assigned.length;
+                    const splitPrice = lineTotal / assigned.length;
                     assigned.forEach(uid => {
                         memberSubtotals[uid] = (memberSubtotals[uid] || 0) + splitPrice;
                     });
                 } else {
                     // Unassigned goes to Payer? Or remains unallocated? 
                     // Let's assign to Payer for now to avoid "money loss"
-                    memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + item.price;
+                    memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + lineTotal;
                 }
             });
 
             // 2. Distribute Tax/Tip/Service proportionally based on subtotal
             receiptItems.forEach(item => {
                 if (['tax', 'tip', 'service'].includes(item.type)) {
-                    const price = item.price;
+                    const lineTotal = item.price * item.quantity;
                     // If subtotal is 0 (everything is tax/tip?), split equally among all members who have assignments, or just payer
                     if (subtotal === 0) {
-                        memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + price;
+                        memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + lineTotal;
                     } else {
                         // Proportional split
                         Object.keys(memberSubtotals).forEach(uid => {
-                            const share = (memberSubtotals[uid] / subtotal) * price;
+                            const share = (memberSubtotals[uid] / subtotal) * lineTotal;
                             memberSubtotals[uid] += share;
                         });
                     }
@@ -449,6 +460,27 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     }
     const remaining = convertedCost - currentCustomSum;
 
+    // Itemized mode bill validation calculations
+    const itemizedTotalScanned = receiptItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const itemizedAssigned = receiptItems.reduce((sum, item) => {
+        const lineTotal = item.price * item.quantity;
+        // Tax/tip/service/deposit/discount are auto-distributed, count as assigned
+        if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) return sum + lineTotal;
+        // Count as assigned if at least one member is assigned
+        if (item.assignedTo && item.assignedTo.length > 0) return sum + lineTotal;
+        return sum;
+    }, 0);
+
+    // We use the top-level originalAmount as the source of truth for the Total Bill
+    const totalBillReference = parseFloat(originalAmount) || 0;
+    const itemizedRemaining = totalBillReference - itemizedAssigned;
+
+    // Check if any assignable items have no one assigned
+    const hasUnassignedItems = receiptItems.some(item => {
+        if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) return false;
+        return !item.assignedTo || item.assignedTo.length === 0;
+    });
+
     const sender = members.find(m => m.id === paidBy);
     const receiverId = splitWith[0];
     const receiver = members.find(m => m.id === receiverId);
@@ -486,7 +518,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 )}
             </header>
 
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-32 w-full max-w-2xl mx-auto">
+            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-48 w-full max-w-2xl mx-auto">
 
                 {/* 1. Cost Input */}
                 <div className="flex flex-col items-center justify-center mb-8 mt-4">
@@ -734,22 +766,118 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                                                 </div>
                                                             )}
                                                             <div className="text-[10px] text-gray-500 flex gap-2">
-                                                                <span>{item.quantity}x</span>
+                                                                <span>{item.quantity}x {item.quantity > 1 && `@ ${getCurrencySymbol(currencyCode)}${item.price.toFixed(2)}`}</span>
                                                                 <span className="uppercase badge bg-gray-800 px-1 rounded text-[8px]">{item.type}</span>
                                                             </div>
                                                         </div>
-                                                        <div className="font-mono font-bold text-tactical-accent">
-                                                            {getCurrencySymbol(currencyCode)}{item.price.toFixed(2)}
+                                                        <div className="text-right">
+                                                            <div className="font-mono font-bold text-tactical-accent">
+                                                                {getCurrencySymbol(currencyCode)}{(item.price * item.quantity).toFixed(2)}
+                                                            </div>
+                                                            {item.quantity > 1 && (
+                                                                <div className="text-[9px] text-gray-500 font-mono">
+                                                                    {item.quantity} × {getCurrencySymbol(currencyCode)}{item.price.toFixed(2)}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
 
                                                     {/* Assignment Avatars */}
                                                     <div className="flex gap-2">
-                                                        {['tax', 'tip', 'service'].includes(item.type) ? (
-                                                            <div className="flex items-center gap-2 w-full">
-                                                                <div className="text-[10px] font-bold text-yellow-500 uppercase border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 rounded w-full text-center">
-                                                                    Shared Proportionally
-                                                                </div>
+                                                        {['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type) ? (
+                                                            <div className="w-full">
+                                                                {/* Shared Badge with expand/collapse */}
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setExpandedSharedItems(prev => {
+                                                                            const next = new Set(prev);
+                                                                            if (next.has(item.id)) {
+                                                                                next.delete(item.id);
+                                                                            } else {
+                                                                                next.add(item.id);
+                                                                            }
+                                                                            return next;
+                                                                        });
+                                                                    }}
+                                                                    className="flex items-center justify-between w-full text-[10px] font-bold text-yellow-500 uppercase border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 rounded hover:bg-yellow-500/20 transition-all"
+                                                                >
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span>Shared</span>
+                                                                        {/* Avatar stack preview */}
+                                                                        <div className="flex -space-x-2">
+                                                                            {(item.assignedTo && item.assignedTo.length > 0 ? item.assignedTo : activeMembers.map(m => m.id)).slice(0, 3).map(memberId => {
+                                                                                const member = activeMembers.find(m => m.id === memberId);
+                                                                                if (!member) return null;
+                                                                                return (
+                                                                                    <div key={memberId} className="w-5 h-5 rounded-full border border-tactical-bg overflow-hidden">
+                                                                                        <AtmosphericAvatar
+                                                                                            userId={member.id}
+                                                                                            avatarUrl={member.avatarUrl}
+                                                                                            name={member.name}
+                                                                                            size="xs"
+                                                                                        />
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                            {(item.assignedTo?.length || activeMembers.length) > 3 && (
+                                                                                <div className="w-5 h-5 rounded-full border border-tactical-bg bg-gray-700 flex items-center justify-center text-[8px] text-gray-300">
+                                                                                    +{(item.assignedTo?.length || activeMembers.length) - 3}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <span className="text-gray-400 normal-case">
+                                                                            ({item.assignedTo?.length || activeMembers.length}/{activeMembers.length})
+                                                                        </span>
+                                                                    </div>
+                                                                    <ChevronDownIcon className={`w-4 h-4 transition-transform ${expandedSharedItems.has(item.id) ? 'rotate-180' : ''}`} />
+                                                                </button>
+
+                                                                {/* Expanded participant selector */}
+                                                                {expandedSharedItems.has(item.id) && (
+                                                                    <div className="mt-2 p-2 bg-black/30 rounded-lg border border-white/5">
+                                                                        <div className="flex flex-wrap gap-2">
+                                                                            {activeMembers.map(m => {
+                                                                                // If no assignedTo yet, treat all as selected (default behavior)
+                                                                                const isAssigned = item.assignedTo?.length
+                                                                                    ? item.assignedTo.includes(m.id)
+                                                                                    : true;
+                                                                                return (
+                                                                                    <button
+                                                                                        key={m.id}
+                                                                                        onClick={() => {
+                                                                                            const newItems = receiptItems.map(ri => {
+                                                                                                if (ri.id !== item.id) return ri;
+                                                                                                // Initialize assignedTo with all members if not set
+                                                                                                const currentAssigned = ri.assignedTo?.length
+                                                                                                    ? ri.assignedTo
+                                                                                                    : activeMembers.map(am => am.id);
+                                                                                                const newAssigned = currentAssigned.includes(m.id)
+                                                                                                    ? currentAssigned.filter(id => id !== m.id)
+                                                                                                    : [...currentAssigned, m.id];
+                                                                                                // Ensure at least one member remains
+                                                                                                if (newAssigned.length === 0) return ri;
+                                                                                                return { ...ri, assignedTo: newAssigned };
+                                                                                            });
+                                                                                            setReceiptItems(newItems);
+                                                                                        }}
+                                                                                        className={`transition-all ${isAssigned ? 'opacity-100 scale-110' : 'opacity-40 grayscale hover:opacity-70'}`}
+                                                                                    >
+                                                                                        <AtmosphericAvatar
+                                                                                            userId={m.id}
+                                                                                            avatarUrl={m.avatarUrl}
+                                                                                            name={m.name}
+                                                                                            size="sm"
+                                                                                            isPathfinder={isAssigned}
+                                                                                        />
+                                                                                    </button>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                        <div className="text-[9px] text-gray-500 mt-2 text-center">
+                                                                            Tap to toggle who shares this charge
+                                                                        </div>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ) : (
                                                             activeMembers.map(m => {
@@ -792,6 +920,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                             </div>
                                         )}
                                     </div>
+
                                 </div>
                             ) : (
                                 <div>
@@ -879,6 +1008,35 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             </div>
 
             <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-2xl mx-auto">
+                {/* Bill Validation Summary (Itemized Mode Only) */}
+                {splitMode === 'ITEMIZED' && receiptItems.length > 0 && !isSettlement && (
+                    <div className="mb-4 pb-4 border-b border-tactical-muted/10">
+                        <div className="flex items-center justify-between text-sm">
+                            <div className="space-y-1">
+                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Bill Summary</div>
+                                <div className="flex gap-4">
+                                    <div className="text-gray-400 text-xs">
+                                        Total Bill: <span className="font-mono font-bold text-white uppercase">{getCurrencySymbol(currencyCode)}{totalBillReference.toFixed(2)}</span>
+                                    </div>
+                                    <div className="text-gray-400 text-xs">
+                                        Assigned: <span className="font-mono font-bold text-green-500 uppercase">{getCurrencySymbol(currencyCode)}{itemizedAssigned.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={`px-4 py-2 rounded-lg font-bold font-mono text-sm ${(itemizedRemaining > 0.01 || hasUnassignedItems)
+                                ? 'bg-red-500/10 text-red-500 border border-red-500/20 shadow-[0_0_10px_rgba(255,0,0,0.1)]'
+                                : 'bg-green-500/10 text-green-500 border border-green-500/20 shadow-[0_0_10px_rgba(0,255,0,0.1)]'
+                                }`}>
+                                {itemizedRemaining > 0.01
+                                    ? `Remaining: ${getCurrencySymbol(currencyCode)}${Math.abs(itemizedRemaining).toFixed(2)}`
+                                    : hasUnassignedItems
+                                        ? 'Items Missing!'
+                                        : 'All Set!'
+                                }
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {isSettlement ? (
                     // Settlement Actions
                     <div className="space-y-3">

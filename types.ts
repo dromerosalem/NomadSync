@@ -31,7 +31,7 @@ export interface ReceiptItem {
   nameEnglish?: string; // English translation
   quantity: number;
   price: number;
-  type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'other';
+  type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'deposit' | 'discount' | 'other';
   assignedTo?: string[]; // IDs of members responsible
 }
 

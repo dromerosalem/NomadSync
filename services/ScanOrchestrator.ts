@@ -1,12 +1,14 @@
 import { analyzeReceipt as analyzeWithGemini } from './geminiService';
 import { analyzeReceiptWithGroq } from './GroqService';
+import { analyzeReceiptPremium } from './geminiPremiumService';
 import { ItineraryItem } from '../types';
 import { UploadSecurityService } from './UploadSecurityService';
 
 const STORAGE_KEY_SCAN_COUNT = 'nomadsync_scan_count';
-const CONFIDENCE_THRESHOLD = 0.7;
+const CONFIDENCE_THRESHOLD = 0.90; // High threshold for financial accuracy
+const MAX_RETRIES = 3;
 
-type ModelType = 'GEMINI' | 'GROQ';
+type ModelType = 'GEMINI' | 'GROQ' | 'GEMINI_PREMIUM';
 
 interface ScanResult {
     items: Partial<ItineraryItem>[] | null;
@@ -16,10 +18,9 @@ interface ScanResult {
 
 export const scanOrchestrator = {
     async scanReceipt(base64Data: string, mimeType: string, tripStartDate?: Date): Promise<Partial<ItineraryItem>[] | null> {
-        // 1. Determine Model (Round Robin)
-        // Even = Gemini, Odd = Groq
+        // 1. Determine Initial Model (Round Robin)
         const currentCount = parseInt(localStorage.getItem(STORAGE_KEY_SCAN_COUNT) || '0', 10);
-        let primaryModel: ModelType = currentCount % 2 === 0 ? 'GEMINI' : 'GROQ';
+        let currentModel: ModelType = currentCount % 2 === 0 ? 'GEMINI' : 'GROQ';
 
         let extractedText: string | undefined = undefined;
 
@@ -31,9 +32,8 @@ export const scanOrchestrator = {
                 extractedText = await extractTextFromPdf(base64Data);
                 console.log(`[ScanOrchestrator] Extracted ${extractedText.length} chars from PDF.`);
             } catch (err) {
-                console.error('[ScanOrchestrator] PDF Text extraction failed, falling back to binary/vision', err);
-                // If extraction fails, we MUST fallback to Gemini for PDFs as Groq can't handle PDF binary
-                primaryModel = 'GEMINI';
+                console.error('[ScanOrchestrator] PDF Text extraction failed, falling back to Gemini', err);
+                currentModel = 'GEMINI';
             }
         }
 
@@ -45,46 +45,92 @@ export const scanOrchestrator = {
             return null;
         }
 
-        console.log(`[ScanOrchestrator] Scan #${currentCount}. Selected Primary: ${primaryModel}`);
+        console.log(`[ScanOrchestrator] Scan #${currentCount}. Primary model: ${currentModel}`);
+        console.log(`[ScanOrchestrator] 🎯 Confidence threshold: ${CONFIDENCE_THRESHOLD}, Max retries: ${MAX_RETRIES}`);
 
-        let result: ScanResult = await this.executeScan(primaryModel, base64Data, mimeType, tripStartDate, extractedText);
+        // 2. Retry Loop with Alternating Models (Lite models only)
+        let bestResult: ScanResult = { items: null, usedModel: currentModel, confidence: 0 };
 
+        for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            console.log(`[ScanOrchestrator] 🔄 Attempt ${attempt}/${MAX_RETRIES} using ${currentModel}...`);
 
-        // 2. Check Confidence & Retry if needed
-        if (result.confidence < CONFIDENCE_THRESHOLD || !result.items || result.items.length === 0) {
-            const secondaryModel: ModelType = primaryModel === 'GEMINI' ? 'GROQ' : 'GEMINI';
-            console.warn(`[ScanOrchestrator] Low confidence (${result.confidence}). Retrying with ${secondaryModel}...`);
+            const result = await this.executeScan(currentModel, base64Data, mimeType, tripStartDate, extractedText);
 
-            // If primary was PDF and we failed, secondary (Groq) can ONLY work if we have text.
-            // If we don't have text, Groq will fail on PDF binary.
-            if (mimeType === 'application/pdf' && !extractedText && secondaryModel === 'GROQ') {
-                console.warn('[ScanOrchestrator] Skipping retry on Groq because PDF binary is not supported without text extraction.');
-            } else {
-                const retryResult = await this.executeScan(secondaryModel, base64Data, mimeType, tripStartDate, extractedText);
-                if (retryResult.confidence > result.confidence) {
-                    result = retryResult;
+            // Log confidence for tracking
+            console.log(`[ScanOrchestrator] 📊 Confidence: ${(result.confidence * 100).toFixed(1)}% (Model: ${result.usedModel})`);
+
+            // Keep track of best result
+            if (result.confidence > bestResult.confidence) {
+                bestResult = result;
+                console.log(`[ScanOrchestrator] ✅ New best result: ${(bestResult.confidence * 100).toFixed(1)}%`);
+            }
+
+            // Check if we've met the threshold
+            if (bestResult.confidence >= CONFIDENCE_THRESHOLD) {
+                console.log(`[ScanOrchestrator] 🎉 Confidence threshold met! Using ${bestResult.usedModel} result.`);
+                break;
+            }
+
+            // Prepare for next attempt with alternate model
+            if (attempt < MAX_RETRIES) {
+                // Skip Groq for PDF if no extracted text (Groq can't handle binary PDFs)
+                const nextModel: ModelType = currentModel === 'GEMINI' ? 'GROQ' : 'GEMINI';
+                if (mimeType === 'application/pdf' && !extractedText && nextModel === 'GROQ') {
+                    console.warn('[ScanOrchestrator] ⚠️ Skipping Groq retry - PDF binary not supported without text extraction');
+                    // Stay on Gemini for another attempt
+                } else {
+                    currentModel = nextModel;
                 }
+                console.log(`[ScanOrchestrator] ⏳ Below threshold (${(bestResult.confidence * 100).toFixed(1)}% < ${CONFIDENCE_THRESHOLD * 100}%). Retrying with ${currentModel}...`);
             }
         }
 
-        // 3. Increment Counter & Return
+        // 3. PREMIUM FALLBACK: If after 3 attempts we still haven't met threshold
+        if (bestResult.confidence < CONFIDENCE_THRESHOLD) {
+            console.warn(`[ScanOrchestrator] ⚠️ All ${MAX_RETRIES} lite model attempts failed (best: ${(bestResult.confidence * 100).toFixed(1)}%).`);
+            console.log(`[ScanOrchestrator] 💎 Activating PREMIUM backup model (Gemini 2.5 Flash)...`);
+
+            const premiumResult = await this.executeScan('GEMINI_PREMIUM', base64Data, mimeType, tripStartDate, extractedText);
+
+            console.log(`[ScanOrchestrator] 💎 Premium result: ${(premiumResult.confidence * 100).toFixed(1)}% confidence`);
+
+            if (premiumResult.confidence > bestResult.confidence) {
+                bestResult = premiumResult;
+                console.log(`[ScanOrchestrator] 💎 Premium model provided better result! Using it.`);
+            } else {
+                console.log(`[ScanOrchestrator] 💎 Premium model did not improve. Keeping best lite result.`);
+            }
+        }
+
+        // 4. Final result logging
+        if (bestResult.confidence < CONFIDENCE_THRESHOLD) {
+            console.warn(`[ScanOrchestrator] ⚠️ Final confidence ${(bestResult.confidence * 100).toFixed(1)}% still below threshold. Using best available result.`);
+        } else {
+            console.log(`[ScanOrchestrator] ✅ Final result: ${(bestResult.confidence * 100).toFixed(1)}% confidence from ${bestResult.usedModel}`);
+        }
+
+        // 5. Increment Counter & Return
         localStorage.setItem(STORAGE_KEY_SCAN_COUNT, (currentCount + 1).toString());
-        return result.items;
+        return bestResult.items;
     },
 
     async executeScan(model: ModelType, base64Data: string, mimeType: string, tripStartDate?: Date, extractedText?: string): Promise<ScanResult> {
         try {
             if (model === 'GEMINI') {
-                const items = await analyzeWithGemini(base64Data, mimeType, tripStartDate, extractedText);
-                // Gemini service doesn't return explicit confidence yet, so we infer high confidence if parsing succeeded
-                const confidence = items && items.length > 0 ? 0.9 : 0;
+                const { items, confidence } = await analyzeWithGemini(base64Data, mimeType, tripStartDate, extractedText);
+                console.log(`[ScanOrchestrator] 🔮 Gemini Lite returned: ${items?.length || 0} items, confidence: ${(confidence * 100).toFixed(1)}%`);
                 return { items, usedModel: 'GEMINI', confidence };
+            } else if (model === 'GEMINI_PREMIUM') {
+                const { items, confidence } = await analyzeReceiptPremium(base64Data, mimeType, tripStartDate, extractedText);
+                console.log(`[ScanOrchestrator] 💎 Gemini Premium returned: ${items?.length || 0} items, confidence: ${(confidence * 100).toFixed(1)}%`);
+                return { items, usedModel: 'GEMINI_PREMIUM', confidence };
             } else {
                 const { items, confidence } = await analyzeReceiptWithGroq(base64Data, mimeType, tripStartDate, extractedText);
+                console.log(`[ScanOrchestrator] 🦙 Groq/Maverick returned: ${items?.length || 0} items, confidence: ${(confidence * 100).toFixed(1)}%`);
                 return { items, usedModel: 'GROQ', confidence };
             }
         } catch (e) {
-            console.error(`[ScanOrchestrator] Error scanning with ${model}`, e);
+            console.error(`[ScanOrchestrator] ❌ Error scanning with ${model}`, e);
             return { items: null, usedModel: model, confidence: 0 };
         }
     }
