@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member, ReceiptItem } from '../types';
-import { ChevronLeftIcon, ChevronDownIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon } from './Icons';
+import { ChevronLeftIcon, ChevronDownIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon, SweatingEmojiIcon } from './Icons';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { scanOrchestrator } from '../services/ScanOrchestrator';
 import { currencyService } from '../services/CurrencyService';
@@ -80,6 +80,33 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingRate, setIsLoadingRate] = useState(false);
     const [expandedSharedItems, setExpandedSharedItems] = useState<Set<string>>(new Set());
+
+    // Dynamic Scanning Phrases
+    const [scanningMessage, setScanningMessage] = useState('Analyzing Receipt...');
+    const [isPremiumScan, setIsPremiumScan] = useState(false);
+
+    useEffect(() => {
+        if (!isScanning || isPremiumScan) return;
+
+        const phrases = [
+            "Decrypting cafe latte scribbles...",
+            "Analyzing spending habits...",
+            "Converting pixels to pennies...",
+            "Consulting the financial oracles...",
+            "Asking the chef for clarification...",
+            "Doing the math so you don't have to...",
+            "Scanning for hidden tacos...",
+            "Deciphering ancient receipt runes..."
+        ];
+
+        let index = 0;
+        const interval = setInterval(() => {
+            setScanningMessage(phrases[index]);
+            index = (index + 1) % phrases.length;
+        }, 2200);
+
+        return () => clearInterval(interval);
+    }, [isScanning, isPremiumScan]);
 
     // Settlement Check
     const isSettlement = initialItem?.type === ItemType.SETTLEMENT;
@@ -244,7 +271,12 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                         console.log(`[LogExpense] PDF Security Pass. Pages: ${pdfCheck.pageCount}, Density: ${pdfCheck.textDensity}`);
                     }
 
-                    const items = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate);
+                    const items = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate, (status) => {
+                        if (status === 'PREMIUM_FALLBACK') {
+                            setIsPremiumScan(true);
+                            setScanningMessage("This receipt is tougher than expected... calling in the heavy artillery! 😅");
+                        }
+                    });
 
                     if (items && items.length > 0) {
                         // LogExpense is single item mode, so we just take the first one
@@ -496,9 +528,15 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 />
             )}
             {isScanning && (
-                <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
-                    <ScanIcon className="w-16 h-16 text-tactical-accent animate-pulse mb-4" />
-                    <div className="font-display text-xl font-bold text-white uppercase tracking-widest">Analyzing Receipt...</div>
+                <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm px-8 text-center transition-all duration-500">
+                    {isPremiumScan ? (
+                        <SweatingEmojiIcon className="w-20 h-20 text-yellow-500 animate-bounce mb-6 filter drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+                    ) : (
+                        <ScanIcon className="w-16 h-16 text-tactical-accent animate-pulse mb-6" />
+                    )}
+                    <div className="font-display text-xl font-bold text-white uppercase tracking-widest leading-relaxed">
+                        {scanningMessage}
+                    </div>
                 </div>
             )}
 

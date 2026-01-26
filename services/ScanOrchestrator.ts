@@ -17,7 +17,7 @@ interface ScanResult {
 }
 
 export const scanOrchestrator = {
-    async scanReceipt(base64Data: string, mimeType: string, tripStartDate?: Date): Promise<Partial<ItineraryItem>[] | null> {
+    async scanReceipt(base64Data: string, mimeType: string, tripStartDate?: Date, onStatusChange?: (status: string) => void): Promise<Partial<ItineraryItem>[] | null> {
         // 1. Determine Initial Model (Round Robin)
         const currentCount = parseInt(localStorage.getItem(STORAGE_KEY_SCAN_COUNT) || '0', 10);
         let currentModel: ModelType = currentCount % 2 === 0 ? 'GEMINI' : 'GROQ';
@@ -89,6 +89,10 @@ export const scanOrchestrator = {
         if (bestResult.confidence < CONFIDENCE_THRESHOLD) {
             console.warn(`[ScanOrchestrator] ⚠️ All ${MAX_RETRIES} lite model attempts failed (best: ${(bestResult.confidence * 100).toFixed(1)}%).`);
             console.log(`[ScanOrchestrator] 💎 Activating PREMIUM backup model (Gemini 2.5 Flash)...`);
+
+            if (onStatusChange) {
+                onStatusChange('PREMIUM_FALLBACK');
+            }
 
             const premiumResult = await this.executeScan('GEMINI_PREMIUM', base64Data, mimeType, tripStartDate, extractedText);
 
