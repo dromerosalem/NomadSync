@@ -288,12 +288,40 @@ export const SearchIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export const SweatingEmojiIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M8 15s1.5 2 4 2 4-2 4-2" />
-    <line x1="9" x2="9.01" y1="9" y2="9" />
-    <line x1="15" x2="15.01" y1="9" y2="9" />
-    <path d="M17 12a2 2 0 0 1 0 4" />
+export const LaserScannerIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    {/* Receipt Silhouette */}
+    <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1Z" className="opacity-20" />
+
+    {/* Neural Mesh Dots */}
+    <g className="animate-pulse">
+      <circle cx="8" cy="8" r="0.5" fill="currentColor" />
+      <circle cx="12" cy="10" r="0.5" fill="currentColor" />
+      <circle cx="16" cy="7" r="0.5" fill="currentColor" />
+      <circle cx="9" cy="14" r="0.5" fill="currentColor" />
+      <circle cx="15" cy="15" r="0.5" fill="currentColor" />
+    </g>
+
+    {/* Laser Scan Line */}
+    <line x1="3" x2="21" y1="12" y2="12" className="text-tactical-accent">
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        values="0 -8; 0 8; 0 -8"
+        dur="3s"
+        repeatCount="indefinite"
+      />
+    </line>
+
+    {/* Glow effect for laser */}
+    <line x1="3" x2="21" y1="12" y2="12" className="text-tactical-accent opacity-50 blur-[1px]">
+      <animateTransform
+        attributeName="transform"
+        type="translate"
+        values="0 -8; 0 8; 0 -8"
+        dur="3s"
+        repeatCount="indefinite"
+      />
+    </line>
   </svg>
 );

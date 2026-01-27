@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member, ReceiptItem } from '../types';
-import { ChevronLeftIcon, ChevronDownIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon, SweatingEmojiIcon } from './Icons';
+import { ChevronLeftIcon, ChevronDownIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, ScanIcon, WalletIcon, PlusIcon, EyeIcon, EyeOffIcon, ListCheckIcon, BanknoteIcon, LaserScannerIcon } from './Icons';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { scanOrchestrator } from '../services/ScanOrchestrator';
 import { currencyService } from '../services/CurrencyService';
@@ -81,14 +81,19 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const [isLoadingRate, setIsLoadingRate] = useState(false);
     const [expandedSharedItems, setExpandedSharedItems] = useState<Set<string>>(new Set());
 
-    // Dynamic Scanning Phrases
     const [scanningMessage, setScanningMessage] = useState('Analyzing Receipt...');
     const [isPremiumScan, setIsPremiumScan] = useState(false);
+    const [scanProgress, setScanProgress] = useState(0);
 
     useEffect(() => {
-        if (!isScanning || isPremiumScan) return;
+        if (!isScanning) {
+            setScanProgress(0);
+            setIsPremiumScan(false);
+            setScanningMessage('Analyzing Receipt...');
+            return;
+        }
 
-        const phrases = [
+        const standardPhrases = [
             "Decrypting cafe latte scribbles...",
             "Analyzing spending habits...",
             "Converting pixels to pennies...",
@@ -99,13 +104,52 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             "Deciphering ancient receipt runes..."
         ];
 
-        let index = 0;
+        const premiumPhrases = [
+            "ACTUATING DEEP RESOLUTION ENGINE...",
+            "IDENTIFYING DOCUMENT STRUCTURE...",
+            "ISOLATING LINE-ITEM ENTITIES...",
+            "VALIDATING TAX & TOTAL LOGIC...",
+            "FORMATTING FINAL ANALYTICAL DATA..."
+        ];
+
+        const phrases = isPremiumScan ? premiumPhrases : standardPhrases;
+        let index = isPremiumScan ? 0 : Math.floor(Math.random() * phrases.length);
+
         const interval = setInterval(() => {
             setScanningMessage(phrases[index]);
             index = (index + 1) % phrases.length;
-        }, 2200);
+        }, isPremiumScan ? 3000 : 2200);
 
-        return () => clearInterval(interval);
+        // Smart-Easing Progress Bar Logic
+        let progressInterval: NodeJS.Timeout;
+        if (isScanning) {
+            const startTime = Date.now();
+            progressInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+
+                setScanProgress(prev => {
+                    if (prev >= 100) return 100;
+
+                    // 0% -> 30%: Fast (1.5s total)
+                    if (prev < 30) {
+                        return Math.min(30, prev + (30 / (1500 / 50))); // Increment per 50ms
+                    }
+
+                    // 30% -> 85%: Slow (linear over 12s)
+                    if (prev < 85) {
+                        return Math.min(85, prev + (55 / (12000 / 50)));
+                    }
+
+                    // 85% -> 99%: Very slow creep until finalization
+                    return Math.min(99, prev + 0.1);
+                });
+            }, 50);
+        }
+
+        return () => {
+            clearInterval(interval);
+            clearInterval(progressInterval);
+        };
     }, [isScanning, isPremiumScan]);
 
     // Settlement Check
@@ -160,8 +204,12 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         } else if (initialItem?.splitDetails && Object.keys(initialItem.splitDetails).length > 0) {
             setSplitMode('CUSTOM');
             const stringAmounts: Record<string, string> = {};
-            Object.entries(initialItem.splitDetails).forEach(([id, amt]) => {
-                stringAmounts[id] = amt.toString();
+            const isMultiCurrency = (initialItem.currencyCode || baseCurrency) !== baseCurrency;
+            const rate = initialItem.exchangeRate || 1;
+
+            Object.entries(initialItem.splitDetails as Record<string, number>).forEach(([id, amt]) => {
+                const localAmt = isMultiCurrency && rate > 0 ? (amt as number) / rate : (amt as number);
+                stringAmounts[id] = localAmt.toFixed(2);
             });
             setCustomAmounts(stringAmounts);
         }
@@ -169,20 +217,68 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
 
     // Initialize custom amounts when cost changes or switching to custom
     useEffect(() => {
-        if (splitMode === 'CUSTOM' && convertedCost && splitWith.length > 0 && Object.keys(customAmounts).length === 0) {
-            const total = new Money(convertedCost);
-            if (total.greaterThan(0)) {
-                const shares = total.allocate(splitWith.length);
+        if (splitMode === 'CUSTOM' && splitWith.length > 0 && Object.keys(customAmounts).length === 0) {
+            const isMultiCurrency = currencyCode !== baseCurrency;
+
+            // If we have receipt items (from a scan or previous itemization), use them to derive custom amounts
+            if (receiptItems.length > 0) {
+                let subtotal = 0;
+                const memberSubtotals: Record<string, number> = {};
+
+                // 1. Calculate base totals from directly assigned items
+                receiptItems.forEach(item => {
+                    if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) return;
+
+                    const lineTotal = item.price * item.quantity;
+                    subtotal += lineTotal;
+                    const assigned = item.assignedTo || [];
+                    if (assigned.length > 0) {
+                        const splitPrice = lineTotal / assigned.length;
+                        assigned.forEach(uid => {
+                            memberSubtotals[uid] = (memberSubtotals[uid] || 0) + splitPrice;
+                        });
+                    } else {
+                        // Unassigned items default to the payer
+                        memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + lineTotal;
+                    }
+                });
+
+                // 2. Distribute Tax/Tip/Fees proportionally
+                receiptItems.forEach(item => {
+                    if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) {
+                        const lineTotal = item.price * item.quantity;
+                        if (subtotal === 0) {
+                            memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + lineTotal;
+                        } else {
+                            Object.keys(memberSubtotals).forEach(uid => {
+                                const share = (memberSubtotals[uid] / subtotal) * lineTotal;
+                                memberSubtotals[uid] += share;
+                            });
+                        }
+                    }
+                });
+
                 const newAmounts: Record<string, string> = {};
-                splitWith.forEach((id, index) => {
-                    newAmounts[id] = shares[index].toFixed(2);
+                splitWith.forEach(id => {
+                    newAmounts[id] = (memberSubtotals[id] || 0).toFixed(2);
                 });
                 setCustomAmounts(newAmounts);
+            } else {
+                // Fallback to equal split of the source amount
+                const sourceAmount = isMultiCurrency ? parseFloat(originalAmount) : convertedCost;
+                const total = new Money(sourceAmount || 0);
+
+                if (total.greaterThan(0)) {
+                    const shares = total.allocate(splitWith.length);
+                    const newAmounts: Record<string, string> = {};
+                    splitWith.forEach((id, index) => {
+                        newAmounts[id] = shares[index].toFixed(2);
+                    });
+                    setCustomAmounts(newAmounts);
+                }
             }
-        } else if (splitMode === 'ITEMIZED') {
-            // We don't auto-calculate custom amounts here, we derive them from items on render/submit
         }
-    }, [convertedCost, splitMode, splitWith.length]);
+    }, [convertedCost, originalAmount, currencyCode, baseCurrency, splitMode, splitWith.length, receiptItems, customAmounts, paidBy]);
 
     // Helper to toggle split members
     const toggleSplitMember = (memberId: string) => {
@@ -212,7 +308,9 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const handleSelectAll = () => {
         setSplitWith(activeMembers.map(m => m.id));
         if (splitMode === 'CUSTOM') {
-            const total = new Money(convertedCost);
+            const isMultiCurrency = currencyCode !== baseCurrency;
+            const sourceAmount = isMultiCurrency ? parseFloat(originalAmount) : convertedCost;
+            const total = new Money(sourceAmount || 0);
             const shares = total.allocate(activeMembers.length);
             const newAmounts: Record<string, string> = {};
             activeMembers.forEach((m, index) => {
@@ -220,6 +318,51 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             });
             setCustomAmounts(newAmounts);
         }
+    };
+
+    const handleSyncFromItems = () => {
+        if (receiptItems.length === 0) return;
+
+        let subtotal = 0;
+        const memberSubtotals: Record<string, number> = {};
+
+        // 1. Calculate base totals from directly assigned items
+        receiptItems.forEach(item => {
+            if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) return;
+
+            const lineTotal = item.price * item.quantity;
+            subtotal += lineTotal;
+            const assigned = item.assignedTo || [];
+            if (assigned.length > 0) {
+                const splitPrice = lineTotal / assigned.length;
+                assigned.forEach(uid => {
+                    memberSubtotals[uid] = (memberSubtotals[uid] || 0) + splitPrice;
+                });
+            } else {
+                memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + lineTotal;
+            }
+        });
+
+        // 2. Distribute Tax/Tip/Fees proportionally
+        receiptItems.forEach(item => {
+            if (['tax', 'tip', 'service', 'deposit', 'discount'].includes(item.type)) {
+                const lineTotal = item.price * item.quantity;
+                if (subtotal === 0) {
+                    memberSubtotals[paidBy] = (memberSubtotals[paidBy] || 0) + lineTotal;
+                } else {
+                    Object.keys(memberSubtotals).forEach(uid => {
+                        const share = (memberSubtotals[uid] / subtotal) * lineTotal;
+                        memberSubtotals[uid] += share;
+                    });
+                }
+            }
+        });
+
+        const newAmounts: Record<string, string> = {};
+        splitWith.forEach(id => {
+            newAmounts[id] = (memberSubtotals[id] || 0).toFixed(2);
+        });
+        setCustomAmounts(newAmounts);
     };
 
     const handleScanClick = () => {
@@ -262,7 +405,8 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                         const pdfCheck = await analyzePdfSecurity(base64Content);
 
                         if (!pdfCheck.isSafe) {
-                            setIsScanning(false);
+                            setScanProgress(100);
+                            setTimeout(() => setIsScanning(false), 300);
                             setAlertState({ title: 'Security Alert', message: pdfCheck.error || 'PDF rejected.', type: 'error' });
                             return;
                         }
@@ -274,7 +418,6 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                     const items = await scanOrchestrator.scanReceipt(base64Content, processedFile.type, tripStartDate, (status) => {
                         if (status === 'PREMIUM_FALLBACK') {
                             setIsPremiumScan(true);
-                            setScanningMessage("This receipt is tougher than expected... calling in the heavy artillery! 😅");
                         }
                     });
 
@@ -299,12 +442,14 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                     } else {
                         setAlertState({ title: 'Scan Failed', message: 'Could not read receipt data.', type: 'error' });
                     }
-                    setIsScanning(false);
+                    setScanProgress(100);
+                    setTimeout(() => setIsScanning(false), 400);
                 };
                 reader.readAsDataURL(processedFile);
             } catch (error) {
                 console.error("Scan/Compression error", error);
-                setIsScanning(false);
+                setScanProgress(100);
+                setTimeout(() => setIsScanning(false), 300);
             }
         }
     };
@@ -317,13 +462,15 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         const totalMoney = new Money(convertedCost);
 
         if (splitMode === 'CUSTOM') {
-            // Check if custom amounts sum up to total (approx) - Note: Custom amounts are typically in BASE currency
+            const isMultiCurrency = currencyCode !== baseCurrency;
+            const sourceAmount = isMultiCurrency ? parseFloat(originalAmount) : convertedCost;
+            const targetTotal = new Money(sourceAmount || 0);
+
             let sum = new Money(0);
             splitWith.forEach(id => {
                 sum = sum.add(customAmounts[id] || '0');
             });
-            // Allow 1 cent drift for manual entry, but ideally 0
-            if (sum.subtract(totalMoney).abs().greaterThan(0.01)) return false;
+            if (sum.subtract(targetTotal).abs().greaterThan(0.01)) return false;
         } else if (splitMode === 'ITEMIZED') {
             // Validate that all assignable items (not tax/tip/service) have at least one assignee
             if (receiptItems.length === 0) return false;
@@ -358,8 +505,29 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         const totalMoney = new Money(convertedCost);
 
         if (splitMode === 'CUSTOM') {
+            const isMultiCurrency = currencyCode !== baseCurrency;
             splitWith.forEach(id => {
-                splitDetails[id] = parseFloat(customAmounts[id] || '0');
+                const amount = parseFloat(customAmounts[id] || '0');
+                splitDetails[id] = isMultiCurrency ? amount * exchangeRate : amount;
+            });
+
+            onSave({
+                id: initialItem?.id,
+                title,
+                cost: totalMoney.toNumber(),
+                originalAmount: parseFloat(originalAmount),
+                currencyCode,
+                exchangeRate,
+                type,
+                startDate: new Date(date),
+                location: initialItem?.location || 'Logged Expense',
+                splitWith,
+                splitDetails,
+                paidBy,
+                isPrivate,
+                showInTimeline,
+                details: initialItem?.details || 'Expense logged via Budget Engine',
+                receiptItems: undefined
             });
         } else if (splitMode === 'ITEMIZED') {
             // Calculate Itemized Splits
@@ -432,10 +600,15 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
 
         } else {
             // Even in EQUAL mode, we allocate explicitly to ensure no penny is lost (Remainder Allocation)
-            // cost / 3 = 3.33, 3.33, 3.34
-            const shares = totalMoney.allocate(splitWith.length);
+            // We split based on the source amount (local if multi-currency) to match user visual experience
+            const isMultiCurrency = currencyCode !== baseCurrency;
+            const sourceAmount = isMultiCurrency ? parseFloat(originalAmount) : convertedCost;
+            const splitSource = new Money(sourceAmount || 0);
+            const sharesSource = splitSource.allocate(splitWith.length);
+
             splitWith.forEach((id, index) => {
-                splitDetails[id] = shares[index].toNumber();
+                const shareAmount = sharesSource[index].toNumber();
+                splitDetails[id] = isMultiCurrency ? shareAmount * exchangeRate : shareAmount;
             });
 
             onSave({
@@ -484,13 +657,20 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     };
 
     // UI Calculations
-    const equalShare = splitWith.length > 0 ? (convertedCost / splitWith.length).toFixed(2) : '0.00';
+    const isMultiCurrency = currencyCode !== baseCurrency;
+    const totalLocalAmount = parseFloat(originalAmount) || 0;
 
-    let currentCustomSum = 0;
+    // Equal Share
+    const equalShareLocal = splitWith.length > 0 ? (totalLocalAmount / splitWith.length).toFixed(2) : '0.00';
+    const equalShareBase = splitWith.length > 0 ? (convertedCost / splitWith.length).toFixed(2) : '0.00';
+
+    // Custom Split Sum and Remaining
+    let currentCustomSumLocal = 0;
     if (splitMode === 'CUSTOM') {
-        splitWith.forEach(id => currentCustomSum += parseFloat(customAmounts[id] || '0'));
+        splitWith.forEach(id => currentCustomSumLocal += parseFloat(customAmounts[id] || '0'));
     }
-    const remaining = convertedCost - currentCustomSum;
+    const remainingLocal = totalLocalAmount - currentCustomSumLocal;
+    const remainingBase = convertedCost - (currentCustomSumLocal * exchangeRate);
 
     // Itemized mode bill validation calculations
     const itemizedTotalScanned = receiptItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -528,14 +708,43 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 />
             )}
             {isScanning && (
-                <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm px-8 text-center transition-all duration-500">
-                    {isPremiumScan ? (
-                        <SweatingEmojiIcon className="w-20 h-20 text-yellow-500 animate-bounce mb-6 filter drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
-                    ) : (
-                        <ScanIcon className="w-16 h-16 text-tactical-accent animate-pulse mb-6" />
-                    )}
-                    <div className="font-display text-xl font-bold text-white uppercase tracking-widest leading-relaxed">
-                        {scanningMessage}
+                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm px-8 text-center transition-all duration-500">
+                    <div className="relative mb-12">
+                        {isPremiumScan ? (
+                            <LaserScannerIcon className="w-24 h-24 text-tactical-accent drop-shadow-[0_0_15px_rgba(255,215,0,0.3)]" />
+                        ) : (
+                            <ScanIcon className="w-20 h-20 text-tactical-accent animate-pulse" />
+                        )}
+
+                        {/* Status Message */}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-8 w-64">
+                            <div className="font-display text-[10px] font-black text-tactical-accent uppercase tracking-[0.3em] mb-4 animate-pulse">
+                                {isPremiumScan ? 'DEEP RESOLUTION SCAN' : 'INTEL ACQUISITION'}
+                            </div>
+                            <div
+                                key={scanningMessage}
+                                className="font-display text-sm font-bold text-white uppercase tracking-widest leading-relaxed h-12 flex items-center justify-center animate-reveal"
+                            >
+                                {scanningMessage}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Smart-Easing Progress Bar */}
+                    <div className="w-full max-w-[240px] mt-16">
+                        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden relative">
+                            <div
+                                className="h-full bg-tactical-accent transition-all duration-300 ease-out relative"
+                                style={{ width: `${scanProgress}%` }}
+                            >
+                                {/* Linear Gradient Pulse */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" style={{ width: '200%' }}></div>
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-2 font-mono text-[9px] text-gray-500 uppercase tracking-tighter">
+                            <span>{isPremiumScan ? 'Neural Processing' : 'Scanning'}</span>
+                            <span>{Math.round(scanProgress)}%</span>
+                        </div>
                     </div>
                 </div>
             )}
@@ -964,18 +1173,29 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
                                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
-                                            Split Among {splitMode === 'CUSTOM' && remaining !== 0 && (
-                                                <span className={remaining < 0 ? "text-red-500" : "text-yellow-500"}>
-                                                    ({remaining > 0 ? `Left: ${getCurrencySymbol(baseCurrency)} ${remaining.toFixed(2)}` : `Over: ${getCurrencySymbol(baseCurrency)} ${Math.abs(remaining).toFixed(2)}`})
+                                            Split Among {splitMode === 'CUSTOM' && remainingLocal !== 0 && (
+                                                <span className={remainingLocal < 0 ? "text-red-500" : "text-yellow-500"}>
+                                                    ({remainingLocal > 0 ? `Left: ${getCurrencySymbol(currencyCode)} ${remainingLocal.toFixed(2)}` : `Over: ${getCurrencySymbol(currencyCode)} ${Math.abs(remainingLocal).toFixed(2)}`})
                                                 </span>
                                             )}
                                         </label>
-                                        <button
-                                            onClick={handleSelectAll}
-                                            className="text-[9px] font-bold text-tactical-accent uppercase hover:underline"
-                                        >
-                                            Select All
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            {splitMode === 'CUSTOM' && receiptItems.length > 0 && (
+                                                <button
+                                                    onClick={handleSyncFromItems}
+                                                    className="text-[9px] font-bold text-tactical-accent uppercase hover:underline flex items-center gap-1"
+                                                >
+                                                    <ListCheckIcon className="w-2.5 h-2.5" />
+                                                    Sync from Items
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={handleSelectAll}
+                                                className="text-[9px] font-bold text-tactical-accent uppercase hover:underline"
+                                            >
+                                                Select All
+                                            </button>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-2">
@@ -1012,24 +1232,38 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                                                         </div>
                                                     </div>
 
-                                                    {/* Amount (Always in Base Currency) */}
+                                                    {/* Amount Display */}
                                                     {isIncluded && (
                                                         <div className="text-right">
                                                             {splitMode === 'EQUAL' ? (
-                                                                <div className="text-sm font-mono text-tactical-accent font-bold">
-                                                                    {getCurrencySymbol(baseCurrency)} {equalShare}
+                                                                <div className="flex flex-col items-end">
+                                                                    <div className="text-sm font-mono text-tactical-accent font-bold">
+                                                                        {getCurrencySymbol(currencyCode)} {equalShareLocal}
+                                                                    </div>
+                                                                    {isMultiCurrency && (
+                                                                        <div className="text-[10px] text-gray-500 font-mono">
+                                                                            ({getCurrencySymbol(baseCurrency)} {equalShareBase})
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             ) : (
-                                                                <div className="flex items-center gap-1">
-                                                                    <span className="text-tactical-accent text-sm font-bold">{getCurrencySymbol(baseCurrency)}</span>
-                                                                    <input
-                                                                        type="number"
-                                                                        value={customAmounts[member.id] || ''}
-                                                                        onClick={(e) => e.stopPropagation()}
-                                                                        onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
-                                                                        className="w-20 bg-black/30 border border-gray-700 rounded p-1 text-right text-white font-mono text-sm outline-none focus:border-tactical-accent"
-                                                                        placeholder="0.00"
-                                                                    />
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span className="text-tactical-accent text-sm font-bold">{getCurrencySymbol(currencyCode)}</span>
+                                                                        <input
+                                                                            type="number"
+                                                                            value={customAmounts[member.id] || ''}
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                            onChange={(e) => handleCustomAmountChange(member.id, e.target.value)}
+                                                                            className="w-20 bg-black/30 border border-gray-700 rounded p-1 text-right text-white font-mono text-sm outline-none focus:border-tactical-accent"
+                                                                            placeholder="0.00"
+                                                                        />
+                                                                    </div>
+                                                                    {isMultiCurrency && (
+                                                                        <div className="text-[10px] text-gray-500 font-mono">
+                                                                            ≈ {getCurrencySymbol(baseCurrency)} {(parseFloat(customAmounts[member.id] || '0') * exchangeRate).toFixed(2)}
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
