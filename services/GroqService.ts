@@ -150,21 +150,27 @@ export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: strin
           ]
         }
         
-        CRITICAL FOR DEPOSITS/DISCOUNTS:
-        - cost = FINAL PAID AMOUNT (what was actually charged)
-        - If items sum EXCEEDS cost due to deposit/discount, ADD A NEGATIVE LINE ITEM:
-          { "name": "Deposit Applied", "quantity": 1, "price": -40.00, "type": "deposit" }
-        - Sum of (quantity × price) for ALL items INCLUDING deposits MUST EQUAL cost
-        - Example: Items = €287.50, Deposit = -€40.00, Total = €247.50 ✓
+        STRICT CURRENCY RULES (APPENDED):
+        - ALWAYS extract 'currencyCode' for the total cost.
+        - Analyze symbols carefully: '₡' is CRC, '€' is EUR.
+        - If 'currencyCode' is NOT 'USD', the 'cost' MUST be the amount in that local currency.
+
+        
+        CRITICAL FOR DEPOSITS / DISCOUNTS:
+        - cost = FINAL PAID AMOUNT(what was actually charged)
+            - If items sum EXCEEDS cost due to deposit / discount, ADD A NEGATIVE LINE ITEM:
+        { "name": "Deposit Applied", "quantity": 1, "price": -40.00, "type": "deposit" }
+        - Sum of(quantity × price) for ALL items INCLUDING deposits MUST EQUAL cost
+            - Example: Items = €287.50, Deposit = -€40.00, Total = €247.50 ✓
         `;
 
-        const prompt = `${contextPrompt}\n${promptInstructions}`;
+        const prompt = `${contextPrompt} \n${promptInstructions} `;
 
         const messageContent: any[] = [{ type: 'text', text: prompt }];
 
         if (textInput) {
             console.log("[GroqService] Using extracted text for analysis");
-            messageContent.push({ type: 'text', text: `\n\nDOCUMENT CONTENT:\n${textInput}` });
+            messageContent.push({ type: 'text', text: `\n\nDOCUMENT CONTENT: \n${textInput} ` });
         } else {
             messageContent.push({
                 type: 'image_url',
@@ -209,6 +215,7 @@ export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: strin
             title: d.title,
             location: d.location || d.title,
             cost: d.cost,
+            originalAmount: d.cost,
             currencyCode: d.currencyCode,
             details: d.details,
             startDate: d.startDate ? new Date(d.startDate) : undefined,
@@ -228,10 +235,10 @@ export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: strin
             const tolerance = totalCost * 0.02; // 2% tolerance
 
             if (Math.abs(itemSum - totalCost) > tolerance && totalCost > 0) {
-                console.warn(`[GroqService] ⚠️ Math validation failed: items sum ${itemSum.toFixed(2)} ≠ total ${totalCost.toFixed(2)}`);
+                console.warn(`[GroqService] ⚠️ Math validation failed: items sum ${itemSum.toFixed(2)} ≠ total ${totalCost.toFixed(2)} `);
                 confidence = Math.min(confidence, 0.80);
             } else if (totalCost > 0) {
-                console.log(`[GroqService] ✅ Math validated: items sum ${itemSum.toFixed(2)} ≈ total ${totalCost.toFixed(2)}`);
+                console.log(`[GroqService] ✅ Math validated: items sum ${itemSum.toFixed(2)} ≈ total ${totalCost.toFixed(2)} `);
             }
         }
 
@@ -257,7 +264,7 @@ export const analyzeReceiptWithGroq = async (base64Data: string, mimeType: strin
 
         // Log reasoning if provided
         if (data.reasoning) {
-            console.log(`[GroqService] 🧠 Model reasoning: ${data.reasoning}`);
+            console.log(`[GroqService] 🧠 Model reasoning: ${data.reasoning} `);
         }
 
         return { items, confidence };

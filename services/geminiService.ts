@@ -145,20 +145,27 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
          ]
        }
        
-       CRITICAL FOR DEPOSITS/DISCOUNTS:
-       - cost = FINAL PAID AMOUNT (what was actually charged)
-       - If items sum EXCEEDS cost due to deposit/discount, ADD A NEGATIVE LINE ITEM:
-         { "name": "Deposit Applied", "quantity": 1, "price": -40.00, "type": "deposit" }
-       - Sum of (quantity × price) for ALL items INCLUDING deposits MUST EQUAL cost
-       - Example: Items = €287.50, Deposit = -€40.00, Total = €247.50 ✓
+        STRICT CURRENCY RULES (APPENDED):
+        - ALWAYS extract 'currencyCode' for the total cost.
+        - Analyze symbols carefully: '₡' is CRC (Costa Rica), 'R$' is BRL, 'S/' is PEN.
+        - If 'currencyCode' is NOT 'USD', the 'cost' field MUST be the amount in that local currency.
+        - Do NOT convert to USD. Return the original receipt amount and the correct 3-letter currency code.
+
+       
+       CRITICAL FOR DEPOSITS / DISCOUNTS:
+    - cost = FINAL PAID AMOUNT(what was actually charged)
+      - If items sum EXCEEDS cost due to deposit / discount, ADD A NEGATIVE LINE ITEM:
+    { "name": "Deposit Applied", "quantity": 1, "price": -40.00, "type": "deposit" }
+    - Sum of(quantity × price) for ALL items INCLUDING deposits MUST EQUAL cost
+      - Example: Items = €287.50, Deposit = -€40.00, Total = €247.50 ✓
     `;
 
-    const prompt = `${contextPrompt}\n${promptInstructions}`;
+    const prompt = `${contextPrompt} \n${promptInstructions} `;
 
     const parts: any[] = [{ text: prompt }];
 
     if (textInput) {
-      parts.unshift({ text: `DOCUMENT CONTENT (Parsed Text):\n${textInput}` });
+      parts.unshift({ text: `DOCUMENT CONTENT(Parsed Text): \n${textInput} ` });
     } else {
       parts.unshift({ inlineData: { mimeType: mimeType, data: base64Data } });
     }
@@ -213,6 +220,7 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
         startDate: item.startDate ? new Date(item.startDate) : undefined,
         endDate: item.endDate ? new Date(item.endDate) : undefined,
         cost: typeof item.cost === 'number' ? item.cost : (parseFloat(item.cost) || 0),
+        originalAmount: typeof item.cost === 'number' ? item.cost : (parseFloat(item.cost) || 0),
         currencyCode: item.currencyCode,
         details: typeof item.details === 'string' ? item.details : undefined,
         tags: Array.isArray(item.tags) ? item.tags : [],
@@ -231,16 +239,16 @@ export const analyzeReceipt = async (base64Data: string, mimeType: string = "ima
 
       if (Math.abs(itemSum - totalCost) > tolerance && totalCost > 0) {
         // Math doesn't add up - cap confidence
-        console.warn(`[GeminiService] ⚠️ Math validation failed: items sum ${itemSum.toFixed(2)} ≠ total ${totalCost.toFixed(2)}`);
+        console.warn(`[GeminiService] ⚠️ Math validation failed: items sum ${itemSum.toFixed(2)} ≠ total ${totalCost.toFixed(2)} `);
         confidence = Math.min(confidence, 0.80);
       } else if (totalCost > 0) {
-        console.log(`[GeminiService] ✅ Math validated: items sum ${itemSum.toFixed(2)} ≈ total ${totalCost.toFixed(2)}`);
+        console.log(`[GeminiService] ✅ Math validated: items sum ${itemSum.toFixed(2)} ≈ total ${totalCost.toFixed(2)} `);
       }
     }
 
     // Log reasoning if provided
     if (data.reasoning) {
-      console.log(`[GeminiService] 🧠 Model reasoning: ${data.reasoning}`);
+      console.log(`[GeminiService] 🧠 Model reasoning: ${data.reasoning} `);
     }
 
     return { items: processedItems, confidence };

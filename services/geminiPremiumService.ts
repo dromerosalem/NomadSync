@@ -127,22 +127,27 @@ export const analyzeReceiptPremium = async (
              ]
            }
          ]
-       }
+        }
+        
+        STRICT CURRENCY RULES (APPENDED):
+        - ALWAYS extract 'currencyCode' for the total cost.
+        - If 'currencyCode' is NOT 'USD', the 'cost' field MUST be the amount in that local currency.
+        - Do NOT convert to USD. Return the original receipt amount and the correct 3-letter currency code.
        
-       CRITICAL FOR DEPOSITS/DISCOUNTS:
-       - cost = FINAL PAID AMOUNT (what was actually charged)
-       - If items sum EXCEEDS cost due to deposit/discount, ADD A NEGATIVE LINE ITEM:
+        CRITICAL FOR DEPOSITS / DISCOUNTS:
+         - cost = FINAL PAID AMOUNT(what was actually charged)
+             - If items sum EXCEEDS cost due to deposit / discount, ADD A NEGATIVE LINE ITEM:
          { "name": "Deposit Applied", "quantity": 1, "price": -40.00, "type": "deposit" }
-       - Sum of (quantity × price) for ALL items INCLUDING deposits MUST EQUAL cost
-       - Example: Items = €287.50, Deposit = -€40.00, Total = €247.50 ✓
+         - Sum of(quantity × price) for ALL items INCLUDING deposits MUST EQUAL cost
+             - Example: Items = €287.50, Deposit = -€40.00, Total = €247.50 ✓
     `;
 
-        const prompt = `${contextPrompt}\n${promptInstructions}`;
+        const prompt = `${contextPrompt} \n${promptInstructions} `;
 
         const parts: any[] = [{ text: prompt }];
 
         if (textInput) {
-            parts.unshift({ text: `DOCUMENT CONTENT:\n${textInput}` });
+            parts.unshift({ text: `DOCUMENT CONTENT: \n${textInput} ` });
         } else {
             parts.unshift({ inlineData: { mimeType: mimeType, data: base64Data } });
         }
@@ -194,6 +199,7 @@ export const analyzeReceiptPremium = async (
                 startDate: item.startDate ? new Date(item.startDate) : undefined,
                 endDate: item.endDate ? new Date(item.endDate) : undefined,
                 cost: typeof item.cost === 'number' ? item.cost : (parseFloat(item.cost) || 0),
+                originalAmount: typeof item.cost === 'number' ? item.cost : (parseFloat(item.cost) || 0),
                 currencyCode: item.currencyCode,
                 details: typeof item.details === 'string' ? item.details : undefined,
                 tags: Array.isArray(item.tags) ? item.tags : [],
@@ -204,11 +210,11 @@ export const analyzeReceiptPremium = async (
 
         // Log reasoning
         if (data.reasoning) {
-            console.log(`[GeminiPremium] 🧠 Premium reasoning: ${data.reasoning}`);
+            console.log(`[GeminiPremium] 🧠 Premium reasoning: ${data.reasoning} `);
         }
 
         // Log success
-        console.log(`[GeminiPremium] 💎 Premium scan complete: ${processedItems.length} items, confidence: ${(confidence * 100).toFixed(1)}%`);
+        console.log(`[GeminiPremium] 💎 Premium scan complete: ${processedItems.length} items, confidence: ${(confidence * 100).toFixed(1)}% `);
 
         return { items: processedItems, confidence };
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { SearchIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 
@@ -115,10 +116,10 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
             )}
 
             {/* Bottom Sheet Overlay */}
-            {isOpen && (
+            {isOpen && createPortal(
                 <div className="fixed inset-0 z-[100] flex flex-col justify-end sm:justify-center items-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
                     <div className="absolute inset-0" onClick={() => setIsOpen(false)}></div>
-                    <div className="relative w-full max-w-md bg-tactical-bg rounded-t-3xl sm:rounded-2xl border-t sm:border border-tactical-muted/30 flex flex-col h-[85vh] sm:h-auto sm:max-h-[600px] shadow-2xl overflow-hidden animate-slide-up">
+                    <div className="relative w-full max-w-md bg-tactical-bg rounded-t-3xl sm:rounded-2xl border-t sm:border border-tactical-muted/30 flex flex-col h-[85vh] max-h-[85vh] sm:h-[600px] shadow-2xl overflow-hidden animate-slide-up">
                         <div className="w-12 h-1.5 bg-gray-800 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0"></div>
                         <div className="px-6 pt-4 pb-4 border-b border-tactical-muted/10 shrink-0">
                             <div className="flex items-center justify-between mb-4">
@@ -140,7 +141,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 scrollbar-hide">
+                        <div className="flex-1 overflow-y-auto p-4 scrollbar-hide min-h-0">
                             {!search && (
                                 <div className="mb-6">
                                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2 mb-3">Quick Assets (Common)</div>
@@ -201,7 +202,8 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.getElementById('modal-root') || document.body
             )}
         </>
     );

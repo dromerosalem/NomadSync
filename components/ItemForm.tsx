@@ -1,8 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member } from '../types';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, WalletIcon } from './Icons';
 import PlaceAutocomplete from './PlaceAutocomplete';
 import { sanitizeAsset } from '../utils/assetUtils';
+
+import CurrencySelector from './CurrencySelector';
+import { getCurrencySymbol } from '../utils/currencyUtils';
+import { currencyService } from '../services/CurrencyService';
 
 interface ItemFormProps {
   type: ItemType;
@@ -14,6 +18,7 @@ interface ItemFormProps {
   queueLength?: number; // Optional prop to show if multiple items are being processed
   currentUserId: string;
   members: Member[]; // Passed to select split
+  baseCurrency?: string;
 }
 
 // Helper to parse the rich details string into key-value pairs for the UI
@@ -57,7 +62,7 @@ const IntelGrid: React.FC<{ details: string; type?: ItemType }> = ({ details, ty
   );
 };
 
-const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDate, initialItem, availableTags = [], queueLength, currentUserId, members = [] }) => {
+const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDate, initialItem, availableTags = [], queueLength, currentUserId, members = [], baseCurrency = 'USD' }) => {
   // Filter helper: Active or undefined (legacy) members only. Exclude Blocked/Pending.
   const activeMembers = members.filter(m => m.status === 'ACTIVE' || !m.status);
 
@@ -84,7 +89,42 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       : new Date(tripStartDate).toISOString().slice(0, 16)
   );
 
-  const [cost, setCost] = useState(initialItem?.cost?.toString() || '');
+  const [cost, setCost] = useState(initialItem?.originalAmount?.toString() || initialItem?.cost?.toString() || '');
+  const [currencyCode, setCurrencyCode] = useState(initialItem?.currencyCode || baseCurrency);
+  const [exchangeRate, setExchangeRate] = useState<number>(initialItem?.exchangeRate || 1);
+  const [convertedCost, setConvertedCost] = useState<number>(initialItem?.cost || 0);
+
+  // Fetch Exchange Rate when currency or date changes
+  useEffect(() => {
+    const fetchRate = async () => {
+      // If currency is same as base, rate is 1
+      if (currencyCode === baseCurrency) {
+        setExchangeRate(1);
+        setConvertedCost(parseFloat(cost) || 0);
+        return;
+      }
+
+      const amount = parseFloat(cost) || 0;
+      if (amount === 0) {
+        setConvertedCost(0);
+        return;
+      }
+
+      try {
+        // Use the start date for historical rates
+        const dateForRate = startDate || new Date().toISOString();
+        const rate = await currencyService.getRate(currencyCode, baseCurrency, dateForRate);
+        setExchangeRate(rate);
+        setConvertedCost(amount * rate);
+      } catch (error) {
+        console.error("Failed to fetch exchange rate:", error);
+        // Fallback to 1:1 if fails, but user should warn?
+        // For now, keep previous rate or default to 1
+      }
+    };
+
+    fetchRate();
+  }, [currencyCode, baseCurrency, startDate, cost]);
 
   const extractCleanDetails = (detailsStr?: string | null) => {
     if (!detailsStr) return '';
@@ -191,12 +231,14 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       setEndLatitude(initialItem.endLatitude);
       setEndLongitude(initialItem.endLongitude);
       setEndCountryCode(initialItem.endCountryCode);
+      setCurrencyCode(initialItem.currencyCode || baseCurrency);
     } else {
       const defaultSplit = activeMembers.map(m => m.id);
       setSplitWith(defaultSplit);
       setPaidBy(currentUserId);
+      setCurrencyCode(baseCurrency);
     }
-  }, [initialItem, tripStartDate, currentUserId]);
+  }, [initialItem, tripStartDate, currentUserId, baseCurrency]);
 
   const handleAddTag = (tagToAdd: string) => {
     const trimmed = tagToAdd.trim();
@@ -241,7 +283,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       endLocation: type === ItemType.TRANSPORT ? endLocation : undefined,
       startDate: new Date(startDate),
       endDate: type === ItemType.STAY || type === ItemType.TRANSPORT ? new Date(endDate) : undefined,
-      cost: parseFloat(cost) || 0,
+      cost: convertedCost, // Save the CONVERTED amount as the main cost for budget
       details: finalDetails,
       type,
       tags,
@@ -255,7 +297,10 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       isPrivate,
       splitWith,
       paidBy,
-      showInTimeline: true
+      showInTimeline: true,
+      currencyCode,
+      originalAmount: parseFloat(cost) || 0, // Save the RAW input as original amount
+      exchangeRate
     });
   };
 
@@ -693,15 +738,29 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       <div className="mt-auto sticky bottom-0 bg-tactical-bg p-6 border-t border-tactical-muted/20 z-20 w-full max-w-2xl mx-auto backdrop-blur-md bg-opacity-95">
         <div className="flex items-end justify-between mb-4">
           <span className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">Financial Liability</span>
-          <div className="flex items-baseline text-tactical-accent">
-            <span className="text-xl font-bold mr-1.5 opacity-60">$</span>
-            <input
-              type="number"
-              value={cost}
-              onChange={(e) => setCost(e.target.value)}
-              className="bg-transparent w-40 text-5xl font-display font-bold text-right outline-none placeholder-tactical-muted/20 selection:bg-tactical-accent selection:text-black"
-              placeholder="0.00"
-            />
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-3">
+              <CurrencySelector
+                variant="minimal"
+                value={currencyCode}
+                onChange={setCurrencyCode}
+              />
+              <div className="flex items-baseline text-tactical-accent">
+                <span className="text-xl font-bold mr-1.5 opacity-60">{getCurrencySymbol(currencyCode)}</span>
+                <input
+                  type="number"
+                  value={cost}
+                  onChange={(e) => setCost(e.target.value)}
+                  className="bg-transparent w-32 sm:w-40 text-4xl sm:text-5xl font-display font-bold text-right outline-none placeholder-tactical-muted/20 selection:bg-tactical-accent selection:text-black"
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+            {currencyCode !== baseCurrency && (cost) && (
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                ≈ {getCurrencySymbol(baseCurrency)}{convertedCost.toFixed(2)}
+              </div>
+            )}
           </div>
         </div>
         <button

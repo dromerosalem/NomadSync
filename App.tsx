@@ -798,6 +798,7 @@ const App: React.FC = () => {
             queueLength={scannedItemsQueue.length > 0 ? scannedItemsQueue.length : undefined}
             currentUserId={currentUser.id}
             members={currentTrip.members}
+            baseCurrency={currentTrip.baseCurrency || 'USD'}
           />
         )}
 
