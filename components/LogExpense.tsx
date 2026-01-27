@@ -527,7 +527,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 isPrivate,
                 showInTimeline,
                 details: initialItem?.details || 'Expense logged via Budget Engine',
-                receiptItems: undefined
+                receiptItems: []
             });
         } else if (splitMode === 'ITEMIZED') {
             // Calculate Itemized Splits
@@ -595,7 +595,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 isPrivate,
                 showInTimeline,
                 details: initialItem?.details || 'Expense logged via Budget Engine',
-                receiptItems: splitMode === 'ITEMIZED' ? receiptItems : undefined
+                receiptItems: splitMode === 'ITEMIZED' ? receiptItems : []
             });
 
         } else {
@@ -627,7 +627,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 isPrivate,
                 showInTimeline,
                 details: initialItem?.details || 'Expense logged via Budget Engine',
-                receiptItems: splitMode === 'ITEMIZED' ? receiptItems : undefined
+                receiptItems: splitMode === 'ITEMIZED' ? receiptItems : []
             });
         }
     };

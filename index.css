@@ -10,6 +10,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Hide standard browser number input arrows (spinners) */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+  appearance: none;
+}
+
 body {
   background-color: #121211;
   color: #EAEAEA;
