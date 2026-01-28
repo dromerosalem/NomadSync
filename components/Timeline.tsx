@@ -494,7 +494,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
 
         <div className="space-y-1">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-            <span className="text-gray-500">Your Share</span>
+            <span className="text-gray-500">Available Balance</span>
             <span className={remainingBudget < 0 ? "text-red-500" : "text-tactical-accent"}>
               {getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalCost.toFixed(0)} / {getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}
             </span>

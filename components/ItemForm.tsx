@@ -213,7 +213,9 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         ? formatDateForInput(initialItem.endDate)
         : new Date(tripStartDate).toISOString().slice(0, 16)
       );
-      setCost(initialItem.cost?.toString() || '');
+      setCost(initialItem.originalAmount?.toString() || initialItem.cost?.toString() || '');
+      setExchangeRate(initialItem.exchangeRate || 1);
+      setConvertedCost(initialItem.cost || 0);
       setDetails(extractCleanDetails(initialItem.details));
       setSeat(extractSeat(initialItem.details));
       setFlightNumber(extractFlightNumber(initialItem.details));
@@ -296,6 +298,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       endCountryCode,
       isPrivate,
       splitWith,
+      splitDetails: undefined, // FORCE RESET: Ensure old fixed splits don't persist. The backend/service will recalculate equal splits.
       paidBy,
       showInTimeline: true,
       currencyCode,
