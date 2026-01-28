@@ -185,7 +185,55 @@ const App: React.FC = () => {
       }
     };
   }, []);
-  // Remove pendingJoinTripId dependency to avoid double firing, handled in refs if needed inside, but simple state is fine here.
+  // Remove pendingJoinTripId dependency to avoid double firing
+
+  // --- GLOBAL REAL-TIME SYNC ---
+  useEffect(() => {
+    if (!isAuthenticated || currentUser.id === 'placeholder') return;
+
+    console.log('[App] Initializing Global Realtime Subscription');
+
+    const channel = supabase.channel('global-user-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'trip_members',
+          filter: `user_id=eq.${currentUser.id}`
+        },
+        (payload) => {
+          console.log('[App] Trip Member Invocation:', payload);
+          // If I am added to/removed from a trip, reload my trip list
+          loadAllData(currentUser.id);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // UPDATE (name change) or INSERT (new trip I created)
+          schema: 'public',
+          table: 'trips'
+        },
+        (payload) => {
+          // Optimization: Ideally we check if I am in this trip, 
+          // but RLS might not let us filtering easily without joining.
+          // For now, if any mapped trip updates, we refresh.
+          const tripId = (payload.new as any).id;
+          const isRelevant = trips.some(t => t.id === tripId);
+          if (isRelevant || payload.eventType === 'INSERT') {
+            console.log('[App] Trip Update Detected:', payload);
+            loadAllData(currentUser.id);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, currentUser.id, trips]); // Dependency on trips might cause re-sub, but needed for filter check.
+  // -----------------------------
 
   // Dedicated data loader - triggers only when identity actually changes
   useEffect(() => {
@@ -495,6 +543,21 @@ const App: React.FC = () => {
     }
   };
 
+  // --- Real-time Sync Handler ---
+  const handleRefreshTrip = async (tripId: string) => {
+    // Silent refresh - do not set global loading state
+    console.log(`[App] Silent Refresh for trip: ${tripId}`);
+    try {
+      const items = await tripService.fetchTripItinerary(tripId);
+      const sorted = semanticSort(items);
+      setTrips(prev => prev.map(t =>
+        t.id === tripId ? { ...t, items: sorted, updatedAt: Date.now() } : t
+      ));
+    } catch (err) {
+      console.error('[App] Silent refresh failed:', err);
+    }
+  };
+
   // ---------------------------------------------------------
 
   const handleSelectType = (type: ItemType) => {
@@ -751,6 +814,7 @@ const App: React.FC = () => {
             onNavigateBudget={() => setView('BUDGET')}
             onAcceptPastExpenses={handleAcceptExpenseInvite}
             onDeclinePastExpenses={handleDeclineExpenseInvite}
+            onRefresh={() => handleRefreshTrip(currentTrip.id)}
           />
         )}
 

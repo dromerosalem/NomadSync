@@ -1,10 +1,12 @@
 import React, { useState, useMemo } from 'react';
+import { supabase } from '../services/supabaseClient';
 import { getMissionCover } from '../utils/assetUtils';
 import { Trip, ItineraryItem, ItemType } from '../types';
-import { PlusIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, ChevronLeftIcon, EyeOffIcon, WalletIcon, UsersIcon, GlobeIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import MissionGlobe from './MissionGlobe';
 import TacticalImage from './TacticalImage';
+import { NotificationManager } from '../services/NotificationManager';
+import { BedIcon, BellIcon, CameraIcon, ChevronLeftIcon, EyeOffIcon, GlobeIcon, MapPinIcon, PlusIcon, TrainIcon, UsersIcon, UtensilsIcon, WalletIcon } from './Icons';
 
 const ExpandableDetails: React.FC<{
   details: string,
@@ -54,6 +56,7 @@ interface TimelineProps {
   onAcceptPastExpenses: () => void;
   onDeclinePastExpenses: () => void;
   onNavigateBudget: () => void;
+  onRefresh: () => void;
 }
 
 const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolean, onClick: () => void, baseCurrency: string }> = ({ item, tripYear, isLast, onClick, baseCurrency }) => {
@@ -397,9 +400,46 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
   );
 };
 
-const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, currentUserId, onAddItem, onEditTrip, onManageTeam, onItemClick, onBackToBase, onAcceptPastExpenses, onDeclinePastExpenses, onNavigateBudget }) => {
+const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, currentUserId, onAddItem, onEditTrip, onManageTeam, onItemClick, onBackToBase, onAcceptPastExpenses, onDeclinePastExpenses, onNavigateBudget, onRefresh }) => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [showGlobe, setShowGlobe] = useState(false);
+  const [permissionState, setPermissionState] = useState<NotificationPermission>(Notification.permission);
+
+  React.useEffect(() => {
+    if ('Notification' in window) {
+      setPermissionState(Notification.permission);
+    }
+  }, []);
+
+  // REAL-TIME SYNC: Listen for changes to itinerary_items
+  React.useEffect(() => {
+    // console.log(`[Timeline] Initializing Realtime for trip: ${trip.id}`);
+
+    const channel = supabase
+      .channel(`timeline-${trip.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'itinerary_items',
+          filter: `trip_id=eq.${trip.id}`
+        },
+        (payload) => {
+          // console.log('[Timeline] Realtime update received:', payload);
+          onRefresh(); // Trigger parent refresh to update state
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // console.log('[Timeline] Connected to realtime channel.');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [trip.id, onRefresh]);
 
   const visibleItems = useMemo(() => {
     return trip.items.filter(item => {
@@ -480,6 +520,13 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
             </button>
             <button onClick={onManageTeam} className="p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg text-gray-400 hover:text-white hover:border-tactical-accent transition-all" title="Manage Squad">
               <UsersIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => NotificationManager.requestPermission().then(p => setPermissionState(p))}
+              className={`p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg transition-all ${permissionState === 'granted' ? 'text-tactical-accent border-tactical-accent/50' : 'text-gray-400 hover:text-white hover:border-tactical-accent'}`}
+              title={permissionState === 'granted' ? 'Notifications Active' : 'Enable Notifications'}
+            >
+              <BellIcon className="w-4 h-4" />
             </button>
             {canEdit && (
               <button onClick={onEditTrip} className="p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg text-gray-400 hover:text-white hover:border-tactical-accent transition-all">

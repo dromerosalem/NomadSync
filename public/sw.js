@@ -109,15 +109,51 @@ async function flushSyncQueue() {
     });
 }
 
-// Notification Click Listener
+// 4. Push Notification Listener
+self.addEventListener('push', (event) => {
+    if (!event.data) return;
+
+    try {
+        const payload = event.data.json();
+        const { title, body, icon, url, tag } = payload;
+
+        const options = {
+            body: body || 'New activity in NomadSync',
+            icon: icon || '/logo.png',
+            badge: '/logo.png', // Small icon for status bar
+            vibrate: [100, 50, 100],
+            data: { url: url || '/' },
+            tag: tag || 'general', // collapse notifications with same tag
+            renotify: true
+        };
+
+        event.waitUntil(
+            self.registration.showNotification(title || 'NomadSync', options)
+        );
+    } catch (err) {
+        console.error('[SW] Push error:', err);
+    }
+});
+
+// 5. Notification Click Listener (Deep Linking)
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+
+    const targetUrl = event.notification.data?.url || '/';
+
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-            if (clientList.length > 0) {
-                return clientList[0].focus();
+            // Check if window is already open
+            for (const client of clientList) {
+                const clientUrl = new URL(client.url);
+                if (clientUrl.pathname === targetUrl && 'focus' in client) {
+                    return client.focus();
+                }
             }
-            return self.clients.openWindow('/');
+            // If not, open new window
+            if (self.clients.openWindow) {
+                return self.clients.openWindow(targetUrl);
+            }
         })
     );
 });

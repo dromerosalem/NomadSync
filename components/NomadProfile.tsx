@@ -4,6 +4,7 @@ import { Member, Trip, ItemType } from '../types';
 import { ChevronLeftIcon, GearIcon, SwordsIcon, NetworkIcon, WalletIcon, ListCheckIcon, EditIcon, PlusIcon, MapPinIcon, CompassIcon, WalkIcon } from './Icons';
 import TacticalImage from './TacticalImage';
 import AtmosphericAvatar from './AtmosphericAvatar';
+import { NotificationManager } from '../services/NotificationManager';
 
 interface NomadProfileProps {
     user: Member;
@@ -241,6 +242,33 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                                 <span>View Ledger History</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
                             </button>
+                        </div>
+                    </div>
+
+                    {/* Comms Uplink */}
+                    <div>
+                        <div className="flex items-center gap-2 text-tactical-accent mb-3">
+                            <NetworkIcon className="w-5 h-5" />
+                            <span className="font-display font-bold uppercase tracking-wider text-sm">Comms Uplink</span>
+                        </div>
+                        <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4">
+                            <p className="text-gray-400 text-xs mb-4">
+                                Establish secure uplink for mission updates. If status is offline, toggle the connection.
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => NotificationManager.requestPermission()}
+                                    className="flex-1 bg-tactical-accent/10 border border-tactical-accent/50 text-tactical-accent hover:bg-tactical-accent hover:text-black py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors"
+                                >
+                                    Enable Comms
+                                </button>
+                                <button
+                                    onClick={() => NotificationManager.unsubscribe()}
+                                    className="px-4 border border-red-500/30 text-red-500 hover:bg-red-500/10 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors"
+                                >
+                                    Sever Link
+                                </button>
+                            </div>
                         </div>
                     </div>
 
