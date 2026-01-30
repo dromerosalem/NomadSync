@@ -44,6 +44,23 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
         return Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
     };
 
+    // Calculate unique countries from trips
+    const uniqueCountries = new Set<string>();
+    trips.forEach(trip => {
+        if (trip.countryCode) {
+            uniqueCountries.add(trip.countryCode);
+        }
+        // Also count from itinerary items
+        trip.items.forEach(item => {
+            if (item.countryCode) {
+                uniqueCountries.add(item.countryCode);
+            }
+            if (item.endCountryCode) {
+                uniqueCountries.add(item.endCountryCode);
+            }
+        });
+    });
+
     return (
         <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative">
             {isLoading && (
@@ -96,7 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                         <GlobeIcon className="w-5 h-5" />
                     </div>
                     <div>
-                        <div className="font-display font-bold text-xl text-white leading-none">4</div>
+                        <div className="font-display font-bold text-xl text-white leading-none">{uniqueCountries.size}</div>
                         <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">COUNTRIES</div>
                     </div>
                 </div>

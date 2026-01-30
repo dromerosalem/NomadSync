@@ -26,7 +26,8 @@ const AtmosphericAvatar: React.FC<AtmosphericAvatarProps> = ({
         sm: 'w-8 h-8',
         md: 'w-10 h-10',
         lg: 'w-12 h-12',
-        xl: 'w-16 h-16'
+        xl: 'w-16 h-16',
+        xxl: 'w-40 h-40'
     };
 
     const iconSizes = {
@@ -34,7 +35,8 @@ const AtmosphericAvatar: React.FC<AtmosphericAvatarProps> = ({
         sm: 16,
         md: 20,
         lg: 24,
-        xl: 32
+        xl: 32,
+        xxl: 80
     };
 
     // Check if avatarUrl is actually a valid image URL (not a placeholder)

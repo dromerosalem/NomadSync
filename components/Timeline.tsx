@@ -515,9 +515,6 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={onNavigateBudget} className="p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg text-tactical-accent hover:text-white hover:border-tactical-accent transition-all" title="Access Budget Engine">
-              <WalletIcon className="w-4 h-4" />
-            </button>
             <button onClick={onManageTeam} className="p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg text-gray-400 hover:text-white hover:border-tactical-accent transition-all" title="Manage Squad">
               <UsersIcon className="w-4 h-4" />
             </button>
@@ -539,20 +536,46 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
           </div>
         </div>
 
-        <div className="space-y-1">
-          <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest">
-            <span className="text-gray-500">Available Balance</span>
-            <span className={remainingBudget < 0 ? "text-red-500" : "text-tactical-accent"}>
-              {getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalCost.toFixed(0)} / {getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}
-            </span>
+        <button
+          onClick={onNavigateBudget}
+          className="w-full mt-2 mb-1 bg-gradient-to-r from-[#1A1A18] to-[#0F0F0E] border border-tactical-muted/30 rounded-xl p-4 flex items-center justify-between group active:scale-[0.98] transition-all hover:border-tactical-accent/50 cursor-pointer"
+        >
+          {/* Left: Wallet Info */}
+          <div className="flex flex-col items-start">
+            <div className="flex items-center gap-2 mb-1.5">
+              <div className="p-1.5 rounded-lg bg-tactical-accent/20 text-tactical-accent">
+                <WalletIcon className="w-4 h-4" />
+              </div>
+              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-tactical-accent transition-colors">Mission Wallet</span>
+            </div>
+            <div className="font-mono text-xl text-white leading-none">
+              <span className={remainingBudget < 0 ? "text-red-500 font-bold" : "text-white font-bold"}>
+                {getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalCost.toFixed(0)}
+              </span>
+              <span className="text-gray-600 text-sm mx-1.5">/</span>
+              <span className="text-gray-500 text-sm">{getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}</span>
+            </div>
           </div>
-          <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${remainingBudget < 0 ? 'bg-red-500' : 'bg-tactical-accent'}`}
-              style={{ width: userBudget > 0 ? `${Math.min((myTotalCost / userBudget) * 100, 100)}%` : '0%' }}
-            ></div>
+
+          {/* Right: Progress & Chevron */}
+          <div className="flex items-center gap-3 pl-4">
+            <div className="flex flex-col items-end gap-1.5">
+              <span className={`text-[9px] font-black uppercase tracking-widest ${remainingBudget < 0 ? 'text-red-500' : 'text-tactical-accent'}`}>
+                {remainingBudget < 0 ? 'OVER BUDGET' : 'AVAILABLE'}
+              </span>
+              <div className="w-28 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${remainingBudget < 0 ? 'bg-red-500' : 'bg-tactical-accent'}`}
+                  style={{ width: userBudget > 0 ? `${Math.min((myTotalCost / userBudget) * 100, 100)}%` : '0%' }}
+                ></div>
+              </div>
+            </div>
+            {/* Chevron indicator */}
+            <svg className="w-5 h-5 text-tactical-accent/50 group-hover:text-tactical-accent group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
           </div>
-        </div>
+        </button>
 
         {availableTags.length > 0 && (
           <div className="flex gap-2 overflow-x-auto pb-1 mt-4 scrollbar-hide -mx-6 px-6">

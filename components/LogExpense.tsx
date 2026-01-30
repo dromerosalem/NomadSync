@@ -765,7 +765,14 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 )}
             </header>
 
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-48 w-full max-w-2xl mx-auto">
+            <div
+                className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-32 w-full max-w-2xl mx-auto"
+                onClick={(e) => {
+                    if (e.target === e.currentTarget) {
+                        (document.activeElement as HTMLElement)?.blur();
+                    }
+                }}
+            >
 
                 {/* 1. Cost Input */}
                 <div className="flex flex-col items-center justify-center mb-8 mt-4">
@@ -791,7 +798,6 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                             disabled={isSettlement}
                             style={{ width: `${Math.max(1, originalAmount.length)}ch` }}
                             className={`bg-transparent text-6xl font-display font-bold text-white outline-none placeholder-gray-800 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield] text-center min-w-[1ch] p-0 ${isSettlement ? 'cursor-not-allowed opacity-90' : ''}`}
-                            autoFocus={!initialItem}
                         />
                     </div>
 
@@ -1279,7 +1285,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 </div>
             </div>
 
-            <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-2xl mx-auto">
+            <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-2xl mx-auto pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
                 {/* Bill Validation Summary (Itemized Mode Only) */}
                 {splitMode === 'ITEMIZED' && receiptItems.length > 0 && !isSettlement && (
                     <div className="mb-4 pb-4 border-b border-tactical-muted/10">

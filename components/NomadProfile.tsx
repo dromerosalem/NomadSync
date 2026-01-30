@@ -5,6 +5,7 @@ import { ChevronLeftIcon, GearIcon, SwordsIcon, NetworkIcon, WalletIcon, ListChe
 import TacticalImage from './TacticalImage';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { NotificationManager } from '../services/NotificationManager';
+import { calculateAchievements, calculateProfileLevel } from '../services/achievementService';
 
 interface NomadProfileProps {
     user: Member;
@@ -19,6 +20,7 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
     // --- REAL-TIME ANALYTICS ---
     const stats = useMemo(() => {
         let missionCount = 0;
+        const uniqueCountries = new Set<string>();
         const uniqueTerritories = new Set<string>();
         let lifetimeSettled = 0;
         let currentNetBalance = 0; // Positive = Owed to me, Negative = I owe others
@@ -29,15 +31,32 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                 missionCount++;
             }
 
-            // 2. Territory Tracking
-            if (trip.destination) {
-                // Heuristic: Extract country/region after "•" or use full string
-                const parts = trip.destination.split('•');
-                const territory = parts.length > 1 ? parts[1].trim() : parts[0].trim();
-                if (territory) uniqueTerritories.add(territory);
+            // 2. Country Tracking (from trip-level countryCode)
+            if (trip.countryCode) {
+                uniqueCountries.add(trip.countryCode);
             }
 
-            // 3. Financial Analysis (Aggregate across all trips)
+            // 3. Territory Tracking (cities/regions from destination, excluding countries)
+            if (trip.destination) {
+                // Extract city/region (before "•" if present)
+                const parts = trip.destination.split('•');
+                const territory = parts[0].trim(); // City or region name
+                if (territory && territory !== trip.countryCode) {
+                    uniqueTerritories.add(territory);
+                }
+            }
+
+            // 4. Also count countries from itinerary items
+            trip.items.forEach(item => {
+                if (item.countryCode) {
+                    uniqueCountries.add(item.countryCode);
+                }
+                if (item.endCountryCode) {
+                    uniqueCountries.add(item.endCountryCode);
+                }
+            });
+
+            // 5. Financial Analysis (Aggregate across all trips)
             trip.items.forEach(item => {
                 if (item.isPrivate) return;
 
@@ -87,12 +106,25 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
 
         return {
             missions: missionCount,
+            countries: uniqueCountries.size,
             territories: uniqueTerritories.size,
-            miles: missionCount * 3124, // Estimate based on missions
             settled: lifetimeSettled,
             outstanding: outstandingDebt
         };
     }, [trips, user.id]);
+
+    // Calculate achievements
+    const achievements = useMemo(() => {
+        return calculateAchievements(trips, user.id); // All achievements, filter later
+    }, [trips, user.id]);
+
+    const unlockedAchievements = useMemo(() => {
+        return achievements.filter(a => a.level > 0);
+    }, [achievements]);
+
+    const profileProgress = useMemo(() => {
+        return calculateProfileLevel(achievements);
+    }, [achievements]);
 
     const completedTrips = trips.filter(t => t.status === 'COMPLETE').sort((a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime());
 
@@ -121,17 +153,19 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                         旅
                     </div>
 
-                    <div className="relative mb-4">
-                        <AtmosphericAvatar
-                            userId={user.id}
-                            avatarUrl={user.avatarUrl}
-                            name={user.name}
-                            size="xl"
-                            className="w-32 h-32"
-                        />
-                        <button className="absolute bottom-1 right-1 z-20 bg-tactical-accent text-black p-2 rounded-full border-4 border-tactical-bg shadow-lg hover:bg-yellow-400 transition-colors">
-                            <EditIcon className="w-4 h-4" />
-                        </button>
+                    <div className="relative mb-6">
+                        <div className="relative inline-block">
+                            <AtmosphericAvatar
+                                userId={user.id}
+                                avatarUrl={user.avatarUrl}
+                                name={user.name}
+                                size="xxl"
+                                className="shadow-[0_0_30px_rgba(255,255,255,0.05)]"
+                            />
+                            <button className="absolute bottom-2 right-2 z-20 bg-tactical-accent text-black p-2.5 rounded-full border-4 border-tactical-bg shadow-xl hover:bg-yellow-400 transition-all hover:scale-110 active:scale-95">
+                                <EditIcon className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
 
                     <h1 className="font-display text-2xl font-bold text-white uppercase tracking-wider mb-1">
@@ -139,9 +173,9 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                     </h1>
                     <div className="flex items-center gap-3 text-sm mb-2">
                         <span className="bg-white/10 px-2 py-0.5 rounded text-gray-400 border border-white/5 uppercase font-bold text-[10px] tracking-wider">
-                            LEVEL {Math.floor(stats.miles / 1000) + 1}
+                            LEVEL {profileProgress.level}
                         </span>
-                        <span className="text-gray-400">Pathfinder Class</span>
+                        <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">{profileProgress.title}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]"></div>
@@ -166,10 +200,10 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                                 <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Territories</span>
                             </div>
                             <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-3 flex flex-col items-center justify-center aspect-square">
-                                <span className="font-display text-2xl font-bold text-tactical-accent mb-1">
-                                    {stats.miles >= 1000 ? (stats.miles / 1000).toFixed(1) + 'k' : stats.miles}
+                                <span className="font-display text-3xl font-bold text-tactical-accent mb-1">
+                                    {stats.countries}
                                 </span>
-                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Miles</span>
+                                <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Countries</span>
                             </div>
                         </div>
                     </div>
@@ -181,34 +215,78 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                                 <NetworkIcon className="w-5 h-5" />
                                 <span className="font-display font-bold uppercase tracking-wider text-sm">Skill Tree</span>
                             </div>
-                            <button className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white">View All</button>
+                            {achievements.length > 3 && (
+                                <button className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white">View All</button>
+                            )}
                         </div>
 
-                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-6 px-6">
-                            <div className="min-w-[140px] bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex flex-col items-center text-center group hover:border-tactical-accent/50 transition-colors">
-                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-gray-400 mb-3 group-hover:bg-tactical-accent/20 group-hover:text-tactical-accent">
-                                    <MapPinIcon className="w-6 h-6" />
-                                </div>
-                                <div className="font-display font-bold text-white uppercase text-sm leading-tight mb-1">Master Planner</div>
-                                <div className="text-xs text-gray-500">Lvl {Math.min(5, stats.missions)}</div>
+                        {unlockedAchievements.length === 0 ? (
+                            <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-6 text-center">
+                                <p className="text-gray-500 text-sm">
+                                    Complete missions and add items to unlock skills!
+                                </p>
                             </div>
+                        ) : (
+                            <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide -mx-6 px-6">
+                                {unlockedAchievements.map(achievement => {
+                                    // Map icon names to actual icon components
+                                    const IconComponent = achievement.icon === 'WalletIcon' ? WalletIcon :
+                                        achievement.icon === 'CompassIcon' ? CompassIcon :
+                                            achievement.icon === 'NetworkIcon' ? NetworkIcon :
+                                                MapPinIcon; // default
 
-                            <div className="min-w-[140px] bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex flex-col items-center text-center group hover:border-tactical-accent/50 transition-colors">
-                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-gray-400 mb-3 group-hover:bg-tactical-accent/20 group-hover:text-tactical-accent">
-                                    <CompassIcon className="w-6 h-6" />
-                                </div>
-                                <div className="font-display font-bold text-white uppercase text-sm leading-tight mb-1">Navigator</div>
-                                <div className="text-xs text-gray-500">Lvl {Math.min(8, stats.territories)}</div>
-                            </div>
+                                    // Determine Rarity
+                                    const rarity = achievement.level >= 5 ? 'LEGENDARY' :
+                                        achievement.level >= 4 ? 'EPIC' :
+                                            achievement.level >= 2 ? 'RARE' : 'COMMON';
 
-                            <div className="min-w-[140px] bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex flex-col items-center text-center group hover:border-tactical-accent/50 transition-colors">
-                                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center text-gray-400 mb-3 group-hover:bg-tactical-accent/20 group-hover:text-tactical-accent">
-                                    <WalkIcon className="w-6 h-6" />
-                                </div>
-                                <div className="font-display font-bold text-white uppercase text-sm leading-tight mb-1">Drifter</div>
-                                <div className="text-xs text-gray-500">Lvl {Math.floor(stats.miles / 5000)}</div>
+                                    const rarityStyles = {
+                                        LEGENDARY: { glow: 'neon-glow-gold', text: 'text-tactical-accent', label: 'LEGENDARY', iconBg: 'bg-yellow-500/20', iconColor: 'text-yellow-400' },
+                                        EPIC: { glow: 'neon-glow-purple', text: 'text-purple-400', label: 'EPIC', iconBg: 'bg-purple-500/20', iconColor: 'text-purple-400' },
+                                        RARE: { glow: 'neon-glow-cyan', text: 'text-cyan-400', label: 'RARE', iconBg: 'bg-cyan-500/20', iconColor: 'text-cyan-400' },
+                                        COMMON: { glow: 'border-white/10', text: 'text-white', label: 'OPERATIVE', iconBg: 'bg-white/5', iconColor: 'text-gray-400' }
+                                    };
+
+                                    const style = rarityStyles[rarity];
+
+                                    return (
+                                        <div
+                                            key={achievement.id}
+                                            className={`min-w-[145px] bg-gradient-to-b from-[#1A1A18] to-[#0F0F0E] border-2 rounded-2xl p-4 flex flex-col items-center text-center group transition-all duration-500 relative overflow-hidden active:scale-95 ${style.glow} hover:-translate-y-1`}
+                                        >
+                                            {/* Holographic Layer for High Tier */}
+                                            {achievement.level >= 4 && <div className="card-holo-layer" />}
+
+                                            {/* Rarity Tag */}
+                                            <div className={`absolute top-2 right-2 text-[7px] font-black px-1.5 py-0.5 rounded border border-current opacity-70 ${style.text}`}>
+                                                {style.label}
+                                            </div>
+
+                                            <div className={`w-14 h-14 rounded-2xl ${style.iconBg} flex items-center justify-center ${style.iconColor} mb-3 group-hover:scale-110 transition-transform duration-500 relative`}>
+                                                {/* Skill Icon Glow */}
+                                                <div className={`absolute inset-0 opacity-20 blur-xl ${style.iconBg} rounded-full`}></div>
+                                                <IconComponent className="w-7 h-7 relative z-10" />
+                                            </div>
+
+                                            <div className="font-display font-black text-white uppercase text-xs leading-tight mb-2 tracking-wider h-8 flex items-center justify-center">
+                                                {achievement.name}
+                                            </div>
+
+                                            <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mb-2">
+                                                <div
+                                                    className={`h-full ${style.iconBg.replace('/20', '')} transition-all duration-1000`}
+                                                    style={{ width: `${(achievement.level / achievement.maxLevel) * 100}%` }}
+                                                ></div>
+                                            </div>
+
+                                            <div className={`text-[9px] font-black uppercase tracking-widest ${style.text}`}>
+                                                LVL {achievement.level}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Financial Honor */}
@@ -245,28 +323,28 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                         </div>
                     </div>
 
-                    {/* Comms Uplink */}
+                    {/* Push Notifications */}
                     <div>
                         <div className="flex items-center gap-2 text-tactical-accent mb-3">
                             <NetworkIcon className="w-5 h-5" />
-                            <span className="font-display font-bold uppercase tracking-wider text-sm">Comms Uplink</span>
+                            <span className="font-display font-bold uppercase tracking-wider text-sm">Push Notifications</span>
                         </div>
                         <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4">
                             <p className="text-gray-400 text-xs mb-4">
-                                Establish secure uplink for mission updates. If status is offline, toggle the connection.
+                                Get instant alerts when your team adds expenses, updates plans, or settles debts.
                             </p>
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => NotificationManager.requestPermission()}
                                     className="flex-1 bg-tactical-accent/10 border border-tactical-accent/50 text-tactical-accent hover:bg-tactical-accent hover:text-black py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors"
                                 >
-                                    Enable Comms
+                                    Enable Notifications
                                 </button>
                                 <button
                                     onClick={() => NotificationManager.unsubscribe()}
                                     className="px-4 border border-red-500/30 text-red-500 hover:bg-red-500/10 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors"
                                 >
-                                    Sever Link
+                                    Disable Alerts
                                 </button>
                             </div>
                         </div>

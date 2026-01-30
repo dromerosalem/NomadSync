@@ -11,62 +11,19 @@ type AuthMode = 'LANDING' | 'SIGNUP' | 'LOGIN';
 
 const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     const [mode, setMode] = useState<AuthMode>('LANDING');
+    const [showEmailForm, setShowEmailForm] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [key, setKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    useEffect(() => {
-        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-        // Initialize Google One Tap
-        const initializeGoogleOneTap = () => {
-            if (!window.google || !clientId) return;
-
-            try {
-                /* global google */
-                google.accounts.id.initialize({
-                    client_id: clientId,
-                    callback: handleGoogleCredentialResponse,
-                    auto_select: false,
-                    use_fedcm_for_prompt: true,
-                    cancel_on_tap_outside: false,
-                });
-
-                google.accounts.id.prompt((notification) => {
-                    const momentType = notification.getMomentType();
-
-                    if (momentType === 'skipped') {
-                        const reason = notification.getSkippedReason();
-                        if (reason === 'unregistered_origin') {
-                            console.warn('[NomadSync] Google One Tap: Local origin (localhost) is not registered in the Google Cloud Console. Login will still work via the "Continue with Google" button.');
-                        } else {
-                            console.log('One Tap skipped:', reason);
-                        }
-                    } else if (momentType === 'dismissed') {
-                        console.log('One Tap dismissed:', notification.getDismissedReason());
-                    }
-                });
-            } catch (err) {
-                console.warn('[NomadSync] Google One Tap initialization failed. Check your VITE_GOOGLE_CLIENT_ID.');
-            }
-        };
-
-        if (clientId && clientId !== 'YOUR_GOOGLE_CLIENT_ID') {
-            const script = document.createElement('script');
-            script.src = 'https://accounts.google.com/gsi/client';
-            script.async = true;
-            script.defer = true;
-            script.onload = initializeGoogleOneTap;
-            document.head.appendChild(script);
-
-            return () => {
-                if (document.head.contains(script)) {
-                    document.head.removeChild(script);
-                }
-            };
-        }
-    }, []);
+    // NOTE: Google One Tap is DISABLED.
+    // It causes 403 errors when the origin (e.g., localhost or your dev IP) is not
+    // explicitly whitelisted in the Google Cloud Console for the Client ID.
+    // These 403 errors corrupt browser networking state on iOS Safari, causing
+    // subsequent OAuth attempts to fail with "Network connection was lost".
+    // The standard "Continue with Google" OAuth flow (handleGoogleAuth) works correctly.
+    // To re-enable One Tap, register all allowed origins in Google Cloud Console -> Credentials.
 
     const handleGoogleCredentialResponse = async (response: any) => {
         setIsLoading(true);
@@ -130,7 +87,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     };
 
     const handleGoogleAuth = () => {
-        // Standard OAuth flow if One Tap isn't used
         supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
@@ -225,13 +181,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
                     <div className="w-full space-y-4 max-w-sm">
                         <button
-                            onClick={() => setMode('SIGNUP')}
+                            onClick={() => { setMode('SIGNUP'); setShowEmailForm(false); }}
                             className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,215,0,0.3)] transition-all"
                         >
                             START NEW MISSION <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                         </button>
                         <button
-                            onClick={() => setMode('LOGIN')}
+                            onClick={() => { setMode('LOGIN'); setShowEmailForm(false); }}
                             className="w-full bg-transparent hover:bg-white/5 border border-tactical-accent/50 text-tactical-accent font-display font-bold text-lg py-4 rounded-xl transition-all"
                         >
                             REJOIN CIRCLE
@@ -257,7 +213,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
 
             <header className="px-6 py-8 z-10 w-full max-w-md mx-auto">
                 <button
-                    onClick={() => setMode('LANDING')}
+                    onClick={() => { setMode('LANDING'); setShowEmailForm(false); }}
                     className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest hover:text-white mb-6"
                 >
                     <div className="h-px w-8 bg-tactical-accent"></div>
@@ -284,81 +240,90 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     <span className="font-bold text-white text-sm uppercase tracking-widest">Continue with Google</span>
                 </button>
 
-                <div className="flex items-center gap-4 mb-8">
-                    <div className="h-px flex-1 bg-gray-800"></div>
-                    <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Or Dispatch Via Email</span>
-                    <div className="h-px flex-1 bg-gray-800"></div>
-                </div>
+                {!showEmailForm ? (
+                    <div className="text-center mt-12 mb-8">
+                        <button
+                            onClick={() => setShowEmailForm(true)}
+                            className="text-tactical-accent font-bold uppercase tracking-[0.2em] text-[10px] border-b border-tactical-accent/30 pb-1 hover:text-white hover:border-white transition-all"
+                        >
+                            {mode === 'SIGNUP' ? 'Enroll With Email' : 'Dispatch Via Email'}
+                        </button>
+                    </div>
+                ) : (
+                    <div className="space-y-6 animate-reveal">
+                        {mode === 'SIGNUP' && (
+                            <div className="group">
+                                <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
+                                    <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
+                                    Nomad Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                    placeholder="GHOST_OPERATIVE"
+                                    className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
+                                />
+                            </div>
+                        )}
 
-                <div className="space-y-6">
-                    {mode === 'SIGNUP' && (
                         <div className="group">
                             <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
                                 <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
-                                Nomad Name
+                                Email Address
                             </label>
                             <input
-                                type="text"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                placeholder="GHOST_OPERATIVE"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="COORDINATES@NOMAD.COM"
                                 className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
                             />
                         </div>
-                    )}
 
-                    <div className="group">
-                        <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
-                            <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
-                            Email Address
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="COORDINATES@NOMAD.COM"
-                            className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
-                        />
+                        <div className="group">
+                            <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
+                                <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
+                                Secret Key
+                            </label>
+                            <input
+                                type="password"
+                                value={key}
+                                onChange={(e) => setKey(e.target.value)}
+                                placeholder="••••••••••••"
+                                className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
+                            />
+                        </div>
                     </div>
-
-                    <div className="group">
-                        <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
-                            <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
-                            Secret Key
-                        </label>
-                        <input
-                            type="password"
-                            value={key}
-                            onChange={(e) => setKey(e.target.value)}
-                            placeholder="••••••••••••"
-                            className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
-                        />
-                    </div>
-                </div>
+                )}
             </div>
 
-            <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-md mx-auto">
-                <button
-                    onClick={handleDeploy}
-                    disabled={isLoading}
-                    className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-xl py-5 rounded-none flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,215,0,0.2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isLoading ? (
-                        <span className="animate-pulse">ESTABLISHING UPLINK...</span>
-                    ) : (
-                        <>
-                            {mode === 'SIGNUP' ? 'DEPLOY TO MISSION' : 'ACCESS TERMINAL'}
-                            <LightningIcon className="w-5 h-5 fill-black" />
-                        </>
-                    )}
-                </button>
+            {showEmailForm && (
+                <div className="p-6 sticky bottom-0 bg-tactical-bg border-t border-tactical-muted/10 z-20 w-full max-w-md mx-auto animate-reveal">
+                    <button
+                        onClick={handleDeploy}
+                        disabled={isLoading}
+                        className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-xl py-5 rounded-none flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,215,0,0.2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isLoading ? (
+                            <span className="animate-pulse">ESTABLISHING UPLINK...</span>
+                        ) : (
+                            <>
+                                {mode === 'SIGNUP' ? 'DEPLOY TO MISSION' : 'ACCESS TERMINAL'}
+                                <LightningIcon className="w-5 h-5 fill-black" />
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
 
-                <div className="mt-6 text-center">
+            <div className="p-6 z-10 w-full max-w-md mx-auto">
+                <div className="text-center">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">
                         {mode === 'SIGNUP' ? 'Veteran?' : 'New Recruit?'}
                     </span>
                     <button
-                        onClick={() => setMode(mode === 'SIGNUP' ? 'LOGIN' : 'SIGNUP')}
+                        onClick={() => { setMode(mode === 'SIGNUP' ? 'LOGIN' : 'SIGNUP'); setShowEmailForm(false); }}
                         className="text-white font-bold uppercase tracking-widest text-xs border-b border-tactical-accent pb-0.5 hover:text-tactical-accent transition-colors"
                     >
                         {mode === 'SIGNUP' ? 'REJOIN CIRCLE' : 'ENROLL NOW'}

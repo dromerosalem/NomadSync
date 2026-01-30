@@ -19,6 +19,7 @@ import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 import ConflictResolver from './components/ConflictResolver';
 import { SyncLog, db } from './db/LocalDatabase';
+import { persistenceService } from './services/persistenceService';
 
 const INITIAL_USER: Member = {
   id: 'placeholder',
@@ -119,6 +120,9 @@ const App: React.FC = () => {
 
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // Request persistent storage early
+      persistenceService.requestPersistence();
+
       if (session) {
         setIsAuthenticated(true);
         const user = session.user;
@@ -233,7 +237,94 @@ const App: React.FC = () => {
       supabase.removeChannel(channel);
     };
   }, [isAuthenticated, currentUser.id, trips]); // Dependency on trips might cause re-sub, but needed for filter check.
+
+  // --- GLOBAL ITINERARY ITEMS SYNC (Persists to IndexedDB) ---
+  useEffect(() => {
+    if (!isAuthenticated || currentUser.id === 'placeholder' || trips.length === 0) return;
+
+    // Get all trip IDs the user is a member of
+    const tripIds = trips.map(t => t.id);
+    console.log('[App] Initializing Itinerary Realtime for trips:', tripIds.length);
+
+    const channel = supabase.channel('global-itinerary-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'itinerary_items'
+        },
+        async (payload) => {
+          const newItem = payload.new as any;
+          if (tripIds.includes(newItem.trip_id)) {
+            console.log('[App] New itinerary item detected:', newItem.id);
+            // Fetch full item with splits and cache it
+            const item = await tripService.fetchSingleItem(newItem.id);
+            if (item) {
+              // Update React state for the relevant trip
+              setTrips(prevTrips => prevTrips.map(t => {
+                if (t.id === item.tripId) {
+                  const exists = t.items.some(i => i.id === item.id);
+                  if (!exists) {
+                    return { ...t, items: [...t.items, item] };
+                  }
+                }
+                return t;
+              }));
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'itinerary_items'
+        },
+        async (payload) => {
+          const updatedItem = payload.new as any;
+          if (tripIds.includes(updatedItem.trip_id)) {
+            console.log('[App] Updated itinerary item detected:', updatedItem.id);
+            const item = await tripService.fetchSingleItem(updatedItem.id);
+            if (item) {
+              setTrips(prevTrips => prevTrips.map(t => {
+                if (t.id === item.tripId) {
+                  return { ...t, items: t.items.map(i => i.id === item.id ? item : i) };
+                }
+                return t;
+              }));
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'itinerary_items'
+        },
+        async (payload) => {
+          const deletedItem = payload.old as any;
+          console.log('[App] Deleted itinerary item detected:', deletedItem.id);
+          // Remove from IndexedDB
+          await tripService.deleteItemFromCache(deletedItem.id);
+          // Remove from React state
+          setTrips(prevTrips => prevTrips.map(t => ({
+            ...t,
+            items: t.items.filter(i => i.id !== deletedItem.id)
+          })));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, currentUser.id, trips.length]); // Use trips.length to avoid re-sub on every item change
   // -----------------------------
+
 
   // Dedicated data loader - triggers only when identity actually changes
   useEffect(() => {

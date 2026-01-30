@@ -153,6 +153,82 @@ export const tripService = {
         }
     },
 
+    /**
+     * Fetch a single itinerary item by ID and cache it.
+     * Used for incremental realtime updates.
+     */
+    async fetchSingleItem(itemId: string): Promise<ItineraryItem | null> {
+        try {
+            const { data, error } = await supabase
+                .from('itinerary_items')
+                .select(`
+                    *,
+                    expense_splits (
+                        user_id,
+                        amount
+                    )
+                `)
+                .eq('id', itemId)
+                .single();
+
+            if (error) throw error;
+            if (!data) return null;
+
+            const item: ItineraryItem = {
+                id: data.id,
+                tripId: data.trip_id,
+                type: data.type,
+                title: data.title,
+                location: data.location,
+                endLocation: data.end_location,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                countryCode: data.country_code,
+                endLatitude: data.end_latitude,
+                endLongitude: data.end_longitude,
+                endCountryCode: data.end_country_code,
+                startDate: new Date(data.start_date),
+                endDate: data.end_date ? new Date(data.end_date) : undefined,
+                durationMinutes: data.duration_minutes,
+                cost: data.cost,
+                paidBy: data.paid_by,
+                createdBy: data.created_by,
+                isPrivate: data.is_private,
+                showInTimeline: data.show_in_timeline,
+                details: data.details,
+                mapUri: data.map_uri,
+                tags: data.tags || [],
+                originalAmount: data.original_amount,
+                currencyCode: data.currency_code,
+                exchangeRate: data.exchange_rate,
+                receiptItems: data.receipt_items,
+                updatedAt: new Date(data.updated_at || Date.now()).getTime(),
+                splitWith: data.expense_splits?.map((s: any) => s.user_id) || [],
+                splitDetails: data.expense_splits?.reduce((acc: any, s: any) => {
+                    acc[s.user_id] = s.amount;
+                    return acc;
+                }, {}) || {}
+            };
+
+            // Cache immediately
+            await db.items.put(item);
+            return item;
+
+        } catch (error) {
+            console.error('[tripService] Failed to fetch single item:', error);
+            // Try to return from cache
+            const cached = await db.items.get(itemId);
+            return cached || null;
+        }
+    },
+
+    /**
+     * Delete an item from local cache (for realtime DELETE events)
+     */
+    async deleteItemFromCache(itemId: string): Promise<void> {
+        await db.items.delete(itemId);
+    },
+
     async createTrip(tripData: Omit<Trip, 'id' | 'items'>, creatorId: string): Promise<Trip> {
         // 1. Insert Trip
         const { data: trip, error: tripError } = await supabase
