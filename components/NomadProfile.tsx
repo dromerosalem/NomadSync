@@ -13,9 +13,10 @@ interface NomadProfileProps {
     onBack: () => void;
     onCreateMission: () => void;
     onSignOut: () => void;
+    onViewGlobalLedger: () => void;
 }
 
-const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCreateMission, onSignOut }) => {
+const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCreateMission, onSignOut, onViewGlobalLedger }) => {
     // Network status detection
     const isOnline = useNetworkStatus();
 
@@ -317,6 +318,15 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                                     </div>
                                 </div>
                             </div>
+                            <button
+                                onClick={onViewGlobalLedger}
+                                className="w-full py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-tactical-accent hover:bg-white/5 flex items-center justify-center gap-2 border-t border-tactical-muted/10 group transition-all active:scale-[0.99]"
+                            >
+                                <span>View Ledger History</span>
+                                <svg className="w-3 h-3 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="m9 18 6-6-6-6" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
 

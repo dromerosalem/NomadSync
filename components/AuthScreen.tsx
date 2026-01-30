@@ -153,12 +153,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                 </div>
 
                 <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 text-center w-full max-w-md mx-auto">
-                    <div className="mb-2 px-3 py-1 border border-tactical-accent/30 rounded bg-black/40 backdrop-blur-sm">
-                        <span className="text-[10px] font-bold text-tactical-accent uppercase tracking-[0.2em] flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-tactical-accent animate-pulse"></span>
-                            Encrypted Feed // 04-22
-                        </span>
-                    </div>
+
 
                     <h1 className="font-display text-5xl md:text-6xl font-bold text-tactical-accent uppercase tracking-tighter mb-4 drop-shadow-lg">
                         NomadSync
@@ -194,13 +189,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                         </button>
                     </div>
 
-                    <div className="mt-12 flex gap-4 text-[9px] font-bold text-gray-600 uppercase tracking-widest">
-                        <span>Protocol v2.0.4-X</span>
-                        <span className="text-gray-800">|</span>
-                        <span className="text-tactical-accent/50">Status: Active</span>
-                        <span className="text-gray-800">|</span>
-                        <span>Loc: Desert-Grid</span>
-                    </div>
+
                 </div>
             </div>
         );
@@ -330,10 +319,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     </button>
                 </div>
 
-                <div className="flex justify-between mt-8 text-[9px] font-bold text-gray-700 uppercase tracking-widest">
-                    <span>DS-TRK-772</span>
-                    <span>AUTH-V3</span>
-                </div>
+
             </div>
         </div>
     );

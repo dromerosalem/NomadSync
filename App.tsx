@@ -15,6 +15,7 @@ import LogExpense from './components/LogExpense';
 import LedgerScreen from './components/LedgerScreen';
 import AuthScreen from './components/AuthScreen';
 import JoinMission from './components/JoinMission';
+import GlobalLedger from './components/GlobalLedger';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 import ConflictResolver from './components/ConflictResolver';
@@ -839,6 +840,15 @@ const App: React.FC = () => {
             onBack={() => setView('DASHBOARD')}
             onCreateMission={() => setView('CREATE')}
             onSignOut={handleSignOut}
+            onViewGlobalLedger={() => setView('GLOBAL_LEDGER')}
+          />
+        )}
+
+        {isAuthenticated && view === 'GLOBAL_LEDGER' && (
+          <GlobalLedger
+            trips={trips}
+            currentUser={currentUser}
+            onBack={() => setView('PROFILE')}
           />
         )}
 
