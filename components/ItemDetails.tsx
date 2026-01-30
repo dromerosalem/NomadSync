@@ -48,7 +48,8 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
     }
   };
 
-  const formatDateOnly = (date: Date) => {
+  const formatDateOnly = (date: Date | undefined) => {
+    if (!date || isNaN(date.getTime())) return 'No Date';
     return date.toLocaleString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -56,7 +57,8 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
     });
   };
 
-  const formatTimeOnly = (date: Date) => {
+  const formatTimeOnly = (date: Date | undefined) => {
+    if (!date || isNaN(date.getTime())) return '00:00';
     return date.toLocaleString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
