@@ -75,13 +75,31 @@ export class NotificationManager {
         }
     }
 
-    static async unsubscribe() {
-        if (!('Notification' in window)) return;
+    static async isSubscribed(): Promise<boolean> {
+        if (!('Notification' in window) || !navigator.serviceWorker) return false;
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.getSubscription();
-        if (subscription) {
-            await subscription.unsubscribe();
-            console.log('Unsubscribed from push notifications');
+        return !!subscription;
+    }
+
+    static async unsubscribe() {
+        if (!('Notification' in window)) return;
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                await subscription.unsubscribe();
+                console.log('Unsubscribed from push notifications locally');
+            }
+
+            // Also remove from Supabase to prevent ghost notifications
+            let deviceId = localStorage.getItem('nomadsync_device_id');
+            if (deviceId) {
+                await supabase.from('user_devices').delete().eq('device_id', deviceId);
+                console.log('Device record removed from HQ.');
+            }
+        } catch (error) {
+            console.error('Failed to unsubscribe:', error);
         }
     }
 

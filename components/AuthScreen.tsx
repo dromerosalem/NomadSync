@@ -3,6 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { GoogleIcon, LightningIcon } from './Icons';
 import { supabase } from '../services/supabaseClient';
 
+// Lazy load the 3D Globe for performance
+const AuthGlobe = React.lazy(() => import('./AuthGlobe'));
+
 interface AuthScreenProps {
     onAuthSuccess: (user: { name: string; email: string }) => void;
 }
@@ -114,6 +117,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                         }}
                     />
 
+                    {/* 3D Globe Background Layer (Lazy Loaded) */}
+                    <div className="absolute inset-0 z-0 pointer-events-none">
+                        <React.Suspense fallback={<div className="w-full h-full bg-transparent" />}>
+                            <AuthGlobe />
+                        </React.Suspense>
+                    </div>
+
                     {/* Giant Compass Watermark (High Visibility) */}
                     <div className="absolute -bottom-20 -left-20 transform rotate-12 opacity-30 mix-blend-overlay pointer-events-none text-white">
                         <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -199,6 +209,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     return (
         <div className="flex flex-col h-full bg-tactical-bg relative animate-fade-in">
             <div className="absolute inset-0 z-0 opacity-10 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==')]"></div>
+
+            {/* 3D Globe Background Layer (Lazy Loaded) - Reused for Forms */}
+            <div className="absolute inset-0 z-0 pointer-events-none">
+                <React.Suspense fallback={<div className="w-full h-full bg-transparent" />}>
+                    <AuthGlobe />
+                </React.Suspense>
+            </div>
 
             <header className="px-6 py-8 z-10 w-full max-w-md mx-auto">
                 <button
