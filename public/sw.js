@@ -54,8 +54,13 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 1. Bypass for specific API domains
-    if (url.hostname.includes('googleapis.com') || url.hostname.includes('supabase.co')) {
+    // 1. Bypass for specific API domains and Vite dev server
+    if (url.hostname.includes('googleapis.com') ||
+        url.hostname.includes('supabase.co') ||
+        url.pathname.includes('/@') ||  // Vite HMR modules
+        url.pathname.includes('node_modules') ||
+        url.pathname.endsWith('.ts') ||
+        url.pathname.endsWith('.tsx')) {
         return;
     }
 
@@ -64,10 +69,12 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.open(MAP_CACHE).then((cache) => {
                 return cache.match(event.request).then((response) => {
-                    const fetchPromise = fetch(event.request).then((networkResponse) => {
-                        cache.put(event.request, networkResponse.clone());
-                        return networkResponse;
-                    });
+                    const fetchPromise = fetch(event.request)
+                        .then((networkResponse) => {
+                            cache.put(event.request, networkResponse.clone());
+                            return networkResponse;
+                        })
+                        .catch(() => response); // Return cached on network error
                     return response || fetchPromise;
                 });
             })
@@ -80,13 +87,20 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             caches.open(CACHE_NAME).then((cache) => {
                 return cache.match(event.request).then((response) => {
-                    const fetchPromise = fetch(event.request).then((networkResponse) => {
-                        // Only cache valid responses
-                        if (networkResponse.status === 200) {
-                            cache.put(event.request, networkResponse.clone());
-                        }
-                        return networkResponse;
-                    });
+                    const fetchPromise = fetch(event.request)
+                        .then((networkResponse) => {
+                            // Only cache valid responses
+                            if (networkResponse.status === 200) {
+                                cache.put(event.request, networkResponse.clone());
+                            }
+                            return networkResponse;
+                        })
+                        .catch((err) => {
+                            // Return cached response on network error, or just fail silently
+                            if (response) return response;
+                            console.debug('[SW] Fetch failed for:', event.request.url);
+                            throw err;
+                        });
                     return response || fetchPromise;
                 });
             })

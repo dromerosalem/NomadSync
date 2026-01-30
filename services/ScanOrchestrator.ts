@@ -1,6 +1,7 @@
-import { analyzeReceipt as analyzeWithGemini } from './geminiService';
-import { analyzeReceiptWithGroq } from './GroqService';
-import { analyzeReceiptPremium } from './geminiPremiumService';
+// ScanOrchestrator - Orchestrates AI receipt analysis with retry logic
+// Now uses Supabase Edge Functions for all AI calls (prompts protected server-side)
+
+import { analyzeReceipt, analyzeReceiptWithGroq, analyzeReceiptPremium } from './EdgeAIService';
 import { ItineraryItem } from '../types';
 import { UploadSecurityService } from './UploadSecurityService';
 
@@ -121,7 +122,7 @@ export const scanOrchestrator = {
     async executeScan(model: ModelType, base64Data: string, mimeType: string, tripStartDate?: Date, extractedText?: string): Promise<ScanResult> {
         try {
             if (model === 'GEMINI') {
-                const { items, confidence } = await analyzeWithGemini(base64Data, mimeType, tripStartDate, extractedText);
+                const { items, confidence } = await analyzeReceipt(base64Data, mimeType, tripStartDate, extractedText);
                 console.log(`[ScanOrchestrator] 🔮 Gemini Lite returned: ${items?.length || 0} items, confidence: ${(confidence * 100).toFixed(1)}%`);
                 return { items, usedModel: 'GEMINI', confidence };
             } else if (model === 'GEMINI_PREMIUM') {

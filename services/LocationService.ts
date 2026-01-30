@@ -1,6 +1,7 @@
 import { db, LocationCache } from '../db/LocalDatabase';
+import { supabase } from './supabaseClient';
 
-const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY;
+// API key now stored server-side in Supabase secrets
 
 export interface LocationResult {
     name: string;
@@ -29,34 +30,31 @@ class LocationService {
             return cached.results;
         }
 
-        // 2. Fetch from Geoapify
+        // 2. Fetch from Edge Function (proxy to Geoapify)
         try {
-            console.log(`[LocationService] Fetching from Geoapify: ${query}`);
-            const response = await fetch(
-                `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&limit=10&apiKey=${GEOAPIFY_API_KEY}&lang=en`
-            );
-
-            if (!response.ok) throw new Error('Location search failed');
-
-            const data = await response.json();
-
-            const results: LocationResult[] = data.features.map((f: any) => ({
-                name: f.properties.name || f.properties.city || f.properties.country,
-                city: f.properties.city,
-                country: f.properties.country,
-                countryCode: f.properties.country_code?.toUpperCase(),
-                lat: f.properties.lat,
-                lon: f.properties.lon,
-                formatted: f.properties.formatted
-            }));
-
-            // 3. Store in Cache
-            await db.location_cache.put({
-                query: query.toLowerCase().trim(),
-                results: results,
-                timestamp: Date.now()
+            console.log(`[LocationService] 🚀 Calling search-location Edge Function: ${query}`);
+            
+            const { data, error } = await supabase.functions.invoke('search-location', {
+                body: { query }
             });
 
+            if (error) {
+                console.error('[LocationService] Edge Function error:', error);
+                throw error;
+            }
+
+            const results: LocationResult[] = data?.results || [];
+
+            // 3. Store in Cache
+            if (results.length > 0) {
+                await db.location_cache.put({
+                    query: query.toLowerCase().trim(),
+                    results: results,
+                    timestamp: Date.now()
+                });
+            }
+
+            console.log(`[LocationService] ✅ Found ${results.length} locations`);
             return results;
         } catch (error) {
             console.error('[LocationService] Search failed:', error);

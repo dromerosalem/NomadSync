@@ -1,16 +1,8 @@
+// CurrencyService - Currency conversion using Edge Function
+// API keys now stored server-side in Supabase secrets
 
 import { Trip, ItineraryItem } from '../types';
-
-const FRANKFURTER_API = 'https://api.frankfurter.app';
-const EXCHANGE_RATE_API_KEY = import.meta.env.VITE_EXCHANGE_RATE_API_KEY;
-const EXCHANGE_RATE_API_BASE = 'https://v6.exchangerate-api.com/v6';
-
-// List of currencies supported by Frankfurter (Free & Unlimited)
-const OCTOPUS_CURRENCIES = new Set([
-    'AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP',
-    'HKD', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'MXN', 'MYR',
-    'NOK', 'NZD', 'PHP', 'PLN', 'RON', 'SEK', 'SGD', 'THB', 'TRY', 'USD', 'ZAR'
-]);
+import { supabase } from './supabaseClient';
 
 interface RateCache {
     [date: string]: {
@@ -53,80 +45,34 @@ export class CurrencyService {
             return cachedRate;
         }
 
-        let rate: number;
-
-        // 2. Try Frankfurter (If both currencies are supported)
-        if (OCTOPUS_CURRENCIES.has(from) && OCTOPUS_CURRENCIES.has(to)) {
-            try {
-                rate = await this.fetchFrankfurter(from, to, dateStr);
-            } catch (err) {
-                console.warn('Frankfurter failed, falling back to ExchangeRate-API', err);
-                rate = await this.fetchExchangeRateAPI(from, to, dateStr); // Fallback
-            }
-        } else {
-            // 3. Use ExchangeRate-API for exotic currencies
-            rate = await this.fetchExchangeRateAPI(from, to, dateStr);
-        }
-
-        // 4. Save to Cache
-        this.saveToCache(from, to, dateStr, rate);
-
-        return rate;
-    }
-
-    private async fetchFrankfurter(from: string, to: string, date: string): Promise<number> {
-        // Frankfurter supports historical dates directly
-        // If date is today, use 'latest' otherwise use date
-        const today = new Date().toISOString().split('T')[0];
-        const endpoint = date === today ? 'latest' : date;
-
-        const response = await fetch(`${FRANKFURTER_API}/${endpoint}?from=${from}&to=${to}`);
-        if (!response.ok) throw new Error('Frankfurter API Error');
-
-        const data = await response.json();
-        return data.rates[to];
-    }
-
-    private async fetchExchangeRateAPI(from: string, to: string, date: string): Promise<number> {
-        const todayStr = new Date().toISOString().split('T')[0];
-        const isTodayOrFuture = date >= todayStr;
-
-        if (isTodayOrFuture) {
-            console.log(`[CurrencyService] Date ${date} is today or future. Using LATEST.`);
-            return this.fetchLatestFromExchangeRateAPI(from, to);
-        }
-
-        const [year, month, day] = date.split('-');
-
+        // 2. Fetch via Edge Function (handles Frankfurter/ExchangeRate-API logic server-side)
         try {
-            // Try historical first (Standard request format: /v6/key/history/code/year/month/day)
-            const url = `${EXCHANGE_RATE_API_BASE}/${EXCHANGE_RATE_API_KEY}/history/${from}/${year}/${month}/${day}`;
-            const res = await fetch(url);
+            console.log(`[CurrencyService] 🚀 Calling convert-currency Edge Function: ${from}->${to} on ${dateStr}`);
+            
+            const { data, error } = await supabase.functions.invoke('convert-currency', {
+                body: { amount: 1, from, to, date: dateStr }
+            });
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.conversion_rates && data.conversion_rates[to]) {
-                    return data.conversion_rates[to];
-                }
-            } else {
-                const errorData = await res.json().catch(() => ({}));
-                console.warn(`[CurrencyService] Historical API returned ${res.status}:`, errorData['error-type'] || res.statusText);
+            if (error) {
+                console.error('[CurrencyService] Edge Function error:', error);
+                throw error;
             }
-        } catch (e) {
-            console.warn(`[CurrencyService] Historical fetch failed:`, e);
+
+            const rate = data?.rate || 1;
+            console.log(`[CurrencyService] ✅ Rate: ${from}->${to} = ${rate}`);
+
+            // 3. Save to Cache
+            this.saveToCache(from, to, dateStr, rate);
+
+            return rate;
+        } catch (error) {
+            console.error('[CurrencyService] Rate fetch failed:', error);
+            throw error;
         }
-
-        console.warn(`[CurrencyService] Historical data unavailable for ${from} on ${date}. Falling back to LATEST.`);
-        return this.fetchLatestFromExchangeRateAPI(from, to);
     }
 
-    private async fetchLatestFromExchangeRateAPI(from: string, to: string): Promise<number> {
-        const urlValues = `${EXCHANGE_RATE_API_BASE}/${EXCHANGE_RATE_API_KEY}/latest/${from}`;
-        const res = await fetch(urlValues);
-        if (!res.ok) throw new Error(`ExchangeRate-API Error: ${res.status}`);
-        const data = await res.json();
-        return data.conversion_rates[to];
-    }
+    // API fetching logic is now handled by the Edge Function (server-side)
+    // This keeps API keys secure and simplifies client code
 
     // --- Caching Logic ---
 
