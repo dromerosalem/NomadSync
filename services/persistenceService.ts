@@ -1,20 +1,21 @@
 /**
  * Storage Persistence Service
  * 
- * Requests persistent storage to prevent iOS from evicting IndexedDB data
- * after 7 days of inactivity.
+ * Requests persistent storage to prevent browsers from evicting IndexedDB/Cache data.
+ * Chrome requires user interaction before granting persistence.
  */
 
 class PersistenceService {
   private isPersisted = false;
+  private hasAttempted = false;
 
   /**
    * Request persistent storage from the browser.
-   * Should be called early in app initialization.
+   * Should be called AFTER user interaction (e.g., after login).
    */
   async requestPersistence(): Promise<boolean> {
     if (!navigator.storage || !navigator.storage.persist) {
-      console.warn('[PersistenceService] Storage API not available');
+      console.info('[PersistenceService] Storage API not available on this browser');
       return false;
     }
 
@@ -22,19 +23,25 @@ class PersistenceService {
       // Check if already persisted
       const alreadyPersisted = await navigator.storage.persisted();
       if (alreadyPersisted) {
-        console.log('[PersistenceService] Storage already persisted');
+        console.log('[PersistenceService] ✓ Storage persistence enabled');
         this.isPersisted = true;
+        this.hasAttempted = true;
         return true;
       }
 
-      // Request persistence
+      // Request persistence (Chrome requires this to be called after user interaction)
       const granted = await navigator.storage.persist();
       this.isPersisted = granted;
+      this.hasAttempted = true;
       
       if (granted) {
-        console.log('[PersistenceService] Storage persistence granted');
+        console.log('[PersistenceService] ✓ Storage persistence granted');
       } else {
-        console.warn('[PersistenceService] Storage persistence denied');
+        console.warn(
+          '[PersistenceService] ⚠️ Storage persistence denied. ' +
+          'Offline data may be cleared if storage is low. ' +
+          'Chrome grants persistence based on site engagement.'
+        );
       }
       
       return granted;
@@ -42,6 +49,16 @@ class PersistenceService {
       console.error('[PersistenceService] Error requesting persistence:', error);
       return false;
     }
+  }
+
+  /**
+   * Retry persistence request (useful after user interaction)
+   */
+  async retryPersistence(): Promise<boolean> {
+    if (this.isPersisted) {
+      return true; // Already granted
+    }
+    return this.requestPersistence();
   }
 
   /**
@@ -68,6 +85,13 @@ class PersistenceService {
    */
   getIsPersisted(): boolean {
     return this.isPersisted;
+  }
+
+  /**
+   * Check if we've attempted to request persistence
+   */
+  getHasAttempted(): boolean {
+    return this.hasAttempted;
   }
 }
 

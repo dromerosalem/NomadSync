@@ -6,6 +6,71 @@ import AtmosphericAvatar from './AtmosphericAvatar';
 import { NotificationManager } from '../services/NotificationManager';
 import { calculateAchievements, calculateProfileLevel } from '../services/achievementService';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { BellIcon, BellOffIcon } from './Icons';
+
+// Sub-component with local state for push notification management
+const PushNotificationSection: React.FC = () => {
+    const [isSubscribed, setIsSubscribed] = React.useState(false);
+    const [isLoading, setIsLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        NotificationManager.isSubscribed().then(status => {
+            setIsSubscribed(status);
+            setIsLoading(false);
+        });
+    }, []);
+
+    const handleEnable = async () => {
+        setIsLoading(true);
+        const permission = await NotificationManager.requestPermission();
+        if (permission === 'granted') {
+            const subbed = await NotificationManager.isSubscribed();
+            setIsSubscribed(subbed);
+        }
+        setIsLoading(false);
+    };
+
+    const handleDisable = async () => {
+        setIsLoading(true);
+        await NotificationManager.unsubscribe();
+        setIsSubscribed(false);
+        setIsLoading(false);
+    };
+
+    return (
+        <div>
+            <div className="flex items-center gap-2 text-tactical-accent mb-3">
+                {isSubscribed ? <BellIcon className="w-5 h-5" /> : <BellOffIcon className="w-5 h-5 text-gray-500" />}
+                <span className="font-display font-bold uppercase tracking-wider text-sm">Push Notifications</span>
+                {/* Status Badge */}
+                <span className={`ml-auto text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${isSubscribed ? 'text-green-400 border-green-500/30 bg-green-500/10' : 'text-gray-500 border-gray-500/30 bg-gray-500/10'}`}>
+                    {isLoading ? 'CHECKING…' : isSubscribed ? 'ACTIVE' : 'DISABLED'}
+                </span>
+            </div>
+            <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4">
+                <p className="text-gray-400 text-xs mb-4">
+                    Get instant alerts when your team adds expenses, updates plans, or settles debts.
+                </p>
+                <div className="flex gap-3">
+                    <button
+                        onClick={handleEnable}
+                        disabled={isLoading || isSubscribed}
+                        className={`flex-1 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors ${isSubscribed ? 'bg-tactical-accent text-black cursor-default' : 'bg-tactical-accent/10 border border-tactical-accent/50 text-tactical-accent hover:bg-tactical-accent hover:text-black'}`}
+                    >
+                        {isSubscribed ? '✓ Enabled' : 'Enable Notifications'}
+                    </button>
+                    <button
+                        onClick={handleDisable}
+                        disabled={isLoading || !isSubscribed}
+                        className={`px-4 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors ${!isSubscribed ? 'border border-gray-500/30 text-gray-500 cursor-default' : 'border border-red-500/30 text-red-500 hover:bg-red-500/10'}`}
+                    >
+                        Disable Alerts
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 interface NomadProfileProps {
     user: Member;
@@ -331,31 +396,7 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                     </div>
 
                     {/* Push Notifications */}
-                    <div>
-                        <div className="flex items-center gap-2 text-tactical-accent mb-3">
-                            <NetworkIcon className="w-5 h-5" />
-                            <span className="font-display font-bold uppercase tracking-wider text-sm">Push Notifications</span>
-                        </div>
-                        <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4">
-                            <p className="text-gray-400 text-xs mb-4">
-                                Get instant alerts when your team adds expenses, updates plans, or settles debts.
-                            </p>
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => NotificationManager.requestPermission()}
-                                    className="flex-1 bg-tactical-accent/10 border border-tactical-accent/50 text-tactical-accent hover:bg-tactical-accent hover:text-black py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors"
-                                >
-                                    Enable Notifications
-                                </button>
-                                <button
-                                    onClick={() => NotificationManager.unsubscribe()}
-                                    className="px-4 border border-red-500/30 text-red-500 hover:bg-red-500/10 py-2 rounded text-[10px] font-bold uppercase tracking-widest transition-colors"
-                                >
-                                    Disable Alerts
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <PushNotificationSection />
 
                     {/* Recent Hits */}
                     <div>

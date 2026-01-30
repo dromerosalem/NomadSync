@@ -6,7 +6,7 @@ import { getCurrencySymbol } from '../utils/currencyUtils';
 import MissionGlobe from './MissionGlobe';
 import TacticalImage from './TacticalImage';
 import { NotificationManager } from '../services/NotificationManager';
-import { BedIcon, BellIcon, CameraIcon, ChevronLeftIcon, EyeOffIcon, GlobeIcon, MapPinIcon, PlusIcon, TrainIcon, UsersIcon, UtensilsIcon, WalletIcon } from './Icons';
+import { BedIcon, BellIcon, BellOffIcon, CameraIcon, ChevronLeftIcon, EyeOffIcon, GlobeIcon, MapPinIcon, PlusIcon, TrainIcon, UsersIcon, UtensilsIcon, WalletIcon } from './Icons';
 
 const ExpandableDetails: React.FC<{
   details: string,
@@ -404,12 +404,28 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [showGlobe, setShowGlobe] = useState(false);
   const [permissionState, setPermissionState] = useState<NotificationPermission>(Notification.permission);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   React.useEffect(() => {
     if ('Notification' in window) {
       setPermissionState(Notification.permission);
+      NotificationManager.isSubscribed().then(setIsSubscribed);
     }
   }, []);
+
+  const handleToggleNotifications = async () => {
+    if (isSubscribed) {
+      await NotificationManager.unsubscribe();
+      setIsSubscribed(false);
+    } else {
+      const permission = await NotificationManager.requestPermission();
+      setPermissionState(permission);
+      if (permission === 'granted') {
+        const subbed = await NotificationManager.isSubscribed();
+        setIsSubscribed(subbed);
+      }
+    }
+  };
 
   // REAL-TIME SYNC: Listen for changes to itinerary_items
   React.useEffect(() => {
@@ -519,11 +535,11 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
               <UsersIcon className="w-4 h-4" />
             </button>
             <button
-              onClick={() => NotificationManager.requestPermission().then(p => setPermissionState(p))}
-              className={`p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg transition-all ${permissionState === 'granted' ? 'text-tactical-accent border-tactical-accent/50' : 'text-gray-400 hover:text-white hover:border-tactical-accent'}`}
-              title={permissionState === 'granted' ? 'Notifications Active' : 'Enable Notifications'}
+              onClick={handleToggleNotifications}
+              className={`p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg transition-all ${isSubscribed ? 'text-tactical-accent border-tactical-accent/50' : 'text-gray-500 hover:text-white hover:border-tactical-muted'}`}
+              title={isSubscribed ? 'Notifications Active' : 'Enable Notifications'}
             >
-              <BellIcon className="w-4 h-4" />
+              {isSubscribed ? <BellIcon className="w-4 h-4" /> : <BellOffIcon className="w-4 h-4" />}
             </button>
             {canEdit && (
               <button onClick={onEditTrip} className="p-2 bg-tactical-card border border-tactical-muted/30 rounded-lg text-gray-400 hover:text-white hover:border-tactical-accent transition-all">

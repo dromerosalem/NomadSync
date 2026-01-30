@@ -121,9 +121,6 @@ const App: React.FC = () => {
 
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Request persistent storage early
-      persistenceService.requestPersistence();
-
       if (session) {
         setIsAuthenticated(true);
         const user = session.user;
@@ -137,6 +134,9 @@ const App: React.FC = () => {
           status: 'ACTIVE'
         };
         setCurrentUser(mappedUser);
+
+        // Request persistent storage AFTER user is authenticated (user interaction context)
+        persistenceService.requestPersistence();
 
         // Check params again here for immediate logged-in load
         const immediateParams = new URLSearchParams(window.location.search);

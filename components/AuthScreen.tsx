@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { GoogleIcon, LightningIcon } from './Icons';
 import { supabase } from '../services/supabaseClient';
+import { persistenceService } from '../services/persistenceService';
 
 // Lazy load the 3D Globe for performance
 const AuthGlobe = React.lazy(() => import('./AuthGlobe'));
@@ -76,6 +77,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
             if (result.error) throw result.error;
 
             if (result.data.user) {
+                // Request persistent storage immediately after successful login (user interaction)
+                persistenceService.requestPersistence();
+
                 onAuthSuccess({
                     name: result.data.user.user_metadata.full_name || name || normalizedEmail.split('@')[0],
                     email: normalizedEmail

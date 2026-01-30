@@ -668,15 +668,9 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                 </div>
               </div>
 
-              {/* Middle Section: Extracted Intel using Grid */}
-              <div className="bg-black/15 rounded-xl p-5 border border-white/5">
-                <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-4 border-b border-white/10 pb-2">Scanned Extraction Data</label>
-                <IntelGrid details={details} type={type} />
-              </div>
-
-              {/* Bottom Section: Full-Width Manual Override */}
+              {/* Unified Input Section */}
               <div className="bg-white/5 rounded-xl p-5 border border-white/10">
-                <label className="text-[10px] font-bold text-white/40 uppercase block mb-3 tracking-widest">Manual Override / Extraction Notes</label>
+                <label className="text-[10px] font-bold text-white/40 uppercase block mb-3 tracking-widest">Flight Details & Notes</label>
                 <textarea
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
@@ -696,13 +690,8 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
               <BedIcon className="w-5 h-5 text-tactical-accent animate-pulse" />
             </div>
             <div className="p-6 space-y-8">
-              <div className="bg-black/20 rounded-xl p-5 border border-tactical-accent/10">
-                <label className="text-[10px] font-bold text-tactical-accent/60 uppercase tracking-widest block mb-4">Confirmed Details</label>
-                <IntelGrid details={details} type={type} />
-              </div>
-
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block ml-1">Mission Log / Reservations</label>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block ml-1">Booking Details & Notes</label>
                 <textarea
                   value={details}
                   onChange={(e) => setDetails(e.target.value)}
@@ -717,13 +706,9 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         {/* OTHER TYPES */}
         {type !== ItemType.TRANSPORT && type !== ItemType.STAY && (
           <div className="space-y-6 mt-8">
-            <div className="bg-tactical-card border border-tactical-muted/20 rounded-2xl p-6 shadow-xl">
-              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-4 border-b border-tactical-muted/10 pb-2">Analysis Results</label>
-              <IntelGrid details={details} type={type} />
-            </div>
             <div className="space-y-3">
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block ml-1">
-                {type === ItemType.FOOD ? 'Refueling Logistics' : 'Mission Reconnaissance'}
+                {type === ItemType.FOOD ? 'Meal Details & Notes' : 'Activity Details & Notes'}
               </label>
               <textarea
                 value={details}
