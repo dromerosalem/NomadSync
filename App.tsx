@@ -820,6 +820,7 @@ const App: React.FC = () => {
 
         {isAuthenticated && view === 'DASHBOARD' && (
           <Dashboard
+            user={currentUser}
             trips={trips}
             isLoading={isLoading}
             onSelectTrip={(trip) => {

@@ -538,41 +538,48 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
 
         <button
           onClick={onNavigateBudget}
-          className="w-full mt-2 mb-1 bg-gradient-to-r from-[#1A1A18] to-[#0F0F0E] border border-tactical-muted/30 rounded-xl p-4 flex items-center justify-between group active:scale-[0.98] transition-all hover:border-tactical-accent/50 cursor-pointer"
+          className="w-full mt-2 mb-1 bg-gradient-to-r from-[#1A1A18] to-[#0F0F0E] border border-tactical-muted/30 rounded-xl overflow-hidden transition-all hover:border-tactical-accent/50 group active:scale-[0.98] text-left"
         >
-          {/* Left: Wallet Info */}
-          <div className="flex flex-col items-start">
-            <div className="flex items-center gap-2 mb-1.5">
-              <div className="p-1.5 rounded-lg bg-tactical-accent/20 text-tactical-accent">
-                <WalletIcon className="w-4 h-4" />
+          <div className="p-4 flex items-center justify-between">
+            {/* Left: Wallet Info */}
+            <div className="flex flex-col items-start">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="p-1.5 rounded-lg bg-tactical-accent/20 text-tactical-accent group-hover:bg-tactical-accent/30 transition-colors">
+                  <WalletIcon className="w-4 h-4" />
+                </div>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-tactical-accent transition-colors">Mission Wallet</span>
               </div>
-              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-tactical-accent transition-colors">Mission Wallet</span>
+              <div className="font-mono text-xl text-white leading-none">
+                <span className={remainingBudget < 0 ? "text-red-500 font-bold" : "text-white font-bold"}>
+                  {getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalCost.toFixed(0)}
+                </span>
+                <span className="text-gray-600 text-sm mx-1.5">/</span>
+                <span className="text-gray-500 text-sm">{getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}</span>
+              </div>
             </div>
-            <div className="font-mono text-xl text-white leading-none">
-              <span className={remainingBudget < 0 ? "text-red-500 font-bold" : "text-white font-bold"}>
-                {getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalCost.toFixed(0)}
-              </span>
-              <span className="text-gray-600 text-sm mx-1.5">/</span>
-              <span className="text-gray-500 text-sm">{getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}</span>
+
+            {/* Right: Progress */}
+            <div className="flex items-center gap-3 pl-4">
+              <div className="flex flex-col items-end gap-1.5">
+                <span className={`text-[9px] font-black uppercase tracking-widest ${remainingBudget < 0 ? 'text-red-500' : 'text-tactical-accent'}`}>
+                  {remainingBudget < 0 ? 'OVER BUDGET' : 'AVAILABLE'}
+                </span>
+                <div className="w-28 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${remainingBudget < 0 ? 'bg-red-500' : 'bg-tactical-accent'}`}
+                    style={{ width: userBudget > 0 ? `${Math.min((myTotalCost / userBudget) * 100, 100)}%` : '0%' }}
+                  ></div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Right: Progress & Chevron */}
-          <div className="flex items-center gap-3 pl-4">
-            <div className="flex flex-col items-end gap-1.5">
-              <span className={`text-[9px] font-black uppercase tracking-widest ${remainingBudget < 0 ? 'text-red-500' : 'text-tactical-accent'}`}>
-                {remainingBudget < 0 ? 'OVER BUDGET' : 'AVAILABLE'}
-              </span>
-              <div className="w-28 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${remainingBudget < 0 ? 'bg-red-500' : 'bg-tactical-accent'}`}
-                  style={{ width: userBudget > 0 ? `${Math.min((myTotalCost / userBudget) * 100, 100)}%` : '0%' }}
-                ></div>
-              </div>
-            </div>
-            {/* Chevron indicator */}
-            <svg className="w-5 h-5 text-tactical-accent/50 group-hover:text-tactical-accent group-hover:translate-x-1 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          <div
+            className="w-full py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest group-hover:text-white group-hover:bg-white/5 flex items-center justify-between px-4 border-t border-tactical-muted/10 transition-all"
+          >
+            <span>Budget Engine</span>
+            <svg className="w-4 h-4 text-tactical-accent border border-tactical-accent/30 rounded p-0.5 group-hover:bg-tactical-accent group-hover:text-black transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="m9 18 6-6-6-6" />
             </svg>
           </div>
         </button>

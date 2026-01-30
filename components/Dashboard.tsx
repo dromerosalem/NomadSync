@@ -1,11 +1,12 @@
 
 import React from 'react';
-import { Trip } from '../types';
+import { Trip, Member } from '../types';
 import { MenuIcon, BellIcon, GridIcon, GlobeIcon, SendIcon, UserIcon, MapPinIcon, PlusIcon, WalletIcon } from './Icons';
 import { getMissionCover, sanitizeAsset } from '../utils/assetUtils';
 import AtmosphericGradient from './AtmosphericGradient';
 
 interface DashboardProps {
+    user: Member;
     trips: Trip[];
     isLoading: boolean;
     onSelectTrip: (trip: Trip) => void;
@@ -13,7 +14,7 @@ interface DashboardProps {
     onNavigateProfile: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, onCreateTrip, onNavigateProfile }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectTrip, onCreateTrip, onNavigateProfile }) => {
 
     const getStatusStyle = (status?: string) => {
         switch (status) {
@@ -73,18 +74,11 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                 </div>
             )}
             {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-20">
-                <button className="text-white hover:text-tactical-accent transition-colors">
-                    <MenuIcon className="w-6 h-6" />
-                </button>
+            <header className="px-6 py-4 flex items-center justify-center sticky top-0 bg-tactical-bg z-20">
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-tactical-accent animate-pulse'}`}></div>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'SYSTEM ONLINE'}</span>
                 </div>
-                <button className="text-white hover:text-tactical-accent transition-colors relative">
-                    <BellIcon className="w-6 h-6" />
-                    <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500"></div>
-                </button>
             </header>
 
             {/* Title Section */}
@@ -93,7 +87,7 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                     COMMAND<br /><span className="text-tactical-accent">CENTER</span>
                 </h1>
                 <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                    OPERATIVE: NOMAD_01
+                    OPERATIVE: {user.name.toUpperCase()}
                 </p>
             </div>
 
@@ -130,11 +124,6 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
                             <div className="w-1.5 h-1.5 rounded-full bg-tactical-accent animate-pulse"></div>
                             <span className="text-[8px] font-mono text-tactical-accent uppercase tracking-widest animate-pulse">Establishing Secure Connection...</span>
                         </div>
-                    )}
-                    {!isLoading && (
-                        <button className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest hover:text-white transition-colors">
-                            VIEW ARCHIVE
-                        </button>
                     )}
                 </div>
 
@@ -249,14 +238,10 @@ const Dashboard: React.FC<DashboardProps> = ({ trips, isLoading, onSelectTrip, o
             </div>
 
             {/* Bottom Navigation */}
-            <div className="fixed bottom-0 left-0 right-0 bg-[#0F0F0E] border-t border-tactical-muted/10 px-6 py-3 flex justify-between items-center z-50 md:max-w-2xl lg:max-w-4xl mx-auto w-full">
+            <div className="fixed bottom-0 left-0 right-0 bg-[#0F0F0E] border-t border-tactical-muted/10 px-12 py-3 flex justify-around items-center z-50 md:max-w-2xl lg:max-w-4xl mx-auto w-full">
                 <button className="flex flex-col items-center gap-1 text-tactical-accent">
                     <GridIcon className="w-5 h-5" />
                     <span className="text-[9px] font-bold uppercase tracking-widest">Base</span>
-                </button>
-                <button className="flex flex-col items-center gap-1 text-gray-500 hover:text-white transition-colors">
-                    <SendIcon className="w-5 h-5" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest">Comms</span>
                 </button>
                 <button
                     onClick={onNavigateProfile}

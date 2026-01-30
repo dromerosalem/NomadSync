@@ -393,25 +393,38 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 </div>
 
                 {/* 3. Group Total */}
-                <div className="bg-black/40 border border-tactical-muted/20 rounded-xl p-5 mb-8 flex justify-between items-center">
-                    <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Group Burn</span>
+                {(() => {
+                    const groupTotalBudget = trip.members.reduce((sum, m) => sum + (m.budget || 0), 0);
+                    const groupBurnRate = groupTotalBudget > 0 ? (groupTotalSpend / groupTotalBudget) * 100 : 0;
+                    const isOverGroupBudget = groupTotalSpend > groupTotalBudget;
+
+                    return (
+                        <div className="bg-black/40 border border-tactical-muted/20 rounded-xl p-5 mb-8 flex justify-between items-center">
+                            <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Group Burn</span>
+                                </div>
+                                <div className="flex items-baseline gap-2">
+                                    <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalSpend.toFixed(0)}</span>
+                                    <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalBudget.toLocaleString()}</span>
+                                </div>
+                                <div className="h-1 w-24 bg-gray-800 rounded-full mt-2 overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all duration-700 ${isOverGroupBudget ? 'bg-red-600' : 'bg-white/30'}`}
+                                        style={{ width: `${Math.min(groupBurnRate, 100)}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Group Status</div>
+                                <div className={`font-bold text-sm ${isOverGroupBudget ? 'text-red-500' : 'text-green-500'}`}>
+                                    {isOverGroupBudget ? 'Over Budget' : 'On Track'}
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex items-baseline gap-2">
-                            <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalSpend.toFixed(0)}</span>
-                            <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}5,000</span>
-                        </div>
-                        <div className="h-1 w-24 bg-gray-800 rounded-full mt-2 overflow-hidden">
-                            <div className="h-full bg-white/30 w-1/2"></div>
-                        </div>
-                    </div>
-                    <div className="text-right">
-                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Group Status</div>
-                        <div className="font-bold text-white text-sm">On Track</div>
-                    </div>
-                </div>
+                    );
+                })()}
 
                 {/* 4. Ledger / Recent Transactions */}
                 <div className="mb-8">

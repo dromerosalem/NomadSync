@@ -1,11 +1,11 @@
 import React, { useMemo } from 'react';
-import { sanitizeAsset } from '../utils/assetUtils';
 import { Member, Trip, ItemType } from '../types';
 import { ChevronLeftIcon, GearIcon, SwordsIcon, NetworkIcon, WalletIcon, ListCheckIcon, EditIcon, PlusIcon, MapPinIcon, CompassIcon, WalkIcon } from './Icons';
-import TacticalImage from './TacticalImage';
+import AtmosphericGradient from './AtmosphericGradient';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { NotificationManager } from '../services/NotificationManager';
 import { calculateAchievements, calculateProfileLevel } from '../services/achievementService';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 interface NomadProfileProps {
     user: Member;
@@ -16,6 +16,8 @@ interface NomadProfileProps {
 }
 
 const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCreateMission, onSignOut }) => {
+    // Network status detection
+    const isOnline = useNetworkStatus();
 
     // --- REAL-TIME ANALYTICS ---
     const stats = useMemo(() => {
@@ -141,7 +143,7 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                     onClick={onSignOut}
                     className="text-red-500 hover:text-red-400 font-display font-bold text-[10px] uppercase tracking-widest border border-red-500/30 px-2 py-1 rounded"
                 >
-                    Terminate
+                    Sign Out
                 </button>
             </header>
 
@@ -178,8 +180,10 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                         <span className="text-gray-400 font-bold uppercase text-[10px] tracking-widest">{profileProgress.title}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                        <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]"></div>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">STATUS: ACTIVE</span>
+                        <div className={`w-2 h-2 rounded-full transition-colors ${isOnline ? 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]' : 'bg-orange-500 shadow-[0_0_5px_rgba(249,115,22,0.8)]'}`}></div>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                            STATUS: {isOnline ? 'ACTIVE' : 'OFFLINE'}
+                        </span>
                     </div>
                 </div>
 
@@ -215,9 +219,6 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                                 <NetworkIcon className="w-5 h-5" />
                                 <span className="font-display font-bold uppercase tracking-wider text-sm">Skill Tree</span>
                             </div>
-                            {achievements.length > 3 && (
-                                <button className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white">View All</button>
-                            )}
                         </div>
 
                         {unlockedAchievements.length === 0 ? (
@@ -296,7 +297,7 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                             <span className="font-display font-bold uppercase tracking-wider text-sm">Financial Honor</span>
                         </div>
                         <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-0 overflow-hidden">
-                            <div className="flex border-b border-tactical-muted/10">
+                            <div className="flex">
                                 <div className="flex-1 p-4 border-r border-tactical-muted/10">
                                     <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">Debts Settled</div>
                                     <div className="font-display text-xl font-bold text-white">${stats.settled.toLocaleString()}</div>
@@ -316,10 +317,6 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                                     </div>
                                 </div>
                             </div>
-                            <button className="w-full py-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-white hover:bg-white/5 flex items-center justify-between px-4">
-                                <span>View Ledger History</span>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                            </button>
                         </div>
                     </div>
 
@@ -358,12 +355,13 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                         </div>
                         <div className="space-y-3">
                             {completedTrips.length > 0 ? completedTrips.slice(0, 3).map(trip => (
-                                <div key={trip.id} className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-3 flex items-center gap-4">
-                                    <TacticalImage
-                                        src={sanitizeAsset(trip.coverImage, trip.id)}
-                                        alt={trip.name}
-                                        className="w-12 h-12 rounded-lg grayscale opacity-70"
-                                    />
+                                <div key={trip.id} className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-3 flex items-center gap-4 active:bg-white/5 transition-colors cursor-pointer" onClick={() => {/* TODO: Navigate to trip */ }}>
+                                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-white/5 shadow-inner">
+                                        <AtmosphericGradient
+                                            trip={trip}
+                                            className="w-full h-full scale-150"
+                                        />
+                                    </div>
                                     <div className="flex-1">
                                         <div className="font-display font-bold text-white uppercase text-sm">{trip.name}</div>
                                         <div className="text-xs text-gray-500">{trip.destination} • {new Date(trip.endDate).toLocaleDateString()}</div>
