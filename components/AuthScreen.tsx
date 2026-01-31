@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleIcon, LightningIcon } from './Icons';
 import { supabase } from '../services/supabaseClient';
 import { persistenceService } from '../services/persistenceService';
@@ -23,15 +23,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
     const [key, setKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    // NOTE: Google One Tap is DISABLED.
-    // It causes 403 errors when the origin (e.g., localhost or your dev IP) is not
-    // explicitly whitelisted in the Google Cloud Console for the Client ID.
-    // These 403 errors corrupt browser networking state on iOS Safari, causing
-    // subsequent OAuth attempts to fail with "Network connection was lost".
-    // The standard "Continue with Google" OAuth flow (handleGoogleAuth) works correctly.
-    // To re-enable One Tap, register all allowed origins in Google Cloud Console -> Credentials.
-
-    const handleGoogleCredentialResponse = async (response: any) => {
+    const handleGoogleCredentialResponse = useCallback(async (response: any) => {
         setIsLoading(true);
         try {
             const { data, error } = await supabase.auth.signInWithIdToken({
@@ -52,7 +44,31 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [onAuthSuccess]);
+
+    // Google One Tap Implementation
+    useEffect(() => {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            console.warn('Google Client ID missing from HQ (env). One Tap offline.');
+            return;
+        }
+
+        const google = (window as any).google;
+        if (google && google.accounts && google.accounts.id) {
+            google.accounts.id.initialize({
+                client_id: clientId,
+                callback: handleGoogleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true,
+            });
+
+            // Fire One Tap prompt on Landing
+            if (mode === 'LANDING') {
+                google.accounts.id.prompt();
+            }
+        }
+    }, [mode, handleGoogleCredentialResponse]);
 
     const handleDeploy = async () => {
         setIsLoading(true);
