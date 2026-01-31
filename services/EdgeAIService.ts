@@ -55,6 +55,7 @@ export async function analyzeReceiptViaEdge(
         // AND generate unique IDs for receiptItems (matching original service behavior)
         const processedItems = data.items?.map((item: any) => ({
             ...item,
+            id: undefined, // CRITICAL: Ensure ID is undefined so UI treats this as a NEW item (Add Mode), not an Edit.
             startDate: item.startDate ? new Date(item.startDate) : undefined,
             endDate: item.endDate ? new Date(item.endDate) : undefined,
             originalAmount: item.cost, // Ensure originalAmount is set

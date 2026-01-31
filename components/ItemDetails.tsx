@@ -252,7 +252,7 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
                             <div className="text-right shrink-0 ml-4">
                               <div className="font-mono text-white">
                                 {item.currencyCode ? getCurrencySymbol(item.currencyCode) : getCurrencySymbol(baseCurrency)}
-                                {rItem.price.toFixed(2)}
+                                {(rItem.price || 0).toFixed(2)}
                               </div>
                               <div className="text-[9px] text-gray-600 uppercase">{rItem.quantity}x • {rItem.type}</div>
                             </div>

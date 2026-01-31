@@ -206,20 +206,20 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                     isQuote={false}
                   />
                 )}
-                {item.endLocation && item.endDate ? (
-                  <div className="flex items-center justify-between relative z-10">
+                {item.endDate ? (
+                  <div className="flex items-center justify-between relative z-10 mt-2">
                     <div>
-                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Departs</div>
-                      <div className="text-xl font-display font-bold text-white leading-none mb-1">{getTime(startDate)}</div>
+                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Departure</div>
+                      <div className="text-xl font-mono font-bold text-tactical-accent leading-none mb-1">{getTime(startDate)}</div>
                       <div className="text-xs text-gray-400 font-medium">{item.location}</div>
                     </div>
                     <div className="text-tactical-accent px-2 flex flex-col items-center justify-center opacity-80">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                     </div>
                     <div className="text-right">
-                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Arrives</div>
-                      <div className="text-xl font-display font-bold text-white leading-none mb-1">{getTime(new Date(item.endDate))}</div>
-                      <div className="text-xs text-gray-400 font-medium">{item.endLocation}</div>
+                      <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Arrival</div>
+                      <div className="text-xl font-mono font-bold text-tactical-accent leading-none mb-1">{getTime(new Date(item.endDate))}</div>
+                      <div className="text-xs text-gray-400 font-medium">{item.endLocation || ''}</div>
                     </div>
                   </div>
                 ) : (

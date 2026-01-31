@@ -99,6 +99,12 @@ const buildGeminiLitePrompt = (tripStartDate?: string) => {
        4. QUANTITY VALIDATION:
           - If a "×" or "x" appears (e.g., "3 × 15.00"), the second number is unit price
           - If just one number after quantity, CHECK if it matches subtotal math
+
+        5. TRANSPORT LOCATION RULES (CRITICAL):
+           - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
+           - DO NOT put "Origin to Destination" in a single field.
+           - 'location' = Origin (City/Airport/Station)
+           - 'endLocation' = Destination (City/Airport/Station)
        
        ═══════════════════════════════════════════════════════════════════════
        DATA EXTRACTION RULES:
@@ -129,8 +135,11 @@ const buildGeminiLitePrompt = (tripStartDate?: string) => {
            {
              "type": "STAY"|"TRANSPORT"|"ACTIVITY"|"FOOD"|"ESSENTIALS"|"SETTLEMENT",
              "title": "String (Intelligent Summary)",
-             "location": "String (City/Address)",
+             "location": "String (Origin for Transport, else Merchant Address)",
+              "endLocation": "String (Destination for Transport only)",
              "startDate": "ISO String",
+             "endDate": "ISO String", // Arrival time
+             "durationMinutes": Number, 
              "cost": Number, // TOTAL amount for entire order (FINAL PAID AMOUNT)
              "currencyCode": "String", // 3-letter ISO code
              "details": "String (Rich summary with Order #, breakdown)",
@@ -236,6 +245,11 @@ const buildGeminiPremiumPrompt = (tripStartDate?: string) => {
           but the 'cost' should be the FINAL PAID AMOUNT (after deposit deduction)
        3. TAXES: Usually included in prices, don't extract tax breakdown lines
        4. DISCOUNTS/VOUCHERS: Account for these when validating totals
+
+        5. TRANSPORT LOCATION RULES (CRITICAL):
+           - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
+           - 'location' = Origin (City/Airport/Station)
+           - 'endLocation' = Destination (City/Airport/Station)
        
        ═══════════════════════════════════════════════════════════════════════
        OUTPUT SCHEMA:
@@ -248,8 +262,11 @@ const buildGeminiPremiumPrompt = (tripStartDate?: string) => {
            {
              "type": "STAY"|"TRANSPORT"|"ACTIVITY"|"FOOD"|"ESSENTIALS",
              "title": "Merchant Name",
-             "location": "City/Address",
+             "location": "String (Origin for Transport, else Merchant Address)",
+              "endLocation": "String (Destination for Transport only)",
              "startDate": "ISO String",
+             "endDate": "ISO String", // Arrival time
+             "durationMinutes": Number,
              "cost": Number,  // FINAL PAID AMOUNT (after deposits/discounts)
              "currencyCode": "EUR",
              "details": "Include deposit info, vouchers, any adjustments",
@@ -362,6 +379,11 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
         4. TRANSCRIPTION RULES:
            - Do NOT divide values by 100 or 10
            - For CRC, JPY, KRW: 6000 means 6000, NOT 60
+
+        5. TRANSPORT LOCATION RULES (CRITICAL):
+           - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
+           - 'location' = Origin (City/Airport/Station)
+           - 'endLocation' = Destination (City/Airport/Station)
         
         ═══════════════════════════════════════════════════════════════════════
         TAX HANDLING (CRITICAL):
@@ -384,8 +406,10 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
             {
               "type": "STAY" | "TRANSPORT" | "ACTIVITY" | "FOOD" | "ESSENTIALS",
               "title": "Vendor/Event Name",
-              "location": "City/Address",
+              "location": "String (Origin for Transport, else Merchant Address)",
+              "endLocation": "String (Destination for Transport only)",
               "startDate": "YYYY-MM-DDTHH:mm",
+              "endDate": "YYYY-MM-DDTHH:mm", // Arrival time for transport
               "cost": 0.0,  // FINAL PAID AMOUNT (after deposits/discounts)
               "currencyCode": "String",  // 3-letter ISO code
               "details": "Rich summary with Order #, breakdown, metadata",

@@ -731,7 +731,7 @@ const App: React.FC = () => {
           .map(m => m.id);
 
         itemToSave = {
-          id: itemData.id || '', // tripService handles new vs update
+          id: '', // FORCE INSERT: tripService treats empty string as "New Item". itemData.id from scanner is temporary.
           tripId: currentTrip.id,
           type: itemData.type || selectedItemType || ItemType.ACTIVITY,
           title: itemData.title || 'Untitled',
