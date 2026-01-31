@@ -248,11 +248,6 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                   <theme.icon className="w-32 h-32 text-white" />
                 </div>
 
-                <TacticalImage
-                  src={getMissionCover(item.id)}
-                  alt={item.title}
-                  className={`absolute inset-0 w-full h-full object-cover mix-blend-overlay ${item.isPrivate ? 'opacity-20 grayscale' : 'opacity-40'}`}
-                />
                 <div className="absolute inset-0 bg-gradient-to-t from-tactical-card via-transparent to-black/20"></div>
 
                 <div className="absolute bottom-3 left-4 z-10 flex flex-col gap-1">
@@ -315,7 +310,6 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                 <div className="absolute -bottom-6 -right-6 opacity-30 transform -rotate-12 pointer-events-none">
                   <theme.icon className="w-32 h-32 text-white" />
                 </div>
-                <TacticalImage src={getMissionCover(item.id)} alt={item.title} className={`absolute inset-0 w-full h-full object-cover mix-blend-overlay ${item.isPrivate ? 'opacity-20 grayscale' : 'opacity-40'}`} />
                 <div className="absolute inset-0 bg-gradient-to-t from-tactical-card via-transparent to-black/20"></div>
                 <div className="absolute bottom-3 left-4 z-10 flex flex-col gap-1">
                   <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] ${theme.color}`}>
@@ -366,7 +360,6 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                 <div className="absolute -bottom-6 -right-6 opacity-30 transform -rotate-12 pointer-events-none">
                   <theme.icon className="w-32 h-32 text-white" />
                 </div>
-                <TacticalImage src={getMissionCover(item.id)} alt={item.title} className={`absolute inset-0 w-full h-full object-cover mix-blend-overlay ${item.isPrivate ? 'opacity-20 grayscale' : 'opacity-40'}`} />
                 <div className="absolute inset-0 bg-gradient-to-t from-tactical-card via-transparent to-black/20"></div>
                 <div className="absolute bottom-3 left-4 z-10 flex flex-col gap-1">
                   <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] ${theme.color}`}>
