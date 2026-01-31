@@ -5,26 +5,20 @@ const ASSETS_TO_CACHE = [
     '/index.html',
     '/manifest.json',
     '/logo.png',
-    '/index.css',
-    '/assets/vibes/explorer.png',
-    '/assets/vibes/relaxer.png',
-    '/assets/vibes/foodie.png',
-    '/assets/vibes/urbanite.png',
-    '/assets/vibes/journey.png',
-    '/assets/vibes/digital_nomad.png',
-    '/assets/vibes/minimalist.png',
-    '/assets/vibes/social.png',
-    '/assets/vibes/nature.png',
-    '/assets/vibes/ocean.png',
-    '/assets/vibes/culture.png',
-    '/assets/vibes/night.png'
+    '/splash.png'
 ];
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
-            return cache.addAll(ASSETS_TO_CACHE);
+            console.log('[SW] Pre-caching core assets...');
+            // Be resilient: try to add all, but don't fail if some are missing
+            return Promise.allSettled(
+                ASSETS_TO_CACHE.map(url =>
+                    cache.add(url).catch(err => console.warn(`[SW] Failed to cache ${url}:`, err))
+                )
+            );
         })
     );
 });
