@@ -1,6 +1,6 @@
 
 
-export type ViewState = 'AUTH' | 'DASHBOARD' | 'CREATE' | 'TIMELINE' | 'ADD_ITEM' | 'ITEM_FORM' | 'EDIT_TRIP' | 'ITEM_DETAILS' | 'MANAGE_TEAM' | 'INVITE_MEMBER' | 'PROFILE' | 'BUDGET' | 'LOG_EXPENSE' | 'LEDGER' | 'JOIN_MISSION' | 'GLOBAL_LEDGER' | 'PRIVACY' | 'TERMS';
+export type ViewState = 'AUTH' | 'DASHBOARD' | 'CREATE' | 'TIMELINE' | 'ADD_ITEM' | 'ITEM_FORM' | 'EDIT_TRIP' | 'ITEM_DETAILS' | 'MANAGE_TEAM' | 'INVITE_MEMBER' | 'PROFILE' | 'BUDGET' | 'LOG_EXPENSE' | 'LEDGER' | 'JOIN_MISSION' | 'GLOBAL_LEDGER' | 'PRIVACY' | 'TERMS' | 'ONBOARDING';
 
 
 export enum ItemType {
@@ -24,6 +24,7 @@ export interface Member {
   status?: 'ACTIVE' | 'BLOCKED' | 'PENDING';
   budget?: number; // Personal budget for the trip
   pendingPastExpensesInvitation?: boolean; // Flag for late joiners invited to share past expenses
+  onboardingCompleted?: boolean;
 }
 
 export interface ReceiptItem {
