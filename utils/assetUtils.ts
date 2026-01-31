@@ -10,7 +10,6 @@ const MISSION_COVERS = [
     '/assets/vibes/foodie.png',
     '/assets/vibes/urbanite.png',
     '/assets/vibes/journey.png',
-    '/assets/vibes/digital_nomad.png',
     '/assets/vibes/minimalist.png',
     '/assets/vibes/social.png',
     '/assets/vibes/nature.png',

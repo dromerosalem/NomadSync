@@ -148,8 +148,11 @@ self.addEventListener('push', (event) => {
         renotify: true
     };
 
+    console.log('[SW] Showing notification:', title, options);
     event.waitUntil(
         self.registration.showNotification(title || 'NomadSync', options)
+            .then(() => console.log('[SW] Notification displayed successfully'))
+            .catch(err => console.error('[SW] Notification display failed:', err))
     );
 });
 

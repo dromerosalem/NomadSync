@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ItemType, ItineraryItem, Member } from '../types';
 import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, WalletIcon } from './Icons';
 import PlaceAutocomplete from './PlaceAutocomplete';
+import TacticalDatePicker from './TacticalDatePicker';
 import { sanitizeAsset } from '../utils/assetUtils';
 
 import CurrencySelector from './CurrencySelector';
@@ -512,27 +513,19 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         {/* Date / Time */}
         <div className="grid grid-cols-2 gap-4 border-t border-b border-tactical-muted/10 py-6">
           <div>
-            <label className="text-[10px] font-bold text-tactical-muted uppercase tracking-widest border-l-2 border-tactical-accent pl-2 mb-2 block">
-              {type === ItemType.TRANSPORT ? 'Departure' : 'Infiltration'}
-            </label>
-            <input
-              type="datetime-local"
+            <TacticalDatePicker
+              label={type === ItemType.TRANSPORT ? 'Departure' : 'Infiltration'}
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="bg-tactical-card text-white text-sm p-2 rounded w-full border border-tactical-muted/30 focus:border-tactical-accent outline-none"
+              onChange={(date) => setStartDate(formatDateForInput(date))}
             />
           </div>
 
           {(type === ItemType.STAY || type === ItemType.TRANSPORT) && (
             <div>
-              <label className="text-[10px] font-bold text-tactical-muted uppercase tracking-widest border-l-2 border-tactical-muted pl-2 mb-2 block">
-                {type === ItemType.TRANSPORT ? 'Arrival' : 'Extraction'}
-              </label>
-              <input
-                type="datetime-local"
+              <TacticalDatePicker
+                label={type === ItemType.TRANSPORT ? 'Arrival' : 'Extraction'}
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-tactical-card text-white text-sm p-2 rounded w-full border border-tactical-muted/30 focus:border-tactical-accent outline-none"
+                onChange={(date) => setEndDate(formatDateForInput(date))}
               />
               {durationMinutes && (
                 <div className="mt-2 text-[10px] text-tactical-accent font-bold uppercase tracking-wider flex items-center gap-1">
