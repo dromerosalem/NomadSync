@@ -110,11 +110,12 @@ const buildGeminiLitePrompt = (tripStartDate?: string) => {
        DATA EXTRACTION RULES:
        ═══════════════════════════════════════════════════════════════════════
 
-        **MULTI-ITEM EXTRACTION**: 
-        - If the document contains multiple distinct events (e.g. Outbound + Return Flight), extract EACH as a separate object.
-        - **ROUND TRIP RULE**: For "Round Trip" tickets, ALWAYS create two distinct 'TRANSPORT' objects. 
-        - **COST SPLITTING**: If only a single total 'cost' is found for the round trip, divide it 50/50 between the two objects.
-        - **SAME EVENT, MULTIPLE TICKETS/ITEMS**: Return ONE object with quantity in receiptItems.
+        **MULTI-ITEM EXTRACTION (CRITICAL)**: 
+        - **ROUND TRIP PARSING**: If the document is a Round Trip (Outbound + Return), extract as **TWO** separate 'TRANSPORT' items (split cost 50/50).
+        - **SAME EVENT MERGING**: If multiple tickets/pages refer to the **SAME EVENT** (e.g. Concert, Tour) on the same date/time, merge them into a **SINGLE** 'ACTIVITY' item.
+            - **SUM THE COSTS**: The item 'cost' must be the SUM of all ticket prices.
+            - **LINE ITEMS**: List each ticket as a separate entry in 'receiptItems'.
+        - **DISTINCT EVENTS**: Only create separate items if the events are truly different (different dates, valid round trips, or different venues).
         - **AGGREGATE COST**: The 'cost' field MUST be the final **TOTAL ORDER AMOUNT**.
 
        **CURRENCY NORMALIZATION (CRITICAL)**:
@@ -257,10 +258,11 @@ const buildGeminiPremiumPrompt = (tripStartDate?: string) => {
        3. TAXES: Usually included in prices, don't extract tax breakdown lines
        4. DISCOUNTS/VOUCHERS: Account for these when validating totals
         
-        **ROUND TRIP RULE (CRITICAL)**:
-        - If the document represents a Round Trip (e.g. Flight Out and Flight Back), you MUST extract them as TWO separate objects in the 'items' array.
-        - Split the total cost 50/50 between the two items unless individual pricing for each leg is clearly visible.
-        - Ensure each leg has its specific 'startDate' and 'endDate' (departure and arrival).
+        **MULTI-ITEM vs SINGLE ITEM (CRITICAL)**:
+        - **ROUND TRIP**: Split into TWO separate 'TRANSPORT' items (Outbound / Return).
+        - **SAME EVENT (e.g. Concert)**: Merge multiple tickets for the SAME event into ONE 'ACTIVITY' item.
+            - Sum all ticket costs into the final 'cost'.
+            - List individual tickets in 'receiptItems'.
 
         5. TRANSPORT LOCATION RULES (CRITICAL):
            - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
@@ -402,9 +404,9 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
            - 'location' = Origin (City/Airport/Station)
            - 'endLocation' = Destination (City/Airport/Station)
 
-        **ROUND TRIP RULE**:
-           - If a "Round Trip" is detected, extract individual legs as separate objects in the 'items' array.
-           - If a single total price is found, divide it by the number of legs.
+        **MULTI-ITEM LOGIC**:
+           - **ROUND TRIP**: Split into TWO items (start/end logic applies to each).
+           - **SAME EVENT**: Merge multiple tickets into ONE item. Sum the costs.
         
         ═══════════════════════════════════════════════════════════════════════
         TAX HANDLING (CRITICAL):
