@@ -110,10 +110,21 @@ const buildGeminiLitePrompt = (tripStartDate?: string) => {
        DATA EXTRACTION RULES:
        ═══════════════════════════════════════════════════════════════════════
 
-       **MULTI-ITEM EXTRACTION**: 
-       - If the document contains multiple distinct events (e.g. Outbound + Return Flight), extract EACH as a separate object.
-       - **SAME EVENT, MULTIPLE TICKETS/ITEMS**: Return ONE object with quantity in receiptItems.
-       - **AGGREGATE COST**: The 'cost' field MUST be the final **TOTAL ORDER AMOUNT**.
+        **MULTI-ITEM EXTRACTION**: 
+        - If the document contains multiple distinct events (e.g. Outbound + Return Flight), extract EACH as a separate object.
+        - **ROUND TRIP RULE**: For "Round Trip" tickets, ALWAYS create two distinct 'TRANSPORT' objects. 
+        - **COST SPLITTING**: If only a single total 'cost' is found for the round trip, divide it 50/50 between the two objects.
+        - **SAME EVENT, MULTIPLE TICKETS/ITEMS**: Return ONE object with quantity in receiptItems.
+        - **AGGREGATE COST**: The 'cost' field MUST be the final **TOTAL ORDER AMOUNT**.
+
+       **CURRENCY NORMALIZATION (CRITICAL)**:
+       - If line items are listed in a different currency (e.g. GBP) than the Final Total (e.g. USD), you MUST convert the line item prices to the Final Total's currency.
+       - Use the ratio (Total / Sum of original items) to convert each item.
+       - The Sum of (quantity × price) MUST equal 'cost'.
+
+       **FUTURE/CONDITIONAL CHARGES**:
+       - Do NOT extract "Damage Deposits" or fees "due on arrival" as line items if they are not part of the current payment total.
+       - Only extract charges that are INCLUDED in the 'cost'.
 
        **CURRENCY EXTRACTION (STRICT)**:
        - **ISO 4217 CODES ONLY**: Return 3-letter codes (e.g. "USD", "EUR", "CRC").
@@ -245,6 +256,11 @@ const buildGeminiPremiumPrompt = (tripStartDate?: string) => {
           but the 'cost' should be the FINAL PAID AMOUNT (after deposit deduction)
        3. TAXES: Usually included in prices, don't extract tax breakdown lines
        4. DISCOUNTS/VOUCHERS: Account for these when validating totals
+        
+        **ROUND TRIP RULE (CRITICAL)**:
+        - If the document represents a Round Trip (e.g. Flight Out and Flight Back), you MUST extract them as TWO separate objects in the 'items' array.
+        - Split the total cost 50/50 between the two items unless individual pricing for each leg is clearly visible.
+        - Ensure each leg has its specific 'startDate' and 'endDate' (departure and arrival).
 
         5. TRANSPORT LOCATION RULES (CRITICAL):
            - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
@@ -329,7 +345,8 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
         STEP 4 - MATHEMATICAL VALIDATION:
         - For each item: verify quantity × price = line total shown
         - Sum all line totals and compare to document SUBTOTAL/TOTAL
-        - If sum ≠ total: Re-examine Step 3
+        - If sum ≠ total: Re-examine Step 3. 
+        - If currencies differ, convert items to match Total.
         
         STEP 5 - CONFIDENCE ASSESSMENT:
         - 0.0-0.3: Failed to extract items or major parsing errors
@@ -384,6 +401,10 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
            - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
            - 'location' = Origin (City/Airport/Station)
            - 'endLocation' = Destination (City/Airport/Station)
+
+        **ROUND TRIP RULE**:
+           - If a "Round Trip" is detected, extract individual legs as separate objects in the 'items' array.
+           - If a single total price is found, divide it by the number of legs.
         
         ═══════════════════════════════════════════════════════════════════════
         TAX HANDLING (CRITICAL):
@@ -430,6 +451,10 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
         - ALWAYS extract 'currencyCode' for the total cost.
         - Analyze symbols carefully: '₡' is CRC, '€' is EUR.
         - If 'currencyCode' is NOT 'USD', the 'cost' MUST be the amount in that local currency.
+
+        **CURRENCY NORMALIZATION (CRITICAL)**:
+        - If items are in Currency A but Total is in Currency B, CONVERT items to Currency B.
+        - The cost matches the currencyCode. The sum of items MUST match cost.
 
         
         CRITICAL FOR DEPOSITS / DISCOUNTS:

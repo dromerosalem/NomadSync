@@ -5,17 +5,7 @@
  */
 
 const MISSION_COVERS = [
-    '/assets/vibes/explorer.png',
-    '/assets/vibes/relaxer.png',
-    '/assets/vibes/foodie.png',
-    '/assets/vibes/urbanite.png',
-    '/assets/vibes/journey.png',
-    '/assets/vibes/minimalist.png',
-    '/assets/vibes/social.png',
-    '/assets/vibes/nature.png',
-    '/assets/vibes/ocean.png',
-    '/assets/vibes/culture.png',
-    '/assets/vibes/night.png'
+    '/logo.png' // Fallback until vibe assets are restored
 ];
 
 /**
@@ -50,7 +40,8 @@ export const sanitizeAsset = (url: string | null | undefined, id: string | undef
         url.includes('picsum.photos') ||
         url.includes('unsplash.com') ||
         url.includes('pravatar.cc') ||
-        url.includes('ui-avatars.com')
+        url.includes('ui-avatars.com') ||
+        url.includes('/assets/vibes/')
     ) {
         return getMissionCover(id);
     }
