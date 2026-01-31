@@ -715,8 +715,9 @@ const App: React.FC = () => {
     try {
       let itemToSave: ItineraryItem;
 
-      if (itemData.id && itemData.id.length > 10) { // Existing UUID
-        const existing = currentTrip.items.find(i => i.id === itemData.id)!;
+      const existing = itemData.id ? currentTrip.items.find(i => i.id === itemData.id) : null;
+
+      if (existing) { // Existing UUID
         itemToSave = {
           ...existing,
           ...itemData,

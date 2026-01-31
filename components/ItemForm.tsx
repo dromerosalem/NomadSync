@@ -280,6 +280,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
     if (flightNumber) finalDetails = `Flight: ${flightNumber} | ` + finalDetails;
 
     onSave({
+      ...initialItem,
       id: initialItem?.id,
       title,
       location,
