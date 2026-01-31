@@ -121,26 +121,36 @@ async function flushSyncQueue() {
 self.addEventListener('push', (event) => {
     if (!event.data) return;
 
+    let title, body, icon, url, tag;
+
     try {
+        // Try parsing as JSON first (standard for our app)
         const payload = event.data.json();
-        const { title, body, icon, url, tag } = payload;
-
-        const options = {
-            body: body || 'New activity in NomadSync',
-            icon: icon || '/logo.png',
-            badge: '/logo.png', // Small icon for status bar
-            vibrate: [100, 50, 100],
-            data: { url: url || '/' },
-            tag: tag || 'general', // collapse notifications with same tag
-            renotify: true
-        };
-
-        event.waitUntil(
-            self.registration.showNotification(title || 'NomadSync', options)
-        );
+        title = payload.title;
+        body = payload.body;
+        icon = payload.icon;
+        url = payload.url;
+        tag = payload.tag;
     } catch (err) {
-        console.error('[SW] Push error:', err);
+        // Fallback for plain text (common when testing from DevTools)
+        console.log('[SW] Push data is not JSON, treating as plain text');
+        title = 'NomadSync';
+        body = event.data.text();
     }
+
+    const options = {
+        body: body || 'New activity in NomadSync',
+        icon: icon || '/logo.png',
+        badge: '/logo.png',
+        vibrate: [100, 50, 100],
+        data: { url: url || '/' },
+        tag: tag || 'general',
+        renotify: true
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title || 'NomadSync', options)
+    );
 });
 
 // 5. Notification Click Listener (Deep Linking)
