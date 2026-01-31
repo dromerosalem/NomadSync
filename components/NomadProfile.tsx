@@ -79,9 +79,11 @@ interface NomadProfileProps {
     onCreateMission: () => void;
     onSignOut: () => void;
     onViewGlobalLedger: () => void;
+    onViewPrivacy: () => void;
+    onViewTerms: () => void;
 }
 
-const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCreateMission, onSignOut, onViewGlobalLedger }) => {
+const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCreateMission, onSignOut, onViewGlobalLedger, onViewPrivacy, onViewTerms }) => {
     // Network status detection
     const isOnline = useNetworkStatus();
 
@@ -432,6 +434,11 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                         </div>
                     </div>
 
+                </div>
+
+                <div className="flex justify-center gap-6 mt-12 mb-8 opacity-40">
+                    <button onClick={onViewPrivacy} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
+                    <button onClick={onViewTerms} className="text-[10px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
                 </div>
             </div>
 

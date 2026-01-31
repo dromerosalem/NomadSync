@@ -9,11 +9,13 @@ const AuthGlobe = React.lazy(() => import('./AuthGlobe'));
 
 interface AuthScreenProps {
     onAuthSuccess: (user: { name: string; email: string }) => void;
+    onViewPrivacy: () => void;
+    onViewTerms: () => void;
 }
 
 type AuthMode = 'LANDING' | 'SIGNUP' | 'LOGIN';
 
-const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
+const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, onViewTerms }) => {
     const [mode, setMode] = useState<AuthMode>('LANDING');
     const [showEmailForm, setShowEmailForm] = useState(false);
     const [name, setName] = useState('');
@@ -203,7 +205,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                         </button>
                     </div>
 
-
+                    <div className="flex gap-4 mt-8 opacity-40">
+                        <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
+                        <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
+                    </div>
                 </div>
             </div>
         );
@@ -338,6 +343,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
                     >
                         {mode === 'SIGNUP' ? 'REJOIN CIRCLE' : 'ENROLL NOW'}
                     </button>
+
+                    <div className="flex justify-center gap-4 mt-8 opacity-40">
+                        <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
+                        <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
+                    </div>
                 </div>
 
 

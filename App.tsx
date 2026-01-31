@@ -16,6 +16,8 @@ import LedgerScreen from './components/LedgerScreen';
 import AuthScreen from './components/AuthScreen';
 import JoinMission from './components/JoinMission';
 import GlobalLedger from './components/GlobalLedger';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 import ConflictResolver from './components/ConflictResolver';
@@ -56,6 +58,20 @@ const App: React.FC = () => {
   const [pendingJoinTripId, setPendingJoinTripId] = useState<string | null>(null);
   const [activeConflict, setActiveConflict] = useState<SyncLog | null>(null);
 
+  // Sync URL with Privacy/Terms Views (For Google Compliance)
+  useEffect(() => {
+    const path = window.location.pathname;
+    if (view === 'PRIVACY') {
+      if (path !== '/privacy') window.history.pushState({}, '', '/privacy');
+    } else if (view === 'TERMS') {
+      if (path !== '/terms') window.history.pushState({}, '', '/terms');
+    } else if (path === '/privacy' || path === '/terms') {
+      // If we are in any other view but the URL is still /privacy or /terms, reset it
+      // unless we are in Auth/Dashboard/Profile where the state transition handles it
+      window.history.pushState({}, '', '/');
+    }
+  }, [view]);
+
   // Check for conflicts on mount and periodic
   const checkConflicts = async () => {
     const conflict = await db.sync_queue
@@ -77,14 +93,20 @@ const App: React.FC = () => {
   });
 
   useEffect(() => {
-    // Check for Deep Link
+    // Check for Deep Link (Join Mission)
     const params = new URLSearchParams(window.location.search);
     const joinId = params.get('join');
     if (joinId) {
       console.log("Deep Link Detected: Joining Trip", joinId);
       setPendingJoinTripId(joinId);
-      // We wait for auth to confirmed before switching view fully, 
-      // but we hold the ID.
+    }
+
+    // Handle Pathname Routing (Privacy / Terms)
+    const pathname = window.location.pathname;
+    if (pathname === '/privacy') {
+      setView('PRIVACY');
+    } else if (pathname === '/terms') {
+      setView('TERMS');
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -817,7 +839,19 @@ const App: React.FC = () => {
       <main className="flex-1 relative overflow-hidden flex flex-col w-full">
 
         {!isAuthenticated && view === 'AUTH' && (
-          <AuthScreen onAuthSuccess={handleAuthSuccess} />
+          <AuthScreen
+            onAuthSuccess={handleAuthSuccess}
+            onViewPrivacy={() => setView('PRIVACY')}
+            onViewTerms={() => setView('TERMS')}
+          />
+        )}
+
+        {view === 'PRIVACY' && (
+          <PrivacyPolicy onBack={() => setView(isAuthenticated ? 'PROFILE' : 'AUTH')} />
+        )}
+
+        {view === 'TERMS' && (
+          <TermsOfService onBack={() => setView(isAuthenticated ? 'PROFILE' : 'AUTH')} />
         )}
 
         {isAuthenticated && view === 'DASHBOARD' && (
@@ -842,6 +876,8 @@ const App: React.FC = () => {
             onCreateMission={() => setView('CREATE')}
             onSignOut={handleSignOut}
             onViewGlobalLedger={() => setView('GLOBAL_LEDGER')}
+            onViewPrivacy={() => setView('PRIVACY')}
+            onViewTerms={() => setView('TERMS')}
           />
         )}
 
