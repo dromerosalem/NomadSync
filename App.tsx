@@ -23,6 +23,7 @@ import VerificationBridge from './components/VerificationBridge';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 import { userService } from './services/userService';
+import AuthGlobe from './components/AuthGlobe';
 import ConflictResolver from './components/ConflictResolver';
 import { SyncLog, db } from './db/LocalDatabase';
 import { persistenceService } from './services/persistenceService';
@@ -294,6 +295,20 @@ const App: React.FC = () => {
     };
   }, []);
 
+  if ((!isAuthenticated && view === 'AUTH') || !currentUser) {
+    // Show Loading/Globe if strictly loading, otherwise Auth screen handles it
+    if (!isAuthenticated && view !== 'AUTH') {
+      return (
+        <div className="h-[100dvh] w-full bg-tactical-bg flex items-center justify-center">
+          <div className="animate-spin-slow">
+            <AuthGlobe />
+          </div>
+          <p className="absolute mt-32 text-xs font-mono text-tactical-accent animate-pulse">ESTABLISHING UPLINK...</p>
+        </div>
+      );
+    }
+  }
+
   // --- LATE RESOLUTION HANDLER ---
   useEffect(() => {
     if (isAuthenticated && pendingJoinTripId && currentUser.onboardingCompleted) {
@@ -499,14 +514,19 @@ const App: React.FC = () => {
   };
 
   const handleOnboardingComplete = async () => {
+    if (!currentUser) return;
+    setIsLoading(true);
     try {
       await userService.updateProfile(currentUser.id, { onboardingCompleted: true });
       setCurrentUser(prev => ({ ...prev, onboardingCompleted: true }));
-      if (pendingJoinTripId) {
-        setView('JOIN_MISSION');
-      } else {
-        setView('DASHBOARD');
-      }
+
+      // Explicit Session Refresh and Hard Navigation for Android Stability
+      await supabase.auth.refreshSession();
+      window.location.assign('/?open=dashboard');
+      // The original logic for pendingJoinTripId and setView is now superseded by the hard navigation.
+      // If the hard navigation fails or is not desired in some contexts,
+      // the previous logic could be re-evaluated.
+      // For now, assuming hard navigation is the desired outcome.
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
       // Fallback: move to dashboard anyway so user isn't stuck
