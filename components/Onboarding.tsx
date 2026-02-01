@@ -29,29 +29,32 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     }, []);
 
     const handleEnableNotifications = async () => {
+        console.log("🕵️ ONBOARDING: Enable Notifications clicked");
         try {
             if (notifPermission === 'granted') {
+                console.log("🕵️ ONBOARDING: Permission already granted, advancing...");
                 setStep(2);
                 return;
             }
+            console.log("🕵️ ONBOARDING: Requesting permission...");
             const permission = await NotificationManager.requestPermission();
+            console.log("🕵️ ONBOARDING: Permission result:", permission);
             setNotifPermission(permission);
+
             if (permission === 'granted') {
-                setTimeout(() => setStep(2), 600);
+                setTimeout(() => {
+                    console.log("🕵️ ONBOARDING: Advancing to Step 2 (Granted)");
+                    setStep(2);
+                }, 600);
             } else if (permission === 'denied') {
-                // User blocked, move on but maybe show alert
                 alert("Notifications are blocked. Please enable them in browser settings.");
-                setStep(2); // Allow progress
+                console.log("🕵️ ONBOARDING: Advancing to Step 2 (Denied)");
+                setStep(2);
             } else {
-                // Default/dismissed - allow retry or skip
-                // For now, if they click and it fails/closes, maybe just advance?
-                // Or stay? Original behavior was stay.
-                // Let's assume on "default" we stay to let them try again, but if it fails silently...
-                // Ideally we let them progress manually via "Skip".
+                console.log("🕵️ ONBOARDING: Permission default/dismissed, staying or skipping?");
             }
         } catch (e) {
-            console.error("Error requesting notifications:", e);
-            // Fallback
+            console.error("❌ ONBOARDING: Error requesting notifications:", e);
             setStep(2);
         }
     };
