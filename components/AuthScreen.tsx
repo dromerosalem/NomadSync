@@ -289,7 +289,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                     </button>
 
                     <div className="flex items-center justify-center gap-2 text-[10px] text-tactical-muted uppercase font-bold tracking-widest animate-pulse">
-                        <RefreshCw className="w-3 h-3 animate-spin" /> Establishing Uplink...
+                        <RefreshCw className="w-3 h-3 animate-spin" /> Connecting to server...
                     </div>
                 </div>
             </div>
@@ -403,7 +403,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                         className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-xl py-5 rounded-none flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(255,215,0,0.2)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? (
-                            <span className="animate-pulse">ESTABLISHING UPLINK...</span>
+                            <span className="animate-pulse">CONNECTING...</span>
                         ) : (
                             <>
                                 {mode === 'SIGNUP' ? 'DEPLOY TO MISSION' : 'ACCESS TERMINAL'}

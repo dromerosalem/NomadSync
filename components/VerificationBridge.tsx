@@ -21,7 +21,7 @@ const VerificationBridge: React.FC = () => {
                 </h1>
 
                 <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-12 leading-relaxed">
-                    Your identity has been verified.<br />Secure uplink established.
+                    Your identity has been verified.<br />Secure connection established.
                 </p>
 
                 <a

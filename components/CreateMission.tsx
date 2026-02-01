@@ -219,7 +219,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
             className="w-full bg-tactical-accent hover:bg-yellow-500 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,215,0,0.2)]"
           >
             {isLoading ? (
-              <span>ESTABLISHING UPLINK...</span>
+              <span>SYNCHRONIZING TRIP...</span>
             ) : (
               <>
                 CREATE MASTER TRIP <ArrowRightIcon className="w-6 h-6" />

@@ -123,7 +123,7 @@ const MissionGlobe: React.FC<MissionGlobeProps> = ({ trip, onClose }) => {
             <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
                 <div>
                     <div className="text-[10px] font-bold text-tactical-accent/80 uppercase tracking-widest animate-pulse">
-                        SATELLITE UPLINK ESTABLISHED
+                        ACTIVE CONNECTION ESTABLISHED
                     </div>
                     <h1 className="font-display text-4xl font-bold text-white mt-1 drop-shadow-lg">
                         {trip.name}

@@ -42,14 +42,28 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
                 </section>
 
                 <section>
-                    <h2 className="text-tactical-accent font-display font-bold uppercase tracking-widest text-lg mb-3">4. Tactical Storage</h2>
+                    <h2 className="text-tactical-accent font-display font-bold uppercase tracking-widest text-lg mb-3">4. AI Intelligence Sovereignty</h2>
                     <p>
-                        Your data is stored securely via Supabase and cached locally on your device for offline deployments. We do not sell your intel to third-party entities.
+                        NomadSync utilizes Google's Gemini models for receipt analysis and itinerary coordination. Your tactical intel is processed for the sole purpose of extraction and execution. We do not use your personal receipts, itineraries, or mission data to train any underlying AI models.
                     </p>
                 </section>
 
                 <section>
-                    <h2 className="text-tactical-accent font-display font-bold uppercase tracking-widest text-lg mb-3">5. Termination</h2>
+                    <h2 className="text-tactical-accent font-display font-bold uppercase tracking-widest text-lg mb-3">5. Tactical Pantry (Local Cache)</h2>
+                    <p>
+                        For offline deployments, NomadSync utilizes local device storage (localStorage and Service Workers) to cache your mission data. This "Tactical Pantry" ensures operational continuity without an active internet connection. This data resides exclusively on your device until it is purged by you or the system.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 className="text-tactical-accent font-display font-bold uppercase tracking-widest text-lg mb-3">6. Tactical Storage & Sub-processors</h2>
+                    <p>
+                        Your primary mission data is stored securely via Supabase (Database & Storage). We utilize specific sub-processors (Supabase, Google, and Vercel) to maintain high-availability infrastructure. We do not sell your intel to third-party entities.
+                    </p>
+                </section>
+
+                <section>
+                    <h2 className="text-tactical-accent font-display font-bold uppercase tracking-widest text-lg mb-3">7. Termination</h2>
                     <p>
                         You can request account termination or data erasure at any time via HQ.
                     </p>
