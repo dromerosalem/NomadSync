@@ -137,6 +137,12 @@ const App: React.FC = () => {
 
         // Check Onboarding Status
         userService.fetchProfile(user.id).then(profile => {
+          // Priority Check: Verification Bridge
+          if (window.location.pathname === '/verified') {
+            setView('VERIFIED' as ViewState);
+            return;
+          }
+
           if (profile.onboardingCompleted) {
             if (pendingJoinTripId) {
               setView('JOIN_MISSION');
@@ -174,6 +180,12 @@ const App: React.FC = () => {
 
         // Check Onboarding
         userService.fetchProfile(user.id).then(profile => {
+          // Priority Check: Verification Bridge
+          if (window.location.pathname === '/verified') {
+            setView('VERIFIED' as ViewState);
+            return;
+          }
+
           if (profile.onboardingCompleted) {
             const params = new URLSearchParams(window.location.search);
             const immediateJoinId = params.get('join');
