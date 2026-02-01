@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { GoogleIcon, LightningIcon } from './Icons';
+import { Mail, RefreshCw, ShieldCheck } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { persistenceService } from '../services/persistenceService';
 
@@ -22,6 +23,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
     const [email, setEmail] = useState('');
     const [key, setKey] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [waitingForVerification, setWaitingForVerification] = useState(false);
 
     const handleGoogleCredentialResponse = useCallback(async (response: any) => {
         setIsLoading(true);
@@ -70,6 +72,27 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
         }
     }, [mode, handleGoogleCredentialResponse]);
 
+    // Polling for Verification
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (waitingForVerification) {
+            interval = setInterval(async () => {
+                const { data } = await supabase.auth.signInWithPassword({
+                    email,
+                    password: key
+                });
+                if (data.session) {
+                    clearInterval(interval);
+                    onAuthSuccess({
+                        name: data.user.user_metadata.full_name || name,
+                        email: data.user.email!
+                    });
+                }
+            }, 3000);
+        }
+        return () => clearInterval(interval);
+    }, [waitingForVerification, email, key, onAuthSuccess, name]);
+
     const handleDeploy = async () => {
         setIsLoading(true);
         try {
@@ -82,7 +105,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                     options: {
                         data: {
                             full_name: name,
-                        }
+                        },
+                        emailRedirectTo: `${window.location.origin}/verified`
                     }
                 });
             } else {
@@ -95,6 +119,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
             if (result.error) throw result.error;
 
             if (result.data.user) {
+                if (mode === 'SIGNUP' && !result.data.session) {
+                    setWaitingForVerification(true);
+                    return;
+                }
+
                 // Request persistent storage immediately after successful login (user interaction)
                 persistenceService.requestPersistence();
 
@@ -224,6 +253,43 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                     <div className="flex gap-4 mt-8 opacity-40">
                         <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
                         <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
+                    </div>
+                </div>
+            </div>
+        );
+
+    }
+
+    if (waitingForVerification) {
+        return (
+            <div className="flex flex-col h-full bg-tactical-bg relative items-center justify-center text-center px-6 animate-fade-in">
+                <div className="absolute inset-0 z-0">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle,_#fbbf24_0%,_transparent_60%)] opacity-10 blur-3xl animate-pulse-slow"></div>
+                </div>
+
+                <div className="relative z-10 p-8 border border-tactical-accent/20 bg-black/40 backdrop-blur-sm rounded-2xl max-w-sm w-full shadow-[0_0_30px_rgba(251,191,36,0.1)]">
+                    <div className="w-16 h-16 mx-auto mb-6 relative">
+                        <div className="absolute inset-0 border-2 border-tactical-accent rounded-full animate-ping opacity-20"></div>
+                        <div className="absolute inset-0 border-2 border-tactical-accent rounded-full animate-spin-slow border-t-transparent"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <ShieldCheck className="w-8 h-8 text-tactical-accent" />
+                        </div>
+                    </div>
+
+                    <h2 className="text-xl font-display font-bold text-white uppercase tracking-wider mb-2">Awaiting Authorization</h2>
+                    <p className="text-xs text-tactical-muted font-mono mb-8">
+                        Encrypted link sent to <span className="text-white">{email}</span>.
+                    </p>
+
+                    <button
+                        onClick={() => window.location.href = 'mailto:'}
+                        className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 mb-4 transition-all shadow-[0_0_15px_rgba(251,191,36,0.3)]"
+                    >
+                        OPEN MAIL APP <Mail className="w-5 h-5" />
+                    </button>
+
+                    <div className="flex items-center justify-center gap-2 text-[10px] text-tactical-muted uppercase font-bold tracking-widest animate-pulse">
+                        <RefreshCw className="w-3 h-3 animate-spin" /> Establishing Uplink...
                     </div>
                 </div>
             </div>

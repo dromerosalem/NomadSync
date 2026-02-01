@@ -19,6 +19,7 @@ import GlobalLedger from './components/GlobalLedger';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import Onboarding from './components/Onboarding';
+import VerificationBridge from './components/VerificationBridge';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 import { userService } from './services/userService';
@@ -103,12 +104,14 @@ const App: React.FC = () => {
       setPendingJoinTripId(joinId);
     }
 
-    // Handle Pathname Routing (Privacy / Terms)
+    // Handle Pathname Routing (Privacy / Terms / Verified)
     const pathname = window.location.pathname;
     if (pathname === '/privacy') {
       setView('PRIVACY');
     } else if (pathname === '/terms') {
       setView('TERMS');
+    } else if (pathname === '/verified') {
+      setView('VERIFIED' as ViewState);
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -1075,6 +1078,10 @@ const App: React.FC = () => {
               setView('DASHBOARD');
             }}
           />
+        )}
+
+        {view === 'VERIFIED' && (
+          <VerificationBridge />
         )}
 
         {/* Conflict Resolution Overlay */}
