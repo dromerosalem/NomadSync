@@ -158,8 +158,27 @@ const App: React.FC = () => {
           }
 
           if (profile.onboardingCompleted) {
-            if (pendingJoinTripId) {
-              setView('JOIN_MISSION');
+            const params = new URLSearchParams(window.location.search);
+            const openView = params.get('open');
+            const joinCode = params.get('join');
+
+            if (openView === 'dashboard') {
+              window.history.replaceState({}, '', '/');
+              setView('DASHBOARD');
+            } else if (joinCode) {
+              if (joinCode.length > 30) {
+                setPendingJoinTripId(joinCode);
+                setView('JOIN_MISSION');
+              } else {
+                tripService.resolveInviteCode(joinCode).then(resolvedId => {
+                  if (resolvedId) {
+                    setPendingJoinTripId(resolvedId);
+                    setView('JOIN_MISSION');
+                  } else {
+                    setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+                  }
+                });
+              }
             } else {
               setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
             }
@@ -202,9 +221,13 @@ const App: React.FC = () => {
 
           if (profile.onboardingCompleted) {
             const params = new URLSearchParams(window.location.search);
+            const openView = params.get('open');
             const joinCode = params.get('join');
 
-            if (joinCode) {
+            if (openView === 'dashboard') {
+              window.history.replaceState({}, '', '/');
+              setView('DASHBOARD');
+            } else if (joinCode) {
               if (joinCode.length > 30) {
                 // UUID - Use directly
                 setPendingJoinTripId(joinCode);
@@ -273,11 +296,20 @@ const App: React.FC = () => {
 
   // --- LATE RESOLUTION HANDLER ---
   useEffect(() => {
-    if (isAuthenticated && pendingJoinTripId && currentUser.onboardingCompleted && view === 'DASHBOARD') {
-      console.log("Late resolution of invite code, redirecting...");
-      setView('JOIN_MISSION');
+    if (isAuthenticated && pendingJoinTripId && currentUser.onboardingCompleted) {
+      // Check if already a member
+      const isMember = trips.some(t => t.id === pendingJoinTripId);
+      if (isMember) {
+        console.log("Already a member of pending trip, clearing state.");
+        setPendingJoinTripId(null);
+        // If view is JOIN_MISSION, go to dashboard?
+        if (view === 'JOIN_MISSION') setView('DASHBOARD');
+      } else if (view === 'DASHBOARD') {
+        console.log("Late resolution of invite code, redirecting...");
+        setView('JOIN_MISSION');
+      }
     }
-  }, [isAuthenticated, pendingJoinTripId, currentUser.onboardingCompleted, view]);
+  }, [isAuthenticated, pendingJoinTripId, currentUser.onboardingCompleted, view, trips]);
 
   // Remove pendingJoinTripId dependency to avoid double firing
 
