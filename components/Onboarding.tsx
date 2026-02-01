@@ -42,7 +42,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     };
 
     const renderNotificationScreen = () => (
-        <div className="flex flex-col h-full bg-tactical-bg p-6 animate-fade-in">
+        <div className="flex flex-col min-h-full bg-tactical-bg p-6 animate-fade-in">
             {/* Header */}
             <div className="mt-8 mb-12 text-center">
                 <div className="w-16 h-16 bg-tactical-accent/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-tactical-accent/30 box-glow">
@@ -128,7 +128,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     );
 
     const renderAccuracyScreen = () => (
-        <div className="flex flex-col h-full bg-tactical-bg p-6 animate-fade-in">
+        <div className="flex flex-col min-h-full bg-tactical-bg p-6 animate-fade-in">
 
 
             {/* Header */}
@@ -147,7 +147,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
             {/* Point of Impact Card */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 mb-12 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-2 opacity-20">
-                    <RefreshCw className="w-4 h-4 animate-spin-slow" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                 </div>
 
                 <div className="flex items-center gap-3 mb-4">
@@ -208,9 +208,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         </div>
     );
 
+    const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+        }
+    }, [step]);
+
     return (
-        <div className="fixed inset-0 z-[1000] bg-tactical-bg overflow-y-auto">
-            <div className="h-full w-full max-w-sm mx-auto shadow-2xl overflow-hidden relative border-x border-white/5">
+        <div ref={scrollContainerRef} className="fixed inset-0 z-[1000] bg-tactical-bg overflow-y-auto">
+            <div className="min-h-full w-full max-w-sm mx-auto shadow-2xl relative border-x border-white/5">
                 {step === 1 ? renderNotificationScreen() : renderAccuracyScreen()}
             </div>
         </div>
