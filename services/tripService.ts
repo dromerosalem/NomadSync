@@ -439,7 +439,22 @@ export const tripService = {
 
     // --- RECRUITMENT OPERATIONS ---
 
-    async searchUsers(query: string): Promise<Member[]> {
+    async createInviteCode(tripId: string): Promise<string> {
+    const { data, error } = await supabase.rpc('create_invite_code', { trip_uuid: tripId });
+    if (error) throw error;
+    return data;
+  },
+
+  async resolveInviteCode(code: string): Promise<string | null> {
+    const { data, error } = await supabase.rpc('resolve_invite_code', { invite_code: code });
+    if (error) {
+      console.error('Failed to resolve invite code:', error);
+      return null;
+    }
+    return data;
+  },
+
+  async searchUsers(query: string): Promise<Member[]> {
         if (!query || query.length < 3) return [];
 
         const { data, error } = await supabase

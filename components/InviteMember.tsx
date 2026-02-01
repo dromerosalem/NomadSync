@@ -64,12 +64,45 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
     const [email, setEmail] = useState('');
     const [copied, setCopied] = useState(false);
 
-    const inviteLink = `${window.location.origin}/?join=${trip.id}`;
+    const [inviteCode, setInviteCode] = useState<string>('');
+    const [loadingCode, setLoadingCode] = useState(false);
+
+    useEffect(() => {
+        // Generate/Fetch Short Code on Mount
+        const getCode = async () => {
+            setLoadingCode(true);
+            try {
+                const code = await tripService.createInviteCode(trip.id);
+                setInviteCode(code);
+            } catch (err) {
+                console.error("Failed to generate invite code:", err);
+            } finally {
+                setLoadingCode(false);
+            }
+        };
+        getCode();
+    }, [trip.id]);
+
+    const inviteLink = inviteCode
+        ? `${window.location.origin}/?join=${inviteCode}`
+        : `${window.location.origin}/?join=${trip.id}`; // Fallback to UUID if loading/error
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(inviteLink);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (!inviteCode) return;
+
+        const message = `ADVENTURE INVITE: You have been recruited for ${trip.name}. Tap to confirm clearance. 📍 ${inviteLink}`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'NomadSync Squad Invite',
+                text: message,
+                url: inviteLink
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(message);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     const handleSendInvite = () => {
@@ -111,7 +144,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                                 <span>COPIED TO CLIPBOARD</span>
                             ) : (
                                 <>
-                                    <CopyIcon className="w-4 h-4" /> COPY LINK
+                                    <CopyIcon className="w-4 h-4" /> SHARE INVITE
                                 </>
                             )}
                         </button>

@@ -98,10 +98,24 @@ const App: React.FC = () => {
   useEffect(() => {
     // Check for Deep Link (Join Mission)
     const params = new URLSearchParams(window.location.search);
-    const joinId = params.get('join');
-    if (joinId) {
-      console.log("Deep Link Detected: Joining Trip", joinId);
-      setPendingJoinTripId(joinId);
+    const joinCode = params.get('join');
+
+    if (joinCode) {
+      if (joinCode.length > 30) {
+        // Legacy UUID link
+        console.log("Deep Link Detected: Joining Trip (UUID)", joinCode);
+        setPendingJoinTripId(joinCode);
+      } else {
+        // Short Code - Resolve it
+        console.log("Deep Link Detected: Resolving Short Code", joinCode);
+        tripService.resolveInviteCode(joinCode).then(resolvedId => {
+          if (resolvedId) {
+            setPendingJoinTripId(resolvedId);
+          } else {
+            console.error("Invalid or expired invite code");
+          }
+        });
+      }
     }
 
     // Handle Pathname Routing (Privacy / Terms / Verified)
