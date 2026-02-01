@@ -30,19 +30,24 @@ export class NotificationManager {
             let subscription = await registration.pushManager.getSubscription();
 
             if (!subscription) {
-                subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                });
+                try {
+                    const appKey = this.urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+                    subscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: appKey
+                    });
+                } catch (keyErr) {
+                    console.error("VAPID Key conversion failed:", keyErr);
+                    return;
+                }
             }
 
             await this.saveSubscription(subscription);
 
         } catch (error: any) {
             console.error('Failed to subscribe to push:', error);
-            if (error.name === 'AbortError' || error.message.includes('push service error')) {
+            if (error.name === 'AbortError' || error.message?.includes('push service error')) {
                 console.warn('Push registration aborted. If you are using Brave, please enable "Use Google Services for Push Messaging" in settings.');
-                // Optionally trigger a toast or UI alert here explaining the Brave issue
             }
         }
     }

@@ -29,15 +29,30 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
     }, []);
 
     const handleEnableNotifications = async () => {
-        if (notifPermission === 'granted') {
+        try {
+            if (notifPermission === 'granted') {
+                setStep(2);
+                return;
+            }
+            const permission = await NotificationManager.requestPermission();
+            setNotifPermission(permission);
+            if (permission === 'granted') {
+                setTimeout(() => setStep(2), 600);
+            } else if (permission === 'denied') {
+                // User blocked, move on but maybe show alert
+                alert("Notifications are blocked. Please enable them in browser settings.");
+                setStep(2); // Allow progress
+            } else {
+                // Default/dismissed - allow retry or skip
+                // For now, if they click and it fails/closes, maybe just advance?
+                // Or stay? Original behavior was stay.
+                // Let's assume on "default" we stay to let them try again, but if it fails silently...
+                // Ideally we let them progress manually via "Skip".
+            }
+        } catch (e) {
+            console.error("Error requesting notifications:", e);
+            // Fallback
             setStep(2);
-            return;
-        }
-        const permission = await NotificationManager.requestPermission();
-        setNotifPermission(permission);
-        if (permission === 'granted') {
-            // Give a small delay to show success before moving
-            setTimeout(() => setStep(2), 600);
         }
     };
 
