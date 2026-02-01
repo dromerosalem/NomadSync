@@ -26,19 +26,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         // Detect if running as PWA
         const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
         setIsStandalone(!!standalone);
-
-        // Check if already granted
-        if ('Notification' in window) {
-            setNotifPermission(Notification.permission);
-        }
     }, []);
 
     const handleEnableNotifications = async () => {
+        if (notifPermission === 'granted') {
+            setStep(2);
+            return;
+        }
         const permission = await NotificationManager.requestPermission();
         setNotifPermission(permission);
         if (permission === 'granted') {
             // Give a small delay to show success before moving
-            setTimeout(() => setStep(2), 800);
+            setTimeout(() => setStep(2), 600);
         }
     };
 
@@ -108,34 +107,21 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 
             {/* Actions */}
             <div className="mt-8 space-y-4">
-                {isStandalone ? (
-                    <button
-                        onClick={handleEnableNotifications}
-                        disabled={notifPermission === 'granted'}
-                        className="w-full py-4 bg-tactical-accent text-black font-display font-black uppercase tracking-widest text-sm rounded-xl hover:bg-tactical-accent/90 transition-all flex items-center justify-center gap-2"
-                    >
-                        {notifPermission === 'granted' ? 'Alerts Enabled' : 'Enable Notifications'}
-                    </button>
-                ) : (
-                    <div className="text-center p-4 bg-tactical-accent/5 border border-tactical-accent/20 rounded-xl relative group">
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-tactical-bg border border-tactical-accent/30 rounded-full text-[10px] font-bold text-tactical-accent animate-bounce">
-                            <ArrowRight className="w-3 h-3 inline rotate-[-90deg] mr-1" />
-                            Tap Share Icon
-                        </div>
-                        <p className="text-xs text-tactical-accent font-bold uppercase mt-2 mb-1">
-                            Add to Home Screen to Enable Alerts
-                        </p>
-                        <p className="text-[10px] text-tactical-muted">
-                            iOS requires PWA mode for push notifications. Tap <Share className="w-3 h-3 inline mx-1" /> then 'Add to Home Screen'.
-                        </p>
-                    </div>
-                )}
+                <button
+                    onClick={handleEnableNotifications}
+                    className={`w-full py-4 font-display font-black uppercase tracking-widest text-sm rounded-xl transition-all flex items-center justify-center gap-2 ${notifPermission === 'granted'
+                        ? 'bg-tactical-accent/20 text-tactical-accent border border-tactical-accent/30'
+                        : 'bg-tactical-accent text-black hover:bg-tactical-accent/90 active:scale-95'
+                        }`}
+                >
+                    {notifPermission === 'granted' ? 'Alerts Enabled' : 'Enable Notifications'}
+                </button>
 
                 <button
                     onClick={() => setStep(2)}
-                    className="w-full py-2 text-[10px] font-bold uppercase tracking-[0.2em] text-tactical-muted hover:text-white transition-colors"
+                    className="w-full py-3 text-xs font-bold uppercase tracking-[0.2em] text-tactical-muted hover:text-white transition-colors border border-white/5 rounded-xl bg-white/5"
                 >
-                    Maybe later
+                    Skip for now
                 </button>
             </div>
         </div>
@@ -163,7 +149,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     </div>
                 </div>
                 <h1 className="text-2xl font-display font-bold uppercase tracking-wider mb-2 text-[#c5a059]">Accuracy Check</h1>
-                <p className="text-tactical-muted text-sm px-4">
+                <p className="text-white/80 text-sm px-4 font-medium leading-relaxed">
                     NomadSync AI is powerful, but not infallible. Please double-check all synchronized intel.
                 </p>
             </div>
@@ -180,20 +166,20 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     </div>
                     <div>
                         <div className="text-[10px] font-bold uppercase tracking-widest text-[#c5a059]">Extracted Intel</div>
-                        <div className="text-xs font-mono">GIGI'S PIZZA • SHIBUYA</div>
+                        <div className="text-xs font-mono text-white/90">GIGI'S PIZZA • SHIBUYA</div>
                     </div>
                 </div>
 
                 <div className="space-y-3 font-mono text-xs">
                     <div className="flex justify-between items-center bg-[#c5a059]/5 p-2 rounded border border-[#c5a059]/20">
-                        <span className="text-tactical-muted">Amount:</span>
+                        <span className="text-white/60">Amount:</span>
                         <span className="text-[#c5a059] font-bold">$42.50</span>
                         <div className="w-4 h-4 border border-[#c5a059] rounded flex items-center justify-center">
                             <div className="w-2 h-2 bg-[#c5a059] rounded-sm"></div>
                         </div>
                     </div>
                     <div className="flex justify-between items-center bg-[#c5a059]/5 p-2 rounded border border-[#c5a059]/20">
-                        <span className="text-tactical-muted">Date:</span>
+                        <span className="text-white/60">Date:</span>
                         <span className="text-[#c5a059] font-bold">2026-02-01</span>
                         <div className="w-4 h-4 border border-[#c5a059] rounded flex items-center justify-center">
                             <div className="w-2 h-2 bg-[#c5a059] rounded-sm"></div>
@@ -201,18 +187,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     </div>
                 </div>
 
-                <div className="mt-4 text-[10px] text-center text-tactical-muted italic font-mono uppercase tracking-tighter">
+                <div className="mt-4 text-[10px] text-center text-[#c5a059]/80 italic font-mono uppercase tracking-tighter">
                     System scanning... Final verification required
                 </div>
             </div>
 
             {/* Scannable Intel Points */}
             <div className="space-y-4 mb-auto text-center px-4">
-                <p className="text-[11px] text-tactical-muted leading-relaxed">
+                <p className="text-xs text-white/70 leading-relaxed font-medium">
                     Efficiency is our primary directive. Accuracy is your ultimate responsibility.
                 </p>
                 <div className="h-px bg-gradient-to-r from-transparent via-[#c5a059]/20 to-transparent w-full"></div>
-                <p className="text-[10px] text-tactical-muted font-mono uppercase tracking-[0.1em]">
+                <p className="text-[10px] text-[#c5a059] font-mono uppercase tracking-[0.1em]">
                     Operational integrity depends on user review.
                 </p>
             </div>
