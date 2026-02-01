@@ -202,10 +202,25 @@ const App: React.FC = () => {
 
           if (profile.onboardingCompleted) {
             const params = new URLSearchParams(window.location.search);
-            const immediateJoinId = params.get('join');
-            if (immediateJoinId) {
-              setPendingJoinTripId(immediateJoinId);
-              setView('JOIN_MISSION');
+            const joinCode = params.get('join');
+
+            if (joinCode) {
+              if (joinCode.length > 30) {
+                // UUID - Use directly
+                setPendingJoinTripId(joinCode);
+                setView('JOIN_MISSION');
+              } else {
+                // Short Code - Resolve then set
+                tripService.resolveInviteCode(joinCode).then(resolvedId => {
+                  if (resolvedId) {
+                    setPendingJoinTripId(resolvedId);
+                    setView('JOIN_MISSION');
+                  } else {
+                    // Failed to resolve or invalid
+                    setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+                  }
+                });
+              }
             } else {
               setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
             }
@@ -255,6 +270,15 @@ const App: React.FC = () => {
       }
     };
   }, []);
+
+  // --- LATE RESOLUTION HANDLER ---
+  useEffect(() => {
+    if (isAuthenticated && pendingJoinTripId && currentUser.onboardingCompleted && view === 'DASHBOARD') {
+      console.log("Late resolution of invite code, redirecting...");
+      setView('JOIN_MISSION');
+    }
+  }, [isAuthenticated, pendingJoinTripId, currentUser.onboardingCompleted, view]);
+
   // Remove pendingJoinTripId dependency to avoid double firing
 
   // --- GLOBAL REAL-TIME SYNC ---
