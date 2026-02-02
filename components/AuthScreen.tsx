@@ -65,8 +65,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                 cancel_on_tap_outside: true,
             });
 
-            // Fire One Tap prompt on Landing
-            if (mode === 'LANDING') {
+            // Fire One Tap prompt on Auth Screens Only (not landing)
+            if (mode === 'SIGNUP' || mode === 'LOGIN') {
                 google.accounts.id.prompt();
             }
         }

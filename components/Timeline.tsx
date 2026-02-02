@@ -207,19 +207,19 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                   />
                 )}
                 {item.endDate ? (
-                  <div className="flex items-center justify-between relative z-10 mt-2">
-                    <div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 relative z-10 mt-2">
+                    <div className="min-w-0">
                       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Departure</div>
                       <div className="text-xl font-mono font-bold text-tactical-accent leading-none mb-1">{getTime(startDate)}</div>
-                      <div className="text-xs text-gray-400 font-medium">{item.location}</div>
+                      <div className="text-xs text-gray-400 font-medium truncate" title={item.location}>{item.location}</div>
                     </div>
-                    <div className="text-tactical-accent px-2 flex flex-col items-center justify-center opacity-80">
+                    <div className="text-tactical-accent flex flex-col items-center justify-center opacity-80 pt-4">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right min-w-0">
                       <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Arrival</div>
                       <div className="text-xl font-mono font-bold text-tactical-accent leading-none mb-1">{getTime(new Date(item.endDate))}</div>
-                      <div className="text-xs text-gray-400 font-medium">{item.endLocation || ''}</div>
+                      <div className="text-xs text-gray-400 font-medium truncate" title={item.endLocation || ''}>{item.endLocation || ''}</div>
                     </div>
                   </div>
                 ) : (
@@ -372,9 +372,19 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                   </div>
                 </div>
               </div>
-              <div className="p-4 pt-2">
-                <h3 className="font-display font-bold text-white text-lg tracking-wide mb-1">{item.title}</h3>
-                <p className="text-gray-400 text-sm mb-3">{item.location}</p>
+              <div className="p-4 pt-4">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-bold text-white text-lg tracking-wide mb-1 truncate uppercase">{item.title}</h3>
+                    <p className="text-gray-400 text-sm mb-1 flex items-center gap-1 min-w-0 truncate">
+                      <MapPinIcon className="w-3 h-3 flex-shrink-0" /> <span className="truncate">{item.location}</span>
+                    </p>
+                  </div>
+                  <div className="text-right ml-4 flex-shrink-0">
+                    <div className="text-tactical-accent font-mono font-bold text-lg leading-none">{getTime(startDate)}</div>
+                  </div>
+                </div>
+
                 {item.details && (
                   <div className="mb-3 text-sm text-gray-300 bg-tactical-bg/40 p-3 rounded border-l-2 border-tactical-accent/50 whitespace-pre-wrap">{item.details}</div>
                 )}
