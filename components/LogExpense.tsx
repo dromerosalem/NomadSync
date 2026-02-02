@@ -698,7 +698,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const receiver = members.find(m => m.id === receiverId);
 
     return (
-        <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative">
+        <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative overflow-x-hidden touch-action-pan-y">
             {alertState && (
                 <TacticalAlert
                     title={alertState.title}
@@ -766,7 +766,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
             </header>
 
             <div
-                className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-32 w-full max-w-2xl mx-auto"
+                className="flex-1 overflow-y-auto overflow-x-hidden p-6 scrollbar-hide pb-32 w-full max-w-2xl mx-auto"
                 onClick={(e) => {
                     if (e.target === e.currentTarget) {
                         (document.activeElement as HTMLElement)?.blur();

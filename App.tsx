@@ -970,8 +970,8 @@ const App: React.FC = () => {
   }, [currentTrip]);
 
   return (
-    <div className="h-[100dvh] bg-tactical-bg text-white font-sans w-full md:max-w-2xl lg:max-w-4xl mx-auto relative shadow-2xl flex flex-col overflow-hidden border-x border-tactical-muted/20">
-      <main className="flex-1 relative overflow-hidden flex flex-col w-full">
+    <div className="h-[100dvh] bg-tactical-bg text-white font-sans w-full md:max-w-2xl lg:max-w-4xl mx-auto relative shadow-2xl flex flex-col overflow-hidden overflow-x-hidden touch-action-pan-y border-x border-tactical-muted/20">
+      <main className="flex-1 relative overflow-hidden overflow-x-hidden flex flex-col w-full">
 
         {!isAuthenticated && view === 'AUTH' && (
           <AuthScreen
