@@ -133,6 +133,11 @@ const App: React.FC = () => {
       console.log('Auth state change:', _event, session?.user?.id);
       if (session) {
         setIsAuthenticated(true);
+        // Request persistence on login/state change
+        persistenceService.requestPersistence().then(granted => {
+          if (granted) console.log('Storage persistence verified on auth change.');
+        });
+
         const user = session.user;
         const mappedUser: Member = {
           id: user.id,
@@ -200,6 +205,11 @@ const App: React.FC = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
+        // Request persistence immediately on session restore
+        persistenceService.requestPersistence().then(granted => {
+          if (granted) console.log('Storage persistence verified on restore.');
+        });
+
         const user = session.user;
         const mappedUser: Member = {
           id: user.id,

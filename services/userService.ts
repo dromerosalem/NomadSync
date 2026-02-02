@@ -8,30 +8,66 @@ export const userService = {
         if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl;
         if (updates.onboardingCompleted !== undefined) dbUpdates.onboarding_completed = updates.onboardingCompleted;
 
+        // Optimistic update to Supabase
         const { error } = await supabase
             .from('profiles')
             .update(dbUpdates)
             .eq('id', userId);
 
-        if (error) throw error;
+        if (error) {
+           console.warn('Profile update failed:', error);
+           // Throwing prevents local update? Maybe better to allow local update if offline?
+           // For now, let's keep strictness unless we want full offline mutation.
+           throw error;
+        }
+        
+        // Cache update
+        try {
+            const cached = localStorage.getItem(`profile_cache_${userId}`);
+            if (cached) {
+                const profile = JSON.parse(cached);
+                const updatedProfile = { ...profile, ...updates };
+                localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(updatedProfile));
+            }
+        } catch (e) {
+            console.warn('Failed to update local profile cache', e);
+        }
     },
 
     async fetchProfile(userId: string): Promise<Partial<Member>> {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
+        try {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', userId)
+                .single();
 
-        if (error) throw error;
-        if (!data) return {};
+            if (error) throw error;
+            if (!data) return {};
 
-        return {
-            id: data.id,
-            name: data.full_name,
-            email: data.email,
-            avatarUrl: data.avatar_url,
-            onboardingCompleted: data.onboarding_completed
-        };
+            const profile = {
+                id: data.id,
+                name: data.full_name,
+                email: data.email,
+                avatarUrl: data.avatar_url,
+                onboardingCompleted: data.onboarding_completed
+            };
+
+            // Cache for offline
+            localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(profile));
+
+            return profile;
+        } catch (error) {
+            console.warn('Network profile fetch failed, checking cache...', error);
+            // Fallback to cache
+            const cached = localStorage.getItem(`profile_cache_${userId}`);
+            if (cached) {
+                return JSON.parse(cached);
+            }
+            // If genuinely no cache and no network, throwing might be right, 
+            // OR return empty to allow app to load but maybe trigger onboarding?
+            // Returning empty might trigger onboarding which handles the 'missing data' case gracefully.
+            return {}; 
+        }
     }
 };
