@@ -122,7 +122,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-          Modify Mission
+          Update Trip
         </div>
         <div className="w-6"></div> {/* Spacer */}
       </header>
@@ -132,7 +132,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
         <div className="space-y-8">
           {/* Mission Name */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Name</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Name</label>
             <input
               type="text"
               value={name}
@@ -143,7 +143,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
 
           {/* Target Location */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Target Location</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Destination</label>
             <PlaceAutocomplete
               value={location}
               onChange={(val, meta) => {
@@ -172,15 +172,15 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
 
           {/* Mission Currency */}
           <CurrencySelector
-            label="Mission Base Currency"
+            label="Trip Base Currency"
             value={baseCurrency}
             onChange={setBaseCurrency}
           />
-          <p className="text-[10px] text-gray-500 mt-1">All expenses for this mission will be converted to this currency.</p>
+          <p className="text-[10px] text-gray-500 mt-1">All expenses for this trip will be converted to this currency.</p>
 
           {/* Interactive Calendar */}
           <div className="space-y-2">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Timeline</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Timeline</label>
             <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20">
               <div className="flex justify-between items-center mb-6">
                 <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>

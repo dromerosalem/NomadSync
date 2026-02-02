@@ -30,7 +30,7 @@ import { persistenceService } from './services/persistenceService';
 
 const INITIAL_USER: Member = {
   id: 'placeholder',
-  name: 'Ghost Operative',
+  name: 'New Traveler',
   email: 'ghost@nomad.com',
   role: 'PATHFINDER',
   avatarUrl: null, // Sanitized in UI
@@ -312,7 +312,7 @@ const App: React.FC = () => {
           <div className="animate-spin-slow">
             <AuthGlobe />
           </div>
-          <p className="absolute mt-32 text-xs font-mono text-tactical-accent animate-pulse">ESTABLISHING UPLINK...</p>
+          <p className="absolute mt-32 text-xs font-mono text-tactical-accent animate-pulse">CONNECTING...</p>
         </div>
       );
     }
@@ -635,7 +635,7 @@ const App: React.FC = () => {
       setView('ADD_ITEM');
     } catch (err) {
       console.error('Failed to create trip:', err);
-      alert('Mission initiation failed. Check connection.');
+      alert('Trip creation failed. Check connection.');
     } finally {
       setIsLoading(false);
     }
@@ -677,7 +677,7 @@ const App: React.FC = () => {
       setView('TIMELINE');
     } catch (err) {
       console.error('Failed to update trip:', err);
-      alert('Mission update failed. Check connection.');
+      alert('Trip update failed. Check connection.');
     } finally {
       setIsLoading(false);
     }
@@ -714,7 +714,7 @@ const App: React.FC = () => {
       }
     } catch (err) {
       console.error('Invite failed:', err);
-      alert('Recruitment failed. Operative may already be deployed.');
+      alert('Invite failed. Traveler may already be joined.');
     } finally {
       setIsLoading(false);
     }
@@ -796,7 +796,7 @@ const App: React.FC = () => {
       setTrips(prevTrips => prevTrips.map(t => t.id === updatedTrip.id ? updatedTrip : t));
     } catch (err) {
       console.error('Settlement failed:', err);
-      alert('Failed to log settlement at HQ.');
+      alert('Failed to save payment.');
     } finally {
       setIsLoading(false);
     }

@@ -42,7 +42,7 @@ const ManageTeam: React.FC<ManageTeamProps> = ({ trip, currentUserId, onBack, on
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <div className="flex flex-col items-center">
-          <span className="font-display font-bold text-lg text-white uppercase tracking-wider">Nomad Circle</span>
+          <span className="font-display font-bold text-lg text-white uppercase tracking-wider">Trip Members</span>
           <span className="text-[10px] text-gray-500 uppercase">{trip.name}</span>
         </div>
         <button className="text-white">

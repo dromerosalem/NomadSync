@@ -210,7 +210,7 @@ const GlobalLedger: React.FC<GlobalLedgerProps> = ({ trips, currentUser, onBack 
                                     : 'bg-tactical-card text-gray-500 border-tactical-muted/20 hover:border-tactical-accent/50'
                                     }`}
                             >
-                                All Missions
+                                All Trips
                             </button>
                             {trips.map(trip => (
                                 <button

@@ -127,8 +127,8 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
       {isScanning && (
         <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
           <ScanIcon className="w-16 h-16 text-tactical-accent animate-pulse mb-4" />
-          <div className="font-display text-xl font-bold text-white uppercase tracking-widest">Processing Intel...</div>
-          <div className="text-sm text-gray-400 mt-2">Analyzing tactical data</div>
+          <div className="font-display text-xl font-bold text-white uppercase tracking-widest">Adding Item...</div>
+          <div className="text-sm text-gray-400 mt-2">Analyzing item details</div>
         </div>
       )}
 
@@ -136,15 +136,15 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
         <button onClick={onClose} className="text-gray-400">
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
-        <span className="font-bold text-sm text-gray-500 uppercase tracking-widest">Add Checkpoint</span>
+        <span className="font-bold text-sm text-gray-500 uppercase tracking-widest">Add to Trip</span>
         <button onClick={onClose} className="text-xs font-bold text-gray-500 uppercase">Close</button>
       </header>
 
       <div className="mb-8">
         <h1 className="font-display text-3xl font-bold text-tactical-accent uppercase leading-none mb-2">
-          New Mission<br />Objective
+          New Trip<br />Item
         </h1>
-        <p className="text-gray-400 text-sm">Select your next tactical advantage.</p>
+        <p className="text-gray-400 text-sm">Select what you'd like to add.</p>
       </div>
 
       <div className="flex-1 space-y-4">
@@ -166,7 +166,7 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
             <ScanIcon className="w-6 h-6" />
           </div>
           <div className="flex-1">
-            <h3 className="font-display font-bold text-tactical-accent uppercase text-lg">Scan Intel / Receipt</h3>
+            <h3 className="font-display font-bold text-tactical-accent uppercase text-lg">Scan Booking / Receipt</h3>
             <p className="text-gray-400 text-sm">AI-Analysis from Camera or File</p>
           </div>
           <div className="text-tactical-accent">
@@ -178,26 +178,26 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <OptionCard
             icon={<BedIcon className="w-6 h-6" />}
-            title="Book a Bed"
-            desc="Secure safehouse"
+            title="Stay"
+            desc="Accommodation details"
             onClick={() => onSelectType(ItemType.STAY)}
           />
           <OptionCard
             icon={<TrainIcon className="w-6 h-6" />}
-            title="Catch a Ride"
-            desc="Transport to next sector"
+            title="Transport"
+            desc="Travel details"
             onClick={() => onSelectType(ItemType.TRANSPORT)}
           />
           <OptionCard
             icon={<CameraIcon className="w-6 h-6" />}
-            title="Hunt for Views"
-            desc="Reconnaissance"
+            title="Activity"
+            desc="Experience details"
             onClick={() => onSelectType(ItemType.ACTIVITY)}
           />
           <OptionCard
             icon={<UtensilsIcon className="w-6 h-6" />}
-            title="Refuel"
-            desc="Replenish supplies"
+            title="Food & Drink"
+            desc="Meal details"
             onClick={() => onSelectType(ItemType.FOOD)}
           />
         </div>

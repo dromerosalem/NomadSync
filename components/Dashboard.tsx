@@ -67,9 +67,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             {isLoading && (
                 <div className="absolute inset-0 bg-tactical-bg/95 backdrop-blur-sm z-50 flex flex-col items-center justify-center text-tactical-accent animate-pulse-slow">
                     <div className="w-16 h-16 border-4 border-tactical-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <p className="font-display text-xl uppercase tracking-widest">Establishing Secure Connection...</p>
+                    <p className="font-display text-xl uppercase tracking-widest">Connecting to Adventures...</p>
                     <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest mt-2">
-                        RETRIEVING MISSION DATA
+                        RETRIEVING TRIP DATA
                     </p>
                 </div>
             )}
@@ -77,17 +77,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             <header className="px-6 py-4 flex items-center justify-center sticky top-0 bg-tactical-bg z-20">
                 <div className="flex items-center gap-2">
                     <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-tactical-accent animate-pulse'}`}></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'SYSTEM ONLINE'}</span>
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'ONLINE'}</span>
                 </div>
             </header>
 
             {/* Title Section */}
             <div className="px-6 mb-6 text-center">
                 <h1 className="font-display text-4xl font-bold text-white uppercase leading-none mb-1">
-                    COMMAND<br /><span className="text-tactical-accent">CENTER</span>
+                    YOUR<br /><span className="text-tactical-accent">DASHBOARD</span>
                 </h1>
                 <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                    OPERATIVE: {user.name.toUpperCase()}
+                    TRAVELER: {user.name.toUpperCase()}
                 </p>
             </div>
 
@@ -99,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                     </div>
                     <div>
                         <div className="font-display font-bold text-xl text-white leading-none">{trips.length}</div>
-                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">MISSIONS</div>
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">TRIPS</div>
                     </div>
                 </div>
                 <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex items-center gap-4">
@@ -117,7 +117,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             <div className="flex-1 overflow-y-auto px-6 pb-32 scrollbar-hide">
                 <div className="flex items-center justify-between mb-6">
                     <div className="border-l-4 border-tactical-accent pl-3">
-                        <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">All Missions</h2>
+                        <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">All Trips</h2>
                     </div>
                     {isLoading && (
                         <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                                             <div className="w-[90%] h-[90%] rounded-full border border-tactical-accent/60 flex flex-col items-center justify-center p-1">
                                                 {/* Top Arc Text Simulation */}
                                                 <div className="text-[6px] font-black text-tactical-accent/90 uppercase tracking-[0.2em] leading-none mb-0.5">
-                                                    MISSION
+                                                    TRIP
                                                 </div>
 
                                                 {/* Center Icon/Text */}
@@ -233,7 +233,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                         <MapPinIcon className="w-5 h-5 fill-current" />
                         <div className="absolute -top-1 -right-1 bg-black text-tactical-accent rounded-full w-2.5 h-2.5 flex items-center justify-center text-[8px] font-bold border border-tactical-accent">+</div>
                     </div>
-                    PLOT NEW PATH
+                    START NEW ADVENTURE
                 </button>
             </div>
 
@@ -241,7 +241,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             <div className="fixed bottom-0 left-0 right-0 bg-[#0F0F0E] border-t border-tactical-muted/10 px-12 py-3 flex justify-around items-center z-50 md:max-w-2xl lg:max-w-4xl mx-auto w-full">
                 <button className="flex flex-col items-center gap-1 text-tactical-accent">
                     <GridIcon className="w-5 h-5" />
-                    <span className="text-[9px] font-bold uppercase tracking-widest">Base</span>
+                    <span className="text-[9px] font-bold uppercase tracking-widest">Home</span>
                 </button>
                 <button
                     onClick={onNavigateProfile}

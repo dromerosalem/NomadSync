@@ -344,7 +344,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                     </div>
 
                     <div className="flex justify-between items-end mb-2">
-                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Personal Burn Rate</div>
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Spending Progress</div>
                         <div className={`text-xs font-bold ${burnRate > 90 ? 'text-red-500' : 'text-tactical-accent'}`}>{burnRate.toFixed(0)}%</div>
                     </div>
                     <div className="h-3 bg-black rounded-full overflow-hidden border border-white/5 mb-4">
@@ -355,7 +355,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                     </div>
 
                     <div className="flex justify-between items-center text-xs border-t border-white/5 pt-3">
-                        <span className="text-gray-500 uppercase">Mission Ends in {daysRemaining} days</span>
+                        <span className="text-gray-500 uppercase">Trip ends in {daysRemaining} days</span>
                         <span className="text-white font-bold">Remaining: {getCurrencySymbol(trip.baseCurrency || 'USD')}{remaining.toFixed(0)}</span>
                     </div>
                 </div>
@@ -403,7 +403,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-500"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Total Group Burn</span>
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Group Spending Progress</span>
                                 </div>
                                 <div className="flex items-baseline gap-2">
                                     <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalSpend.toFixed(0)}</span>
@@ -429,7 +429,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 {/* 4. Ledger / Recent Transactions */}
                 <div className="mb-8">
                     <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Latest Intel</h3>
+                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Recent Activity</h3>
                         <button
                             onClick={onViewLedger}
                             className="flex items-center gap-1 text-[10px] font-bold text-tactical-accent uppercase hover:underline"
@@ -473,7 +473,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         })}
                         {recentTransactions.length === 0 && (
                             <div className="text-center text-gray-500 text-xs py-4 border border-dashed border-gray-700 rounded-lg">
-                                No financial intelligence logged yet.
+                                No activities logged yet.
                             </div>
                         )}
                     </div>
@@ -482,7 +482,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 {/* 5. Blood Debts (Dual Mode) */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Blood Debts</h3>
+                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Balances</h3>
                         {/* Mode Toggle with Role Check */}
                         <div className="relative">
                             {!isPathfinder && (
@@ -498,7 +498,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                 className={`flex items-center gap-2 bg-black/40 rounded-lg p-1 border border-tactical-muted/30 ${!isPathfinder ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                             >
                                 <div className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${!useSmartSplit ? 'bg-tactical-accent text-black' : 'text-gray-500'}`}>
-                                    Direct Link
+                                    Direct View
                                 </div>
                                 <div className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${useSmartSplit ? 'bg-tactical-accent text-black' : 'text-gray-500'}`}>
                                     Smart Route
@@ -558,7 +558,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         <div className="mt-6 border border-tactical-muted/20 rounded-xl bg-black/20 p-4">
                             <div className="flex items-center gap-2 mb-3 text-tactical-accent/80">
                                 <NetworkIcon className="w-4 h-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Global Squad Settlements</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest">Group Settlements</span>
                             </div>
                             <div className="space-y-2">
                                 {smartTransfers.map((tx, idx) => {
@@ -607,7 +607,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             <ChevronLeftIcon className="w-6 h-6" />
                         </button>
                         <div className="font-display font-bold text-lg text-white uppercase tracking-wider">
-                            Debt History
+                            Activity History
                         </div>
                         <div className="w-6"></div>
                     </header>
@@ -624,7 +624,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                         {/* Active Balance based on Toggle */}
                         <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-                            {useSmartSplit ? 'SMART ROUTE (OPTIMIZED)' : 'DIRECT LINK (UNSHUFFLED)'}
+                            {useSmartSplit ? 'OPTIMIZED VIEW' : 'DIRECT VIEW'}
                         </div>
 
                         <div className="text-sm font-bold tracking-wider mb-6">
@@ -637,7 +637,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         <div className="mx-6 mb-8 bg-black/40 border border-tactical-muted/20 rounded-xl p-4 text-left">
                             <div className="flex items-center gap-2 mb-3">
                                 <SearchIcon className="w-3 h-3 text-tactical-accent" />
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Net Mission Intel</span>
+                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.2em]">Trip Summary</span>
                             </div>
 
                             <div className="grid grid-cols-3 gap-2">
@@ -656,7 +656,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             </div>
 
                             <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
-                                <div className="text-[8px] font-bold text-gray-500 uppercase">My Overall Mission Gap</div>
+                                <div className="text-[8px] font-bold text-gray-500 uppercase">My Balance</div>
                                 <div className={`font-mono text-sm font-bold ${(myTotalPaid - myTotalReceived - myTotalSpend) >= -0.01 ? 'text-tactical-accent' : 'text-red-500'}`}>
                                     {getCurrencySymbol(trip.baseCurrency || 'USD')}{(myTotalPaid - myTotalReceived - myTotalSpend).toFixed(2)}
                                 </div>
@@ -665,7 +665,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             {useSmartSplit && Math.abs(selectedMemberBalance - (pairwiseDebt[selectedMemberId!] || 0)) > 0.01 && (
                                 <div className="mt-3 bg-tactical-accent/10 p-2 rounded border border-tactical-accent/20">
                                     <p className="text-[8px] font-mono text-tactical-accent uppercase leading-tight">
-                                        Note: Smart Route has optimized your transfers. Direct debt to this operative: {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(pairwiseDebt[selectedMemberId!] || 0).toFixed(0)}.
+                                        Note: Optimized view has simplified your transfers. Direct debt to this member: {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(pairwiseDebt[selectedMemberId!] || 0).toFixed(0)}.
                                     </p>
                                 </div>
                             )}
@@ -720,7 +720,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-2">
-                            Evidence Locker (Proof of Debt)
+                            Transaction Evidence
                         </div>
                         {sharedHistory.length === 0 && (
                             <div className="text-center text-gray-500 mt-8 text-xs font-bold uppercase tracking-widest">

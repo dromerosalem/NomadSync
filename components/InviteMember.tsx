@@ -31,8 +31,8 @@ const SearchList: React.FC<{ query: string, onSelect: (user: Member) => void, ex
         return () => clearTimeout(timeout);
     }, [query, existingMemberIds]);
 
-    if (loading) return <div className="p-4 text-center text-xs text-gray-400">SCANNING DATABASE...</div>;
-    if (results.length === 0) return <div className="p-4 text-center text-xs text-gray-500">NO OPERATIVES FOUND</div>;
+    if (loading) return <div className="p-4 text-center text-xs text-gray-400">CONNECTING...</div>;
+    if (results.length === 0) return <div className="p-4 text-center text-xs text-gray-500">NO MEMBERS FOUND</div>;
 
     return (
         <div className="divide-y divide-white/5">
@@ -52,7 +52,7 @@ const SearchList: React.FC<{ query: string, onSelect: (user: Member) => void, ex
                         <div className="text-sm font-bold text-white truncate">{user.name}</div>
                         <div className="text-[10px] text-gray-500 truncate">{user.email}</div>
                     </div>
-                    <div className="text-[9px] font-bold text-tactical-accent border border-tactical-accent/30 px-2 py-0.5 rounded">RECRUIT</div>
+                    <div className="text-[9px] font-bold text-tactical-accent border border-tactical-accent/30 px-2 py-0.5 rounded">MEMBER</div>
                 </button>
             ))}
         </div>
@@ -90,11 +90,11 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
     const handleCopy = () => {
         if (!inviteCode) return;
 
-        const message = `ADVENTURE INVITE: You have been recruited for ${trip.name}. Tap to confirm clearance. 📍 ${inviteLink}`;
+        const message = `ADVENTURE INVITE: You have been invited to join ${trip.name}. Tap to confirm. 📍 ${inviteLink}`;
 
         if (navigator.share) {
             navigator.share({
-                title: 'NomadSync Squad Invite',
+                title: 'NomadSync Trip Invite',
                 text: message,
                 url: inviteLink
             }).catch(console.error);
@@ -121,7 +121,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                     <ChevronLeftIcon className="w-6 h-6" />
                 </button>
                 <div className="font-display font-bold text-lg text-tactical-accent uppercase tracking-wider">
-                    Recruit Your Circle
+                    Invite Your Group
                 </div>
             </header>
 
@@ -130,7 +130,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                 {/* Mission URL */}
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
-                        <LinkIcon className="w-3 h-3" /> Mission URL
+                        <LinkIcon className="w-3 h-3" /> Trip Link
                     </div>
                     <div className="bg-tactical-card rounded-xl p-1 border border-tactical-muted/30 flex flex-col gap-2">
                         <div className="bg-black/20 rounded-t-lg p-3 font-mono text-sm text-gray-400 select-all truncate">
@@ -177,7 +177,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 leading-relaxed">
-                                Full operational access. Can modify itinerary and budget.
+                                Full access. Can modify itinerary and budget.
                             </p>
                         </div>
                     </button>
@@ -201,7 +201,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                                 </div>
                             </div>
                             <p className="text-xs text-gray-500 leading-relaxed">
-                                Surveillance only. Read-only access to mission details.
+                                Viewer only. Read-only access to trip details.
                             </p>
                         </div>
                     </button>
@@ -211,7 +211,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                 <div className="space-y-2">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
-                        Find Operative
+                        Find Member
                     </div>
                     <div className="relative">
                         <input
@@ -240,7 +240,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
                     <div className="flex justify-between items-end mb-3">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
                             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                            Active Squad
+                            Adventure Circle
                         </div>
                         <div className="text-[9px] font-bold text-tactical-muted border border-tactical-muted/30 px-1.5 py-0.5 rounded bg-black/30">
                             {trip.members.filter(m => m.status === 'ACTIVE').length} ACTIVE

@@ -104,7 +104,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-          Abort Mission Setup
+          Cancel Setup
         </div>
         <div className="w-6"></div> {/* Spacer */}
       </header>
@@ -116,7 +116,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
             Plot Your<br />Path
           </h1>
           <p className="text-tactical-muted tracking-widest text-sm uppercase font-medium">
-            Initiate New Mission
+            Start Your Adventure
           </p>
         </header>
 
@@ -127,7 +127,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
           <div className="space-y-8">
             {/* Mission Name */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Name</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Name</label>
               <input
                 type="text"
                 value={name}
@@ -139,7 +139,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
 
             {/* Base Location */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Base Location (Departure)</label>
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Departure City</label>
               <PlaceAutocomplete
                 value={location}
                 onChange={(val, meta) => {
@@ -167,7 +167,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
 
             {/* Base Currency */}
             <CurrencySelector
-              label="Mission Currency"
+              label="Trip Currency"
               value={baseCurrency}
               onChange={setBaseCurrency}
             />
@@ -175,7 +175,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
 
           {/* Right Column: Calendar */}
           <div className="space-y-2 h-full flex flex-col">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Mission Timeline</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Dates</label>
             <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20 flex-1">
               <div className="flex justify-between items-center mb-6">
                 <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>
@@ -222,7 +222,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
               <span>SYNCHRONIZING TRIP...</span>
             ) : (
               <>
-                CREATE MASTER TRIP <ArrowRightIcon className="w-6 h-6" />
+                START YOUR ADVENTURE <ArrowRightIcon className="w-6 h-6" />
               </>
             )}
           </button>

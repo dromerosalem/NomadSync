@@ -31,10 +31,10 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
 
   const getHeaderTitle = () => {
     switch (item.type) {
-      case ItemType.STAY: return 'ACCOMMODATION INTEL';
-      case ItemType.TRANSPORT: return 'EXTRACTION DETAILS';
-      case ItemType.ACTIVITY: return 'RECON REPORT';
-      case ItemType.FOOD: return 'SUPPLY LOG';
+      case ItemType.STAY: return 'STAY DETAILS';
+      case ItemType.TRANSPORT: return 'TRANSPORT DETAILS';
+      case ItemType.ACTIVITY: return 'ACTIVITY REPORT';
+      case ItemType.FOOD: return 'FOOD & DRINK LOG';
     }
   };
 
@@ -99,14 +99,14 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
               <button
                 onClick={onEdit}
                 className="p-2 text-tactical-accent hover:bg-tactical-accent/10 rounded-full transition-colors"
-                title="Edit Intel"
+                title="Edit Item"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" /></svg>
               </button>
               <button
                 onClick={onDelete}
                 className="p-2 text-red-500 hover:bg-red-500/10 rounded-full transition-colors"
-                title="Delete Intel"
+                title="Delete Item"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
               </button>
@@ -126,7 +126,7 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
             {item.isPrivate && (
               <div className="inline-flex items-center gap-2 px-3 py-1 mb-3 rounded-full bg-gray-800 border border-gray-600">
                 <EyeOffIcon className="w-3 h-3 text-gray-400" />
-                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Private Intel</span>
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Private Item</span>
               </div>
             )}
 
@@ -333,19 +333,19 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
 
           {/* Details & Notes */}
           <div className="space-y-2">
-            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Additional Intel</div>
+            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Additional Details</div>
             <div className="bg-tactical-card rounded-lg p-4 border border-tactical-muted/30 min-h-[100px] text-gray-300 leading-relaxed whitespace-pre-wrap">
-              {item.details || "No additional intelligence logged."}
+              {item.details || "No additional details logged."}
             </div>
           </div>
 
           {/* Tactical Map Block */}
           <div className="space-y-2">
             <div className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest flex items-center justify-between">
-              <span>Sat-Link Feed</span>
+              <span>Location Map</span>
               {item.mapUri && (
                 <a href={item.mapUri} target="_blank" rel="noopener noreferrer" className="text-[8px] underline opacity-50 hover:opacity-100">
-                  EXT: FEED
+                  OPEN EXTERNAL MAP
                 </a>
               )}
             </div>

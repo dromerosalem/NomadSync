@@ -57,7 +57,7 @@ const LedgerScreen: React.FC<LedgerScreenProps> = ({ trip, currentUserId, onBack
                     <ChevronLeftIcon className="w-6 h-6" />
                 </button>
                 <div className="font-display font-bold text-lg text-white uppercase tracking-wider">
-                    Mission Ledger
+                    Trip Ledger
                 </div>
                 <div className="w-6"></div>
             </header>
@@ -66,14 +66,14 @@ const LedgerScreen: React.FC<LedgerScreenProps> = ({ trip, currentUserId, onBack
 
                 {Object.keys(groupedExpenses).length === 0 && (
                     <div className="text-center text-gray-500 mt-10">
-                        <div className="text-sm uppercase tracking-widest font-bold">No Intel Logged</div>
+                        <div className="text-sm uppercase tracking-widest font-bold">No Activity Logged</div>
                     </div>
                 )}
 
                 {Object.entries(groupedExpenses).map(([month, items]) => (
                     <div key={month}>
                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 border-b border-gray-800 pb-2">
-                            Chronological Intel • {month}
+                            Detailed Activity • {month}
                         </div>
 
                         <div className="space-y-3">

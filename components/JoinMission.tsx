@@ -38,7 +38,7 @@ const JoinMission: React.FC<JoinMissionProps> = ({ tripId, currentUser, onJoin, 
                 // We are in the app, direct entry
                 onJoin();
             } else {
-                // We are in browser, show "Mission Accepted" bridge
+                // We are in browser, show "Adventure Joined" bridge
                 setSuccess(true);
             }
         } catch (err) {
@@ -55,16 +55,16 @@ const JoinMission: React.FC<JoinMissionProps> = ({ tripId, currentUser, onJoin, 
                     <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                 </div>
 
-                <h1 className="font-display text-2xl font-bold text-white uppercase mb-2">MISSION ACCEPTED</h1>
+                <h1 className="font-display text-2xl font-bold text-white uppercase mb-2">ADVENTURE JOINED</h1>
                 <p className="text-gray-400 text-sm mb-8 max-w-xs mx-auto">
-                    Decryption Complete. Welcome to the Squad.
+                    Connection Complete. Welcome to the Adventure Circle.
                 </p>
 
                 <a
                     href="/?open=dashboard"
                     className="w-full max-w-xs bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-[0_0_15px_rgba(255,215,0,0.3)]"
                 >
-                    RETURN TO COMMAND CENTER
+                    RETURN TO DASHBOARD
                 </a>
             </div>
         );
@@ -76,9 +76,9 @@ const JoinMission: React.FC<JoinMissionProps> = ({ tripId, currentUser, onJoin, 
                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" /></svg>
             </div>
 
-            <h1 className="font-display text-2xl font-bold text-white uppercase mb-2">Incoming Mission Invite</h1>
+            <h1 className="font-display text-2xl font-bold text-white uppercase mb-2">Incoming Trip Invite</h1>
             <p className="text-gray-400 text-sm mb-8 max-w-xs mx-auto">
-                You have been summoned to join a NomadSync Squad. Confirm your acceptance to access encrypted mission details.
+                You have been invited to join a NomadSync Adventure Circle. Confirm your acceptance to access trip details.
             </p>
 
             {error && (
@@ -93,14 +93,14 @@ const JoinMission: React.FC<JoinMissionProps> = ({ tripId, currentUser, onJoin, 
                     disabled={loading}
                     className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                 >
-                    {loading ? 'DECRYPTING MISSION DATA...' : 'ACCEPT MISSION'}
+                    {loading ? 'SYNCING TRIP DATA...' : 'ACCEPT INVITE'}
                 </button>
 
                 <button
                     onClick={onCancel}
                     className="w-full text-xs font-bold text-gray-500 hover:text-white uppercase tracking-widest py-3"
                 >
-                    Decline & Abort
+                    Decline Invite
                 </button>
             </div>
         </div>

@@ -36,7 +36,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
             if (error) throw error;
             if (data.user) {
                 onAuthSuccess({
-                    name: data.user.user_metadata.full_name || 'Ghost Operative',
+                    name: data.user.user_metadata.full_name || 'New Traveler',
                     email: data.user.email!
                 });
             }
@@ -134,7 +134,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
             }
         } catch (err: any) {
             console.error('Auth Error:', err);
-            alert(err.message || "Invalid Credentials Detected");
+            alert(err.message || "Check your details and try again");
         } finally {
             setIsLoading(false);
         }
@@ -226,7 +226,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                     </div>
 
                     <p className="font-display text-xl font-bold text-white uppercase tracking-widest leading-relaxed mb-8 max-w-xs">
-                        Sync The Mission.<br />Eliminate The Friction.
+                        Sync Your Adventure.<br />Eliminate The Friction.
                     </p>
 
                     <div className="flex gap-1 mb-12">
@@ -240,13 +240,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                             onClick={() => { setMode('SIGNUP'); setShowEmailForm(false); }}
                             className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,215,0,0.3)] transition-all"
                         >
-                            START NEW MISSION <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
+                            START YOUR ADVENTURE <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                         </button>
                         <button
                             onClick={() => { setMode('LOGIN'); setShowEmailForm(false); }}
                             className="w-full bg-transparent hover:bg-white/5 border border-tactical-accent/50 text-tactical-accent font-display font-bold text-lg py-4 rounded-xl transition-all"
                         >
-                            REJOIN CIRCLE
+                            LOG IN
                         </button>
                     </div>
 
@@ -314,15 +314,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                     className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest hover:text-white mb-6"
                 >
                     <div className="h-px w-8 bg-tactical-accent"></div>
-                    Mission Protocol 01
+                    Adventure Sync 01
                 </button>
-                <h1 className="font-display text-5xl font-bold text-tactical-accent uppercase leading-none mb-2">
-                    {mode === 'SIGNUP' ? 'Recruit' : 'Operative'}
+                <h1 className="font-display text-4xl font-bold text-tactical-accent uppercase leading-none mb-2">
+                    {mode === 'SIGNUP' ? 'Create Your' : 'Account'}
                     <br />
-                    {mode === 'SIGNUP' ? 'Enrollment' : 'Access'}
+                    {mode === 'SIGNUP' ? 'Account' : 'Log In'}
                 </h1>
                 <p className="text-gray-500 text-xs font-bold uppercase tracking-wider max-w-xs leading-relaxed">
-                    Securing your digital footprint across the desert. Verification required.
+                    Access your world across the globe. Seamless sync.
                 </p>
             </header>
 
@@ -343,7 +343,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                             onClick={() => setShowEmailForm(true)}
                             className="text-tactical-accent font-bold uppercase tracking-[0.2em] text-[10px] border-b border-tactical-accent/30 pb-1 hover:text-white hover:border-white transition-all"
                         >
-                            {mode === 'SIGNUP' ? 'Enroll With Email' : 'Dispatch Via Email'}
+                            {mode === 'SIGNUP' ? 'Sign Up via Email' : 'Log In via Email'}
                         </button>
                     </div>
                 ) : (
@@ -352,13 +352,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                             <div className="group">
                                 <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
                                     <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
-                                    Nomad Name
+                                    User Name
                                 </label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    placeholder="GHOST_OPERATIVE"
+                                    placeholder="ADVENTURE_USER"
                                     className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
                                 />
                             </div>
@@ -381,7 +381,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                         <div className="group">
                             <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 group-focus-within:text-white transition-colors">
                                 <div className="w-1 h-1 bg-tactical-accent rounded-full opacity-0 group-focus-within:opacity-100"></div>
-                                Secret Key
+                                Password
                             </label>
                             <input
                                 type="password"
@@ -406,7 +406,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                             <span className="animate-pulse">CONNECTING...</span>
                         ) : (
                             <>
-                                {mode === 'SIGNUP' ? 'DEPLOY TO MISSION' : 'ACCESS TERMINAL'}
+                                {mode === 'SIGNUP' ? 'JOIN THE JOURNEY' : 'LOG IN'}
                                 <LightningIcon className="w-5 h-5 fill-black" />
                             </>
                         )}
@@ -417,13 +417,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
             <div className="p-6 z-10 w-full max-w-md mx-auto">
                 <div className="text-center">
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">
-                        {mode === 'SIGNUP' ? 'Veteran?' : 'New Recruit?'}
+                        {mode === 'SIGNUP' ? 'Already have an account?' : 'Don\'t have an account?'}
                     </span>
                     <button
                         onClick={() => { setMode(mode === 'SIGNUP' ? 'LOGIN' : 'SIGNUP'); setShowEmailForm(false); }}
                         className="text-white font-bold uppercase tracking-widest text-xs border-b border-tactical-accent pb-0.5 hover:text-tactical-accent transition-colors"
                     >
-                        {mode === 'SIGNUP' ? 'REJOIN CIRCLE' : 'ENROLL NOW'}
+                        {mode === 'SIGNUP' ? 'LOG IN' : 'SIGN UP FOR FREE'}
                     </button>
 
                     <div className="flex justify-center gap-4 mt-8 opacity-40">

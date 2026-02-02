@@ -66,7 +66,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 <div className="w-16 h-16 bg-tactical-accent/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-tactical-accent/30 box-glow">
                     <Bell className="w-8 h-8 text-tactical-accent" />
                 </div>
-                <h1 className="text-2xl font-display font-bold uppercase tracking-wider mb-2">Tactical Alerts</h1>
+                <h1 className="text-2xl font-display font-bold uppercase tracking-wider mb-2">Adventure Alerts</h1>
                 <p className="text-tactical-muted text-sm px-4">
                     Get instant alerts when your team adds expenses, updates plans, or settles debts.
                 </p>
@@ -92,7 +92,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
             </div>
 
-            {/* Scannable Intel Points */}
+            {/* Adventure Highlights */}
             <div className="space-y-6 mb-auto">
                 <div className="flex items-start gap-4">
                     <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
@@ -109,7 +109,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     </div>
                     <div>
                         <h3 className="text-xs font-bold uppercase tracking-tight text-tactical-accent mb-0.5">Trip Changes</h3>
-                        <p className="text-[11px] text-tactical-muted">Instant updates if the mission itinerary moves or updates.</p>
+                        <p className="text-[11px] text-tactical-muted">Instant updates if the trip itinerary moves or updates.</p>
                     </div>
                 </div>
                 <div className="flex items-start gap-4">
@@ -158,7 +158,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
                 <h1 className="text-2xl font-display font-bold uppercase tracking-wider mb-2 text-tactical-accent">Accuracy Check</h1>
                 <p className="text-white/80 text-sm px-4 font-medium leading-relaxed">
-                    NomadSync AI is powerful, but not infallible. Please double-check all synchronized intel.
+                    NomadSync AI is powerful, but not infallible. Please double-check all synchronized details.
                 </p>
             </div>
 
@@ -173,7 +173,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                         <Receipt className="w-4 h-4 text-tactical-accent" />
                     </div>
                     <div>
-                        <div className="text-[10px] font-bold uppercase tracking-widest text-tactical-accent">Extracted Intel</div>
+                        <div className="text-[10px] font-bold uppercase tracking-widest text-tactical-accent">Extracted Details</div>
                         <div className="text-xs font-mono text-white/90">GIGI'S PIZZA • SHIBUYA</div>
                     </div>
                 </div>
@@ -196,18 +196,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                 </div>
 
                 <div className="mt-4 text-[10px] text-center text-tactical-accent/80 italic font-mono uppercase tracking-tighter">
-                    System scanning... Final verification required
+                    System scanning... Please verify details.
                 </div>
             </div>
 
-            {/* Scannable Intel Points */}
+            {/* Adventure Highlights */}
             <div className="space-y-4 mb-auto text-center px-4">
                 <p className="text-xs text-white/70 leading-relaxed font-medium">
-                    Efficiency is our primary directive. Accuracy is your ultimate responsibility.
+                    Efficiency is our goal. Accuracy is your priority.
                 </p>
                 <div className="h-px bg-gradient-to-r from-transparent via-tactical-accent/20 to-transparent w-full"></div>
                 <p className="text-[10px] text-tactical-accent font-mono uppercase tracking-[0.1em]">
-                    Operational integrity depends on user review.
+                    Reliability depends on your review.
                 </p>
             </div>
 
@@ -217,10 +217,10 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
                     onClick={onComplete}
                     className="w-full py-4 bg-tactical-accent text-black font-display font-black uppercase tracking-[0.2em] text-sm rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2 transform active:scale-95 shadow-[0_0_20px_rgba(251,191,36,0.3)]"
                 >
-                    I WILL VERIFY
+                    I UNDERSTAND
                 </button>
                 <div className="mt-4 text-center">
-                    <span className="text-[8px] font-bold uppercase tracking-widest text-tactical-accent/50">Protocol Acknowledged</span>
+                    <span className="text-[8px] font-bold uppercase tracking-widest text-tactical-accent/50">Ready to start</span>
                 </div>
             </div>
         </div>

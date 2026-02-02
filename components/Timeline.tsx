@@ -33,7 +33,7 @@ const ExpandableDetails: React.FC<{
           onClick={toggle}
           className="mt-2 text-[10px] font-bold uppercase tracking-widest text-tactical-accent hover:text-white flex items-center gap-1 transition-colors"
         >
-          {isExpanded ? 'Collapse Intel' : 'Expand Full Intel'}
+          {isExpanded ? 'Collapse Details' : 'Expand Details'}
           <svg className={`w-3 h-3 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
           </svg>
@@ -82,21 +82,21 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
         return {
           gradient: 'linear-gradient(135deg, #064e3b 0%, #10b981 100%)',
           icon: UtensilsIcon,
-          label: 'REFUEL',
+          label: 'FOOD',
           color: 'text-emerald-400'
         };
       case ItemType.TRANSPORT:
         return {
           gradient: 'linear-gradient(135deg, #082f49 0%, #06b6d4 100%)',
           icon: TrainIcon,
-          label: 'TRANSIT',
+          label: 'TRANSPORT',
           color: 'text-cyan-400'
         };
       default:
         return {
           gradient: 'linear-gradient(135deg, #451a03 0%, #f59e0b 100%)',
           icon: CameraIcon,
-          label: 'RECON',
+          label: 'ACTIVITY',
           color: 'text-amber-500'
         };
     }
@@ -289,7 +289,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-tactical-muted/10">
                   {item.mapUri ? (
                     <a href={item.mapUri} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-[10px] text-emerald-500 hover:text-white uppercase tracking-widest font-black underline">
-                      VIEW INTEL MAP
+                      VIEW MAP
                     </a>
                   ) : <div></div>}
 
@@ -526,7 +526,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
               <ChevronLeftIcon className="w-6 h-6" />
             </button>
             <div>
-              <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Current Mission</h2>
+              <h2 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Current Trip</h2>
               <h1 className="font-display text-2xl font-bold text-white uppercase leading-none">{trip.name}</h1>
               <div className="flex items-center gap-2 text-tactical-muted text-xs mt-1">
                 <MapPinIcon className="w-3 h-3" /> {trip.destination}
@@ -566,7 +566,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
                 <div className="p-1.5 rounded-lg bg-tactical-accent/20 text-tactical-accent group-hover:bg-tactical-accent/30 transition-colors">
                   <WalletIcon className="w-4 h-4" />
                 </div>
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-tactical-accent transition-colors">Mission Wallet</span>
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest group-hover:text-tactical-accent transition-colors">Wallet</span>
               </div>
               <div className="font-mono text-xl text-white leading-none">
                 <span className={remainingBudget < 0 ? "text-red-500 font-bold" : "text-white font-bold"}>
@@ -645,7 +645,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
             <div className="w-16 h-16 rounded-full bg-tactical-card border-2 border-dashed border-tactical-muted/50 flex items-center justify-center mb-4">
               <PlusIcon className="w-6 h-6" />
             </div>
-            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">{activeFilter ? 'No Intel Matches Filter' : 'No Timeline Intel'}</p>
+            <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">{activeFilter ? 'No items Match Filter' : 'No Items Added'}</p>
           </div>
         ) : (
           <div className="space-y-0">

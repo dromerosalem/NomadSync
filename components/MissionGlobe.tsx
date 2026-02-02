@@ -77,7 +77,7 @@ const MissionGlobe: React.FC<MissionGlobeProps> = ({ trip, onClose }) => {
             points.unshift({
                 id: 'mission-base',
                 order: 0, // 0 for HQ/Base
-                name: 'MISSION BASE',
+                name: 'TRIP BASE',
                 city: trip.destination,
                 lat: Number(trip.latitude),
                 lng: Number(trip.longitude),
@@ -122,8 +122,8 @@ const MissionGlobe: React.FC<MissionGlobeProps> = ({ trip, onClose }) => {
             {/* Mission HUD Header */}
             <div className="absolute top-0 left-0 w-full p-6 flex justify-between items-start z-10 pointer-events-none">
                 <div>
-                    <div className="text-[10px] font-bold text-tactical-accent/80 uppercase tracking-widest animate-pulse">
-                        ACTIVE CONNECTION ESTABLISHED
+                    <div className="text-[10px] font-bold text-tactical-accent/80 uppercase tracking-widest">
+                        TRIP OVERVIEW
                     </div>
                     <h1 className="font-display text-4xl font-bold text-white mt-1 drop-shadow-lg">
                         {trip.name}
@@ -237,7 +237,7 @@ const MissionGlobe: React.FC<MissionGlobeProps> = ({ trip, onClose }) => {
                         <span className="text-[10px] text-white font-bold uppercase tracking-widest">Transport</span>
                     </div>
                     <div className="text-[10px] text-gray-500 font-mono pl-4 border-l border-white/20">
-                        PHYSICAL INTELLIGENCE LAYER
+                        TRIP HIGHLIGHTS
                     </div>
                 </div>
             </div>

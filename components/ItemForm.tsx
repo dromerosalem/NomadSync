@@ -321,10 +321,10 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
   const getHeaderTitle = () => {
     switch (type) {
-      case ItemType.STAY: return 'MISSION: ACCOMMODATION';
-      case ItemType.TRANSPORT: return 'MISSION: EXTRACTION';
-      case ItemType.ACTIVITY: return 'MISSION: INTEL & VIEWS';
-      case ItemType.FOOD: return 'MISSION: REFUEL';
+      case ItemType.STAY: return 'TRIP ITEM: STAY';
+      case ItemType.TRANSPORT: return 'TRIP ITEM: TRANSPORT';
+      case ItemType.ACTIVITY: return 'TRIP ITEM: ACTIVITY';
+      case ItemType.FOOD: return 'TRIP ITEM: FOOD & DRINK';
     }
   };
 
@@ -358,11 +358,11 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         </button>
         <div className="flex flex-col items-center">
           <div className="px-3 py-1 rounded-full border border-tactical-muted/30 bg-tactical-card text-[10px] uppercase font-bold tracking-widest text-gray-500">
-            {initialItem?.id ? 'Modifying Intel' : 'Secured by User'}
+            {initialItem?.id ? 'Updating Item' : 'Private Item'}
           </div>
           {queueLength !== undefined && queueLength > 1 && (
             <div className="text-[10px] text-tactical-accent font-bold mt-1 tracking-widest animate-pulse">
-              DETECTED INTEL: +{queueLength - 1} MORE
+              DETECTED ITEMS: +{queueLength - 1} MORE
             </div>
           )}
         </div>
@@ -384,7 +384,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">
                 {type === ItemType.TRANSPORT ? 'Transport Provider' :
                   type === ItemType.FOOD ? 'Establishment Name' :
-                    'Fortress Identifier'}
+                    'Place Name'}
               </label>
               <input
                 value={title}
@@ -404,12 +404,12 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
             </div>
             <div>
               <div className="font-display font-bold text-white uppercase text-sm tracking-wide">
-                {isPrivate ? 'Private Intel' : 'Public Intel'}
+                {isPrivate ? 'Private Item' : 'Share Item'}
               </div>
               <div className="text-xs text-gray-500">
                 {isOwner
-                  ? (isPrivate ? 'Only visible to you' : 'Visible to entire squad')
-                  : 'Created by another operative (Locked)'}
+                  ? (isPrivate ? 'Only visible to you' : 'Visible to everyone in the trip')
+                  : 'Created by another traveler (Locked)'}
               </div>
             </div>
           </div>
@@ -441,7 +441,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                 </div>
                 <div>
                   <div className="font-display font-bold text-white uppercase text-sm tracking-wide">
-                    Financial Config
+                    Payment & Split
                   </div>
                   <div className="text-xs text-gray-500">
                     Paid by <span className="text-white font-bold">{paidBy === currentUserId ? 'YOU' : payer?.name}</span> • Split by <span className="text-white font-bold">{splitWith.length}</span>
@@ -478,7 +478,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 block">
-                    Split Among
+                    Split With
                   </label>
                   {activeMembers.map(member => (
                     <div key={member.id} className="flex items-center justify-between p-2 rounded hover:bg-white/5">
@@ -515,7 +515,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         <div className="grid grid-cols-2 gap-4 border-t border-b border-tactical-muted/10 py-6">
           <div>
             <TacticalDatePicker
-              label={type === ItemType.TRANSPORT ? 'Departure' : 'Infiltration'}
+              label={type === ItemType.TRANSPORT ? 'Departure' : 'Check-In'}
               value={startDate}
               onChange={(date) => setStartDate(formatDateForInput(date))}
             />
@@ -524,7 +524,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           {(type === ItemType.STAY || type === ItemType.TRANSPORT) && (
             <div>
               <TacticalDatePicker
-                label={type === ItemType.TRANSPORT ? 'Arrival' : 'Extraction'}
+                label={type === ItemType.TRANSPORT ? 'Arrival' : 'Check-Out'}
                 value={endDate}
                 onChange={(date) => setEndDate(formatDateForInput(date))}
               />
@@ -542,7 +542,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         <div className="space-y-4">
           <div>
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">
-              {type === ItemType.TRANSPORT ? 'Origin Coordinates' : 'Target Coordinates'}
+              {type === ItemType.TRANSPORT ? 'Origin Coordinates' : 'Location Coordinates'}
             </label>
             <PlaceAutocomplete
               value={location}
@@ -561,7 +561,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           {type === ItemType.TRANSPORT && (
             <div>
               <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">
-                Target Coordinates (Destination)
+                Destination Coordinates
               </label>
               <PlaceAutocomplete
                 value={endLocation}
@@ -581,7 +581,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
         {/* Tags Section */}
         <div className="mt-6">
-          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Tactical Labels</label>
+          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Trip Labels</label>
           {availableTags.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-3">
               {availableTags.map(tag => (
@@ -629,7 +629,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
             <div className="p-6 border-b border-dashed border-black/30 bg-white/5">
               <div className="flex justify-between items-start">
                 <div>
-                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1">Operative</span>
+                  <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest block mb-1">Traveler</span>
                   <div className="font-display font-bold text-2xl text-white tracking-tight">THE TRAVELER</div>
                 </div>
                 <div className="text-right">
@@ -680,7 +680,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         {type === ItemType.STAY && (
           <div className="bg-tactical-muted/10 border border-tactical-accent/30 rounded-2xl overflow-hidden shadow-2xl mt-8">
             <div className="bg-tactical-accent/15 p-4 border-b border-tactical-accent/30 flex justify-between items-center">
-              <span className="text-xs font-extrabold text-tactical-accent uppercase tracking-[0.2em]">Safehouse Identification</span>
+              <span className="text-xs font-extrabold text-tactical-accent uppercase tracking-[0.2em]">Accommodation Details</span>
               <BedIcon className="w-5 h-5 text-tactical-accent animate-pulse" />
             </div>
             <div className="p-6 space-y-8">
@@ -719,7 +719,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       {/* Footer */}
       <div className="mt-auto sticky bottom-0 bg-tactical-bg p-6 border-t border-tactical-muted/20 z-20 w-full max-w-2xl mx-auto backdrop-blur-md bg-opacity-95">
         <div className="flex items-end justify-between mb-4">
-          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">Financial Liability</span>
+          <span className="text-[11px] font-bold text-gray-500 uppercase tracking-[0.2em]">Cost</span>
           <div className="flex flex-col items-end gap-1">
             <div className="flex items-center gap-3">
               <CurrencySelector
@@ -750,7 +750,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           disabled={!title}
           className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-black text-xl py-5 rounded-2xl shadow-[0_0_30px_rgba(255,215,0,0.15)] active:scale-[0.98] disabled:opacity-30 transition-all uppercase tracking-[0.15em]"
         >
-          {queueLength && queueLength > 1 ? 'CONFIRM & NEXT INTEL' : (initialItem?.id ? 'UPDATE INTEL' : 'CONFIRM MISSION')}
+          {queueLength && queueLength > 1 ? 'SAVE & NEXT ITEM' : (initialItem?.id ? 'UPDATE ITEM' : 'ADD TO TRIP')}
         </button>
       </div>
     </div>

@@ -94,22 +94,22 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
         }
 
         const standardPhrases = [
-            "Decrypting cafe latte scribbles...",
             "Analyzing spending habits...",
-            "Converting pixels to pennies...",
-            "Consulting the financial oracles...",
-            "Asking the chef for clarification...",
-            "Doing the math so you don't have to...",
-            "Scanning for hidden tacos...",
-            "Deciphering ancient receipt runes..."
+            "Checking local prices...",
+            "Scanning for receipts...",
+            "Categorizing items...",
+            "Updating your budget...",
+            "Doing the math...",
+            "Almost there...",
+            "Finalizing details..."
         ];
 
         const premiumPhrases = [
-            "ACTUATING DEEP RESOLUTION ENGINE...",
-            "IDENTIFYING DOCUMENT STRUCTURE...",
-            "ISOLATING LINE-ITEM ENTITIES...",
-            "VALIDATING TAX & TOTAL LOGIC...",
-            "FORMATTING FINAL ANALYTICAL DATA..."
+            "ADVANCED SCANNING ENABLED...",
+            "EXTRACTING DETAILS...",
+            "LISTING ITEMS...",
+            "CHECKING TOTALS...",
+            "FINALIZING..."
         ];
 
         const phrases = isPremiumScan ? premiumPhrases : standardPhrases;
@@ -719,7 +719,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                         {/* Status Message */}
                         <div className="absolute top-full left-1/2 -translate-x-1/2 mt-8 w-64">
                             <div className="font-display text-[10px] font-black text-tactical-accent uppercase tracking-[0.3em] mb-4 animate-pulse">
-                                {isPremiumScan ? 'DEEP RESOLUTION SCAN' : 'INTEL ACQUISITION'}
+                                {isPremiumScan ? 'DEEP RESOLUTION SCAN' : 'ANALYZING DETAILS'}
                             </div>
                             <div
                                 key={scanningMessage}
