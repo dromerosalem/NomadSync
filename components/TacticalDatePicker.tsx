@@ -1,5 +1,83 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeftIcon } from './Icons';
+
+interface TimeWheelProps {
+    value: number;
+    range: number;
+    onChange: (val: number) => void;
+}
+
+const TimeWheel: React.FC<TimeWheelProps> = ({ value, range, onChange }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const itemHeight = 40; // Matches CSS .wheel-item height
+    const loopCount = 5; // Repeat range to simulate infinite scroll
+    const options = Array.from({ length: range * loopCount }, (_, i) => i % range);
+
+    const scrollToValue = useCallback((val: number, smooth = true) => {
+        if (!containerRef.current) return;
+        const targetIndex = val + range * Math.floor(loopCount / 2);
+        containerRef.current.scrollTo({
+            top: targetIndex * itemHeight,
+            behavior: smooth ? 'smooth' : 'auto'
+        });
+    }, [range, itemHeight, loopCount]);
+
+    useEffect(() => {
+        scrollToValue(value, false);
+    }, []); // Initial scroll
+
+    // Sync if external value changes (e.g. from scan)
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        // Calculate current scroll index to see if we need to sync
+        const currentIndex = Math.round(container.scrollTop / itemHeight) % range;
+        if (currentIndex !== value) {
+            scrollToValue(value);
+        }
+    }, [value, range, scrollToValue]);
+
+    const handleScroll = () => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const scrollTop = container.scrollTop;
+        const index = Math.round(scrollTop / itemHeight);
+        const actualValue = options[index];
+
+        // Infinite loop logic: if we get too close to edges, jump to middle
+        if (index < range) {
+            container.scrollTo({ top: (index + range * 2) * itemHeight, behavior: 'auto' });
+        } else if (index > range * 4) {
+            container.scrollTo({ top: (index - range * 2) * itemHeight, behavior: 'auto' });
+        }
+
+        if (actualValue !== value) {
+            onChange(actualValue);
+        }
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            onScroll={handleScroll}
+            className="wheel-container w-20 bg-white/5 rounded-xl border border-white/10"
+        >
+            {/* Pad top/bottom to allow snapping to middle */}
+            <div style={{ height: itemHeight }} />
+            {options.map((opt, i) => (
+                <div
+                    key={i}
+                    className={`wheel-item ${opt === value ? 'selected' : ''}`}
+                >
+                    {opt.toString().padStart(2, '0')}
+                </div>
+            ))}
+            <div style={{ height: itemHeight }} />
+        </div>
+    );
+};
 
 interface TacticalDatePickerProps {
     label: string;
@@ -157,26 +235,26 @@ const TacticalDatePicker: React.FC<TacticalDatePickerProps> = ({ label, value, o
                                 })}
                             </div>
 
-                            {/* Time Selector - Wheel Simulation */}
+                            {/* Time Selector - Wheel Scroller */}
                             <div className="bg-black/20 rounded-xl p-4 border border-white/5">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 block text-center">Operation Time (24H)</label>
-                                <div className="flex justify-center items-center gap-4">
-                                    {/* Hours */}
-                                    <div className="flex flex-col items-center gap-1">
-                                        <button onClick={() => updateTime((hours + 1) % 24, minutes)} className="text-gray-500 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rotate-180"><path d="m6 9 6 6 6-6" /></svg></button>
-                                        <div className="bg-white/5 w-16 py-2 rounded-lg text-center font-mono text-2xl font-bold text-white border border-white/10">
-                                            {hours.toString().padStart(2, '0')}
-                                        </div>
-                                        <button onClick={() => updateTime((hours - 1 + 24) % 24, minutes)} className="text-gray-500 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></button>
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 block text-center">Operation Time (24H)</label>
+
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="flex justify-center items-center gap-4 relative">
+                                        {/* Central Highlight Bar - Now perfectly centered with the wheels */}
+                                        <div className="absolute inset-x-[-12px] top-1/2 -translate-y-1/2 h-10 border-y border-tactical-accent/30 pointer-events-none bg-tactical-accent/5 rounded-md" />
+
+                                        <TimeWheel value={hours} range={24} onChange={(h) => updateTime(h, minutes)} />
+
+                                        <div className="text-2xl font-bold text-gray-600 z-10">:</div>
+
+                                        <TimeWheel value={minutes} range={60} onChange={(m) => updateTime(hours, m)} />
                                     </div>
-                                    <div className="text-2xl font-bold text-gray-600 pb-1">:</div>
-                                    {/* Minutes */}
-                                    <div className="flex flex-col items-center gap-1">
-                                        <button onClick={() => updateTime(hours, (minutes + 5) % 60)} className="text-gray-500 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="rotate-180"><path d="m6 9 6 6 6-6" /></svg></button>
-                                        <div className="bg-white/5 w-16 py-2 rounded-lg text-center font-mono text-2xl font-bold text-white border border-white/10">
-                                            {minutes.toString().padStart(2, '0')}
-                                        </div>
-                                        <button onClick={() => updateTime(hours, (minutes - 5 + 60) % 60)} className="text-gray-500 hover:text-white"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg></button>
+
+                                    {/* Labels outside the centered wheel block */}
+                                    <div className="flex justify-between w-full max-w-[180px] px-2">
+                                        <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Hours</span>
+                                        <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Minutes</span>
                                     </div>
                                 </div>
                             </div>

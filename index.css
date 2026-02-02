@@ -209,3 +209,36 @@ body {
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
+
+/* Infinite Wheel Scroller */
+.wheel-container {
+  height: 120px;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 40%, black 60%, transparent);
+}
+
+.wheel-container::-webkit-scrollbar {
+  display: none;
+}
+
+.wheel-item {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #94a3b8;
+  transition: all 0.2s ease;
+}
+
+.wheel-item.selected {
+  color: #facc15;
+  font-size: 2rem;
+  transform: scale(1.1);
+}
