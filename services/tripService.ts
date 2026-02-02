@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import { Trip, ItineraryItem, Member, Role } from '../types';
 import { db } from '../db/LocalDatabase';
+import { syncService } from './SyncService';
 
 export const tripService = {
     // --- TRIP OPERATIONS ---
@@ -327,7 +328,15 @@ export const tripService = {
         };
 
         // 1. Update Local DB Immediately (Optimistic)
-        await db.items.put(optimisticItem);
+        try {
+            await db.items.put(optimisticItem);
+        } catch (dbError) {
+             console.error('[tripService] Critical: Failed to write to local DB', dbError);
+             // If local write fails, we should still try sync or queue?
+             // But if we can't write to local DB, queueing (which writes to local DB) will also fail.
+             // We must throw here.
+             throw new Error('Storage Error: Could not save item locally.');
+        }
 
         // 2. Try Sync
         try {
@@ -404,7 +413,7 @@ export const tripService = {
             console.warn('[tripService] Supabase write failed, enqueuing for background sync:', err);
 
             // 3. Fallback to Sync Queue
-            const syncService = (await import('./SyncService')).syncService;
+            // syncService is statically imported now, so this is safe offline
             await syncService.enqueue(
                 'itinerary_items',
                 isNew ? 'INSERT' : 'UPDATE',
@@ -428,7 +437,6 @@ export const tripService = {
             console.warn('[tripService] Supabase delete failed, enqueuing for background sync:', err);
 
             // 3. Fallback to Sync Queue
-            const syncService = (await import('./SyncService')).syncService;
             await syncService.enqueue(
                 'itinerary_items',
                 'DELETE',
@@ -440,21 +448,21 @@ export const tripService = {
     // --- RECRUITMENT OPERATIONS ---
 
     async createInviteCode(tripId: string): Promise<string> {
-    const { data, error } = await supabase.rpc('create_invite_code', { trip_uuid: tripId });
-    if (error) throw error;
-    return data;
-  },
+        const { data, error } = await supabase.rpc('create_invite_code', { trip_uuid: tripId });
+        if (error) throw error;
+        return data;
+    },
 
-  async resolveInviteCode(code: string): Promise<string | null> {
-    const { data, error } = await supabase.rpc('resolve_invite_code', { invite_code: code });
-    if (error) {
-      console.error('Failed to resolve invite code:', error);
-      return null;
-    }
-    return data;
-  },
+    async resolveInviteCode(code: string): Promise<string | null> {
+        const { data, error } = await supabase.rpc('resolve_invite_code', { invite_code: code });
+        if (error) {
+            console.error('Failed to resolve invite code:', error);
+            return null;
+        }
+        return data;
+    },
 
-  async searchUsers(query: string): Promise<Member[]> {
+    async searchUsers(query: string): Promise<Member[]> {
         if (!query || query.length < 3) return [];
 
         const { data, error } = await supabase
