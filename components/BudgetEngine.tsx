@@ -22,6 +22,7 @@ interface BudgetEngineProps {
 const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, currentUserRole, onBack, onLogExpense, onViewLedger, onItemClick, onToggleBudgetMode, onSettleDebt }) => {
     const currentUser = trip.members.find(m => m.id === currentUserId);
     const userBudget = currentUser?.budget || 0;
+    const dailyBudget = currentUser?.dailyBudget || 0; // Optional Daily Budget
 
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [settleModalOpen, setSettleModalOpen] = useState(false);
@@ -181,10 +182,23 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         const pDebtNumbers: Record<string, number> = {};
         Object.keys(pDebt).forEach(id => pDebtNumbers[id] = pDebt[id].toNumber());
 
+        // --- DAILY SPEND CALCULATION ---
+        // Filter transactions where I PAID today (using local time)
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        let todaySpend = new Money(0);
+        trip.items.forEach(item => {
+            if (item.paidBy === currentUserId && new Date(item.startDate) >= startOfToday) {
+                todaySpend = todaySpend.add(new Money(item.cost || 0));
+            }
+        });
+
         return {
             myTotalSpend: myTotal.toNumber(),
             myTotalPaid: myPaid.toNumber(),
             myTotalReceived: myReceived.toNumber(),
+            myTodaySpend: todaySpend.toNumber(),
             groupTotalSpend: groupTotal.toNumber(),
             categorySpend: catSpendNumbers,
             pairwiseDebt: pDebtNumbers,
@@ -198,6 +212,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         myTotalSpend,
         myTotalPaid,
         myTotalReceived,
+        myTodaySpend,
         groupTotalSpend,
         categorySpend,
         pairwiseDebt,
@@ -208,6 +223,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         myTotalSpend: 0,
         myTotalPaid: 0,
         myTotalReceived: 0,
+        myTodaySpend: 0,
         groupTotalSpend: 0,
         categorySpend: {
             [ItemType.FOOD]: 0,
@@ -227,6 +243,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     const burnRate = userBudget > 0 ? Math.min((myTotalSpend / userBudget) * 100, 100) : 0;
     const remaining = userBudget - myTotalSpend;
     const daysRemaining = daysUntilEnd;
+
+    // Daily Budget Logic
+    const dailyProgressBar = dailyBudget > 0 ? Math.min((myTodaySpend / dailyBudget) * 100, 100) : 0;
+    const isOverDailyBudget = dailyBudget > 0 && myTodaySpend > dailyBudget;
 
 
     // Helper: Get Display Balance for Main List AND Detail View
@@ -327,6 +347,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 </button>
             </header>
 
+
+
             <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-24">
 
                 {/* 1. Personal Budget Card */}
@@ -359,6 +381,40 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         <span className="text-white font-bold">Remaining: {getCurrencySymbol(trip.baseCurrency || 'USD')}{remaining.toFixed(0)}</span>
                     </div>
                 </div>
+
+                {/* 1.5. Daily Budget Widget (Optional) */}
+                {dailyBudget > 0 && (
+                    <div className={`mb-8 border rounded-xl p-4 flex justify-between items-center transition-colors ${isOverDailyBudget ? 'bg-tactical-accent/5 border-tactical-accent/20' : 'bg-black/40 border-tactical-muted/20'}`}>
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className={`text-[10px] font-bold uppercase tracking-widest ${isOverDailyBudget ? 'text-tactical-accent' : 'text-gray-500'}`}>Daily Tracker</span>
+                                {isOverDailyBudget && (
+                                    <span className="text-[9px] font-mono font-bold text-tactical-accent/80 uppercase tracking-tighter">
+                                        Limit Exceeded
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-baseline gap-2">
+                                <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTodaySpend.toFixed(0)}</span>
+                                <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{dailyBudget}</span>
+                            </div>
+                            <div className="h-1.5 w-full bg-gray-800 rounded-full mt-2 overflow-hidden">
+                                <div
+                                    className="h-full bg-tactical-accent transition-all duration-700"
+                                    style={{ width: `${dailyProgressBar}%` }}
+                                ></div>
+                            </div>
+                        </div>
+                        <div className="ml-4 text-right">
+                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">
+                                {isOverDailyBudget ? 'Over Limit' : 'Left Today'}
+                            </div>
+                            <div className={`font-bold font-mono text-sm ${isOverDailyBudget ? 'text-tactical-accent' : 'text-tactical-accent'}`}>
+                                {isOverDailyBudget ? '+' : ''}{getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(dailyBudget - myTodaySpend).toFixed(0)}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* 2. Category Breakdown - Responsive Grid */}
                 <div className="mb-8">
@@ -624,7 +680,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                         {/* Active Balance based on Toggle */}
                         <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-1">
-                            {useSmartSplit ? 'OPTIMIZED VIEW' : 'DIRECT VIEW'}
+                            {useSmartSplit ? 'SMART ROUTE' : 'DIRECT VIEW'}
                         </div>
 
                         <div className="text-sm font-bold tracking-wider mb-6">
@@ -633,7 +689,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             {Math.abs(selectedMemberBalance) <= 0.01 && <span className="text-gray-500">ALL SETTLED</span>}
                         </div>
 
-                        {/* Net Intel Card - The "Why" */}
+                        {/* Net Balance Details - The "Why" */}
                         <div className="mx-6 mb-8 bg-black/40 border border-tactical-muted/20 rounded-xl p-4 text-left">
                             <div className="flex items-center gap-2 mb-3">
                                 <SearchIcon className="w-3 h-3 text-tactical-accent" />
@@ -665,7 +721,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             {useSmartSplit && Math.abs(selectedMemberBalance - (pairwiseDebt[selectedMemberId!] || 0)) > 0.01 && (
                                 <div className="mt-3 bg-tactical-accent/10 p-2 rounded border border-tactical-accent/20">
                                     <p className="text-[8px] font-mono text-tactical-accent uppercase leading-tight">
-                                        Note: Optimized view has simplified your transfers. Direct debt to this member: {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(pairwiseDebt[selectedMemberId!] || 0).toFixed(0)}.
+                                        Note: Smart Route has simplified your transfers. Direct debt to this member: {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(pairwiseDebt[selectedMemberId!] || 0).toFixed(0)}.
                                     </p>
                                 </div>
                             )}

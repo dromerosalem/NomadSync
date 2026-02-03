@@ -14,6 +14,7 @@ export const tripService = {
                 .select(`
         role,
         personal_budget,
+        daily_budget,
         status,
         trips (
           id,
@@ -32,6 +33,7 @@ export const tripService = {
             user_id,
             role,
             personal_budget,
+            daily_budget,
             status,
             profiles (
               full_name,
@@ -70,6 +72,7 @@ export const tripService = {
                         avatarUrl: m.profiles?.avatar_url,
                         status: m.status,
                         budget: m.personal_budget || 0,
+                        dailyBudget: m.daily_budget || 0,
                         isCurrentUser: m.user_id === userId
                     })),
                     updatedAt: new Date(trip.updated_at || Date.now()).getTime()
@@ -135,6 +138,7 @@ export const tripService = {
                 currencyCode: item.currency_code,
                 exchangeRate: item.exchange_rate,
                 receiptItems: item.receipt_items,
+                resources: item.resources || [],
                 updatedAt: new Date(item.updated_at || Date.now()).getTime(),
                 splitWith: item.expense_splits.map((s: any) => s.user_id),
                 splitDetails: item.expense_splits.reduce((acc: any, s: any) => {
@@ -203,6 +207,7 @@ export const tripService = {
                 currencyCode: data.currency_code,
                 exchangeRate: data.exchange_rate,
                 receiptItems: data.receipt_items,
+                resources: data.resources || [],
                 updatedAt: new Date(data.updated_at || Date.now()).getTime(),
                 splitWith: data.expense_splits?.map((s: any) => s.user_id) || [],
                 splitDetails: data.expense_splits?.reduce((acc: any, s: any) => {
@@ -264,6 +269,7 @@ export const tripService = {
                 user_id: m.id === '1' ? creatorId : m.id,
                 role: m.role,
                 personal_budget: m.budget || 0,
+                daily_budget: m.dailyBudget || null,
                 status: m.status || 'ACTIVE'
             }));
 
@@ -304,10 +310,14 @@ export const tripService = {
         if (error) throw error;
     },
 
-    async updateMemberBudget(tripId: string, userId: string, budget: number): Promise<void> {
+    async updateMemberBudget(tripId: string, userId: string, budget: number, dailyBudget?: number): Promise<void> {
+        const updatePayload: any = { personal_budget: budget };
+        if (dailyBudget !== undefined) {
+            updatePayload.daily_budget = dailyBudget;
+        }
         const { error } = await supabase
             .from('trip_members')
-            .update({ personal_budget: budget })
+            .update(updatePayload)
             .eq('trip_id', tripId)
             .eq('user_id', userId);
 
@@ -366,7 +376,8 @@ export const tripService = {
                 original_amount: optimisticItem.originalAmount,
                 currency_code: optimisticItem.currencyCode,
                 exchange_rate: optimisticItem.exchangeRate,
-                receipt_items: optimisticItem.receiptItems
+                receipt_items: optimisticItem.receiptItems,
+                resources: optimisticItem.resources || []
             };
 
             let resultId = optimisticItem.id;

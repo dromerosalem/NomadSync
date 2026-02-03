@@ -607,10 +607,10 @@ const App: React.FC = () => {
     });
   };
 
-  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }) => {
+  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number) => {
     setIsLoading(true);
     try {
-      const creatorMember = { ...currentUser, budget: budget };
+      const creatorMember = { ...currentUser, budget: budget, dailyBudget: dailyBudget || 0 };
       const members = [creatorMember, ...initialMembers];
 
       const newTripData: Omit<Trip, 'id' | 'items'> = {
@@ -663,8 +663,11 @@ const App: React.FC = () => {
       const oldMember = oldTrip?.members.find(m => m.id === currentUser.id);
       const newMember = updatedTrip.members.find(m => m.id === currentUser.id);
 
-      if (newMember && oldMember && newMember.budget !== oldMember.budget) {
-        await tripService.updateMemberBudget(updatedTrip.id, currentUser.id, newMember.budget);
+      const budgetChanged = newMember && oldMember && newMember.budget !== oldMember.budget;
+      const dailyBudgetChanged = newMember && oldMember && newMember.dailyBudget !== oldMember.dailyBudget;
+
+      if (budgetChanged || dailyBudgetChanged) {
+        await tripService.updateMemberBudget(updatedTrip.id, currentUser.id, newMember!.budget || 0, newMember!.dailyBudget);
       }
 
       // 3. Update Local State
@@ -890,7 +893,8 @@ const App: React.FC = () => {
           ...itemData,
           startDate: itemData.startDate || existing.startDate,
           endDate: 'endDate' in itemData ? itemData.endDate : existing.endDate,
-          receiptItems: (itemData as any).receiptItems !== undefined ? (itemData as any).receiptItems : existing.receiptItems
+          receiptItems: (itemData as any).receiptItems !== undefined ? (itemData as any).receiptItems : existing.receiptItems,
+          resources: itemData.resources !== undefined ? itemData.resources : (existing.resources || [])
         } as ItineraryItem;
       } else {
         const defaultSplitWith = currentTrip.members
@@ -926,7 +930,8 @@ const App: React.FC = () => {
           endLatitude: itemData.endLatitude,
           endLongitude: itemData.endLongitude,
           endCountryCode: itemData.endCountryCode,
-          receiptItems: (itemData as any).receiptItems
+          receiptItems: (itemData as any).receiptItems,
+          resources: itemData.resources || []
         } as ItineraryItem;
       }
 

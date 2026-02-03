@@ -25,6 +25,7 @@ export interface Member {
   budget?: number; // Personal budget for the trip
   pendingPastExpensesInvitation?: boolean; // Flag for late joiners invited to share past expenses
   onboardingCompleted?: boolean;
+  dailyBudget?: number; // Optional daily spending limit
 }
 
 export interface ReceiptItem {
@@ -36,6 +37,12 @@ export interface ReceiptItem {
   price: number;
   type: 'food' | 'drink' | 'service' | 'tip' | 'tax' | 'deposit' | 'discount' | 'other';
   assignedTo?: string[]; // IDs of members responsible
+}
+
+export interface ResourceLink {
+  id: string;
+  title: string;
+  url: string;
 }
 
 export interface ItineraryItem {
@@ -73,6 +80,9 @@ export interface ItineraryItem {
 
   // Receipt Breakdown
   receiptItems?: ReceiptItem[];
+
+  // Resources / Hyperlinks
+  resources?: ResourceLink[];
 
   updatedAt?: number;
 }

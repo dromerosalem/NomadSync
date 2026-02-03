@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ItemType, ItineraryItem, Member } from '../types';
-import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, WalletIcon } from './Icons';
+import { ItemType, ItineraryItem, Member, ResourceLink } from '../types';
+import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, PlusIcon, EyeOffIcon, EyeIcon, WalletIcon, LinkIcon, TrashIcon } from './Icons';
 import PlaceAutocomplete from './PlaceAutocomplete';
 import TacticalDatePicker from './TacticalDatePicker';
 import { sanitizeAsset } from '../utils/assetUtils';
@@ -23,7 +23,7 @@ interface ItemFormProps {
 }
 
 // Helper to parse the rich details string into key-value pairs for the UI
-const parseIntel = (detailsStr: string, excludeKeys: string[] = []) => {
+const parseDetails = (detailsStr: string, excludeKeys: string[] = []) => {
   if (!detailsStr) return [];
   const normalizedExcludes = excludeKeys.map(k => k.toLowerCase());
 
@@ -42,9 +42,9 @@ const parseIntel = (detailsStr: string, excludeKeys: string[] = []) => {
     .filter((pair): pair is { key: string; value: string } => pair !== null && pair.value !== '');
 };
 
-const IntelGrid: React.FC<{ details: string; type?: ItemType }> = ({ details, type }) => {
+const DetailsGrid: React.FC<{ details: string; type?: ItemType }> = ({ details, type }) => {
   const excludeKeys = type === ItemType.TRANSPORT ? ['Flight Number', 'Seat', 'Flight', 'Assigned Seat'] : [];
-  const pairs = parseIntel(details, excludeKeys);
+  const pairs = parseDetails(details, excludeKeys);
   if (pairs.length === 0) return null;
 
   return (
@@ -135,7 +135,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       .replace(/Flight:\s*.*?\s*\|\s*/gi, '');
 
     // Also remove raw multiline entries like "Flight Number: BA123" or "Seat: 12A" 
-    // to avoid redundancy in the IntelGrid/textarea
+    // to avoid redundancy in the DetailsGrid/textarea
     return cleaned.split('\n')
       .filter(line => {
         const lower = line.toLowerCase();
@@ -196,6 +196,12 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
   const [showFinancialOptions, setShowFinancialOptions] = useState(false);
 
+  // Resources State
+  const [resources, setResources] = useState<ResourceLink[]>(initialItem?.resources || []);
+  const [newLinkUrl, setNewLinkUrl] = useState('');
+  const [newLinkTitle, setNewLinkTitle] = useState('');
+  const [isAddingResource, setIsAddingResource] = useState(false);
+
   // Tag State
   const [tags, setTags] = useState<string[]>(initialItem?.tags || []);
   const [tagInput, setTagInput] = useState('');
@@ -235,6 +241,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       setEndLongitude(initialItem.endLongitude);
       setEndCountryCode(initialItem.endCountryCode);
       setCurrencyCode(initialItem.currencyCode || baseCurrency);
+      setResources(initialItem.resources || []);
     } else {
       const defaultSplit = activeMembers.map(m => m.id);
       setSplitWith(defaultSplit);
@@ -272,6 +279,26 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
     });
   };
 
+  const handleAddResource = () => {
+    if (!newLinkUrl) return;
+
+    // Auto-generate ID (simple random for now, will be stable on save if not regenerating)
+    const newLink: ResourceLink = {
+      id: Math.random().toString(36).substr(2, 9),
+      url: newLinkUrl,
+      title: newLinkTitle || new URL(newLinkUrl).hostname.replace('www.', '')
+    };
+
+    setResources([...resources, newLink]);
+    setNewLinkUrl('');
+    setNewLinkTitle('');
+    setIsAddingResource(false);
+  };
+
+  const handleRemoveResource = (id: string) => {
+    setResources(resources.filter(r => r.id !== id));
+  };
+
   const handleSubmit = () => {
     if (!title) return;
 
@@ -305,7 +332,8 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
       showInTimeline: true,
       currencyCode,
       originalAmount: parseFloat(cost) || 0, // Save the RAW input as original amount
-      exchangeRate
+      exchangeRate,
+      resources
     });
   };
 
@@ -618,7 +646,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           </div>
         </div>
 
-        {/* Specialized Intel Cards - REDESIGNED FOR VERTICAL SPACE */}
+        {/* Specialized Detail Cards - REDESIGNED FOR VERTICAL SPACE */}
 
         {/* TRANSPORT CARD */}
         {type === ItemType.TRANSPORT && (
@@ -713,6 +741,96 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
             </div>
           </div>
         )}
+
+        {/* Resources / Links Section - LOW PROFILE */}
+        <div className="space-y-3 mt-4">
+          {resources.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block ml-1">
+                Saved Resources
+              </label>
+              <div className="space-y-2">
+                {resources.map(link => (
+                  <div key={link.id} className="flex items-center justify-between bg-tactical-card/30 p-2.5 rounded-xl border border-tactical-muted/10 group">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <LinkIcon className="w-3.5 h-3.5 text-tactical-accent shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold text-white truncate">{link.title}</div>
+                        <div className="text-[9px] text-gray-500 truncate">{link.url}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleRemoveResource(link.id)}
+                      className="p-1 text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <TrashIcon className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isAddingResource ? (
+            <button
+              onClick={() => setIsAddingResource(true)}
+              disabled={resources.length >= 10}
+              className={`flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${resources.length >= 10
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-gray-500 hover:text-tactical-accent'
+                }`}
+            >
+              <PlusIcon className="w-3 h-3" />
+              {resources.length >= 10
+                ? 'Max Links Reached (10)'
+                : resources.length > 0
+                  ? `Add Another Link (${resources.length}/10)`
+                  : '+ Add Link or Resource'}
+            </button>
+          ) : (
+            <div className="bg-tactical-card/50 border border-tactical-muted/20 rounded-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[9px] font-bold text-tactical-accent uppercase tracking-widest">Add Resource</span>
+                <button
+                  onClick={() => setIsAddingResource(false)}
+                  className="text-[9px] text-gray-500 hover:text-white uppercase font-bold"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Hyperlink URL</label>
+                  <input
+                    placeholder="https://example.com"
+                    value={newLinkUrl}
+                    onChange={(e) => setNewLinkUrl(e.target.value)}
+                    className="w-full bg-black/40 border border-tactical-muted/30 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-tactical-accent"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-gray-500 uppercase tracking-widest ml-1">Alias / Title (Optional)</label>
+                  <input
+                    placeholder="e.g. Menu, Booking Info..."
+                    value={newLinkTitle}
+                    onChange={(e) => setNewLinkTitle(e.target.value)}
+                    className="w-full bg-black/40 border border-tactical-muted/30 rounded-lg px-3 py-2.5 text-xs text-white outline-none focus:border-tactical-accent"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleAddResource}
+                disabled={!newLinkUrl}
+                className="w-full py-3 bg-tactical-accent/10 hover:bg-tactical-accent/20 text-tactical-accent text-[10px] font-bold uppercase rounded-xl transition-all border border-tactical-accent/20 disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Add Link
+              </button>
+            </div>
+          )}
+        </div>
 
       </div>
 

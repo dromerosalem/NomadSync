@@ -56,7 +56,7 @@ const ConflictResolver: React.FC<ConflictResolverProps> = ({ conflict, onResolve
                 <div className="bg-tactical-highlight/50 border-l-4 border-tactical-accent p-4 mb-6 rounded-r-lg">
                     <p className="text-sm text-tactical-text leading-relaxed">
                         Mission HQ updated <span className="text-tactical-accent font-bold">"{payload.title}"</span> while you were operating offline.
-                        Choose which intelligence to retain.
+                        Choose which data to retain.
                     </p>
                 </div>
 
@@ -66,7 +66,7 @@ const ConflictResolver: React.FC<ConflictResolverProps> = ({ conflict, onResolve
                     {/* My Version */}
                     <div className="flex flex-col gap-3">
                         <div className="flex items-center gap-2 text-xs font-bold text-tactical-muted uppercase">
-                            <Smartphone size={14} /> My Intel
+                            <Smartphone size={14} /> Local Version
                         </div>
                         <div className="bg-tactical-highlight p-3 rounded-xl border border-white/5 h-full">
                             <p className="text-xs text-tactical-muted mb-1 italic">Saved Locally</p>

@@ -26,6 +26,8 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
   // Initialize budget from Current User's Personal Budget
   const currentUser = trip.members.find(m => m.id === currentUserId);
   const [budget, setBudget] = useState(currentUser?.budget?.toString() || '');
+  const [dailyBudget, setDailyBudget] = useState(currentUser?.dailyBudget?.toString() || '');
+  const [showDailyBudget, setShowDailyBudget] = useState(!!currentUser?.dailyBudget);
 
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date(trip.startDate));
@@ -36,7 +38,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
     if (name && location && startDate && endDate) {
       // Update Current User's budget in the members list
       const updatedMembers = trip.members.map(m =>
-        m.id === currentUserId ? { ...m, budget: parseInt(budget) || 0 } : m
+        m.id === currentUserId ? { ...m, budget: parseInt(budget) || 0, dailyBudget: parseInt(dailyBudget) || 0 } : m
       );
 
       onUpdate({
@@ -168,6 +170,44 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
               className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
             <p className="text-[10px] text-gray-500">Updating this value changes your personal tracking only.</p>
+          </div>
+
+          {/* Daily Budget (Optional Toggle) */}
+          <div className="space-y-4">
+            {!showDailyBudget ? (
+              <button
+                type="button"
+                onClick={() => setShowDailyBudget(true)}
+                className="w-full py-3 border border-dashed border-tactical-muted/30 rounded-lg text-tactical-muted text-xs font-bold uppercase tracking-wider hover:border-tactical-accent/50 hover:text-tactical-accent transition-all flex items-center justify-center gap-2"
+              >
+                <span className="text-lg">+</span> Set Daily Spending Limit
+              </button>
+            ) : (
+              <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Daily Budget ({getCurrencySymbol(baseCurrency)})</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDailyBudget(false);
+                      setDailyBudget('');
+                    }}
+                    className="text-[10px] text-red-500/70 hover:text-red-500 uppercase font-bold tracking-tighter"
+                  >
+                    Remove Limit
+                  </button>
+                </div>
+                <input
+                  type="number"
+                  value={dailyBudget}
+                  onChange={(e) => setDailyBudget(e.target.value)}
+                  placeholder="e.g. 150"
+                  className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  autoFocus
+                />
+                <p className="text-[10px] text-gray-500">Resets daily at 00:00. You'll get notified if you exceed this limit.</p>
+              </div>
+            )}
           </div>
 
           {/* Mission Currency */}

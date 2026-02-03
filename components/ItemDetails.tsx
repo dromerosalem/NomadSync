@@ -2,7 +2,7 @@ import React from 'react';
 import { Trip, ItineraryItem, ItemType, Member } from '../types';
 import { sanitizeAsset } from '../utils/assetUtils';
 import AtmosphericAvatar from './AtmosphericAvatar';
-import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, EyeOffIcon, UserIcon } from './Icons';
+import { ChevronLeftIcon, BedIcon, TrainIcon, CameraIcon, UtensilsIcon, MapPinIcon, EyeOffIcon, UserIcon, LinkIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
 import MapComponent from './MapComponent';
 
@@ -338,6 +338,35 @@ const ItemDetails: React.FC<ItemDetailsProps> = ({ item, canEdit, onClose, onEdi
               {item.details || "No additional details logged."}
             </div>
           </div>
+
+          {/* Resources / Links Block */}
+          {item.resources && item.resources.length > 0 && (
+            <div className="space-y-2">
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Resources & Links</div>
+              <div className="bg-tactical-card border border-tactical-muted/30 rounded-xl overflow-hidden">
+                {item.resources.map((link, idx) => (
+                  <a
+                    key={link.id || idx}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-3 p-3 border-b border-tactical-muted/10 last:border-0 hover:bg-white/5 transition-colors group"
+                  >
+                    <div className="p-2 rounded-lg bg-black/30 text-tactical-accent group-hover:text-white transition-colors">
+                      <LinkIcon className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-bold text-white truncate group-hover:text-tactical-accent transition-colors">{link.title}</div>
+                      <div className="text-[10px] text-gray-500 truncate">{link.url}</div>
+                    </div>
+                    <div className="text-gray-600 group-hover:text-white">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" x2="21" y1="14" y2="3" /></svg>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Tactical Map Block */}
           <div className="space-y-2">

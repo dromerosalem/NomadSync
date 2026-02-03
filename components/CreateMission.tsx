@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ArrowRightIcon, ChevronLeftIcon } from './Icons';
 import { Member } from '../types';
 import { getCurrencySymbol } from '../utils/currencyUtils';
@@ -6,18 +6,54 @@ import PlaceAutocomplete from './PlaceAutocomplete';
 import { LocationResult } from '../services/LocationService';
 
 interface CreateMissionProps {
-  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }) => void;
+  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number) => void;
   onBack: () => void;
   isLoading: boolean;
 }
 
 import CurrencySelector from './CurrencySelector';
 
+const INSPIRING_PHRASES = [
+  "Leave the coordinates behind and let the horizon find you.",
+  "There are some paths you can only find when you’re willing to get lost.",
+  "The best stories aren't told; they are lived in the places you haven't been.",
+  "Collect moments that your soul will remember long after the tan fades.",
+  "Somewhere between the map and the destination, you’ll find the magic.",
+  "Your comfort zone is a beautiful place, but nothing ever grows there.",
+  "Adventure is the bridge between who you are and who you’re becoming.",
+  "Wander with purpose, explore with passion, and return with a new soul.",
+  "The world is too big to stay in one place, and your spirit is too bright to stay small.",
+  "Every sunrise in a new city is a chance to start your story over again.",
+  "Build a life you don't need a vacation from, one discovery at a time.",
+  "True discovery isn't finding new lands, but seeing through new eyes.",
+  "Life is short and the world is wide. Better get started.",
+  "Follow the compass of your heart; it always knows the way to the extraordinary.",
+  "The mountains are calling, the oceans are waiting, and your circle is ready.",
+  "Let’s go where the Wi-Fi is weak but the connection is real.",
+  "Traveling is the only thing you buy that makes you richer.",
+  "A journey of a thousand miles begins with a single 'Yes'.",
+  "Find a place where your soul feels as vast as the open road.",
+  "Pack light, live deep, and let the adventure write the rest.",
+  "The road ahead is a blank page; your footsteps are the ink.",
+  "Don't just travel to see; travel to feel the pulse of the unknown.",
+  "The greatest legacy is the collection of horizons you've touched.",
+  "Seek not to find yourself, but to create yourself in new places.",
+  "Every passport stamp is a badge of courage for the curious soul.",
+  "The stars look different from every corner of the earth; go see them.",
+  "Adventure isn't outside; it's the spark within that calls you forward.",
+  "Bridges were meant to be crossed, and borders were meant to be blurred.",
+  "Distance is just a measure of how far your dreams can reach.",
+  "The destination is the period, but the journey is the poetry.",
+];
+
 const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoading }) => {
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [budget, setBudget] = useState('2000');
+  const [dailyBudget, setDailyBudget] = useState('');
+  const [showDailyBudget, setShowDailyBudget] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState('USD');
+  const randomSubheader = useMemo(() => INSPIRING_PHRASES[Math.floor(Math.random() * INSPIRING_PHRASES.length)], []);
 
   // Location Metadata
   const [locationMetadata, setLocationMetadata] = useState<{ lat: number, lon: number, countryCode: string } | undefined>();
@@ -32,7 +68,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
       const mockMembers: Member[] = [];
 
       // Default to single day trip if no end date selected
-      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency, locationMetadata);
+      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency, locationMetadata, parseInt(dailyBudget) || 0);
     }
   };
 
@@ -103,9 +139,6 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
         <button onClick={onBack} className="text-gray-400 hover:text-white">
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
-        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-          Cancel Setup
-        </div>
         <div className="w-6"></div> {/* Spacer */}
       </header>
 
@@ -113,10 +146,10 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
       <div className="flex-1 overflow-y-auto scrollbar-hide p-6">
         <header className="mb-8 mt-2">
           <h1 className="font-display text-4xl font-bold text-tactical-accent uppercase leading-tight mb-2">
-            Plot Your<br />Path
+            Chart Your<br />Adventure
           </h1>
-          <p className="text-tactical-muted tracking-widest text-sm uppercase font-medium">
-            Start Your Adventure
+          <p className="text-tactical-muted tracking-widest text-xs uppercase font-medium">
+            {randomSubheader}
           </p>
         </header>
 
@@ -163,6 +196,44 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
                 className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
               />
               <p className="text-[10px] text-gray-500">This budget is private to you and tracked separately from other members.</p>
+            </div>
+
+            {/* Daily Budget (Optional Toggle) */}
+            <div className="space-y-4">
+              {!showDailyBudget ? (
+                <button
+                  type="button"
+                  onClick={() => setShowDailyBudget(true)}
+                  className="w-full py-3 border border-dashed border-tactical-muted/30 rounded-lg text-tactical-muted text-xs font-bold uppercase tracking-wider hover:border-tactical-accent/50 hover:text-tactical-accent transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="text-lg">+</span> Set Daily Spending Limit
+                </button>
+              ) : (
+                <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Daily Budget ({getCurrencySymbol(baseCurrency)})</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowDailyBudget(false);
+                        setDailyBudget('');
+                      }}
+                      className="text-[10px] text-red-500/70 hover:text-red-500 uppercase font-bold tracking-tighter"
+                    >
+                      Remove Limit
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    value={dailyBudget}
+                    onChange={(e) => setDailyBudget(e.target.value)}
+                    placeholder="e.g. 150"
+                    className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-gray-500">Resets daily at 00:00. You'll get notified if you exceed this limit.</p>
+                </div>
+              )}
             </div>
 
             {/* Base Currency */}
