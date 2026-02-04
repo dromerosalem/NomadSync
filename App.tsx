@@ -27,8 +27,6 @@ import AuthGlobe from './components/AuthGlobe';
 import ConflictResolver from './components/ConflictResolver';
 import { SyncLog, db } from './db/LocalDatabase';
 import { persistenceService } from './services/persistenceService';
-import { useDrag } from '@use-gesture/react';
-import { getOperatingSystem } from './utils/device';
 
 
 const INITIAL_USER: Member = {
@@ -61,33 +59,6 @@ const INITIAL_TRIPS: Trip[] = [];
 const LAST_USER_KEY = 'nomad_last_user';
 
 const App: React.FC = () => {
-  // Gesture Handling for Back Navigation
-  const bind = useDrag(({ movement: [mx, my], velocity: [vx, vy], direction: [dx, dy], cancel, last }) => {
-    // Only trigger if starting from the left edge (optional refinement, but global swipe-back is usually edge-based or general horizontal)
-    // For this implementation, we allow a general horizontal swipe to back, but require a minimum movement and velocity.
-
-    // We only care about horizontal movement to the right (positive mx)
-    if (mx > 100 && vx > 0.5 && Math.abs(dy) < 0.5) {
-      const os = getOperatingSystem();
-      // Trigger back navigation
-      // iOS users expect edge swipe, but a general strong right swipe works as a proxy in PWAs without native edge access
-      if (os === 'iOS') {
-        // Visual feedback could be added here
-        if (last) {
-          window.history.back();
-        }
-      } else if (os === 'Android') {
-        // Android usually has system back button/gesture, but we can support this too if desired
-        // Guard against conflicting with vertical scroll
-        if (last && Math.abs(my) < 50) {
-          window.history.back();
-        }
-      }
-    }
-  }, {
-    filterTaps: true,
-    axis: 'x' // Restrict to horizontal axis logic mostly
-  });
 
   // HYDRATE INSTANTLY from Local Storage
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
@@ -359,7 +330,7 @@ const App: React.FC = () => {
     // Show Loading/Globe if strictly loading, otherwise Auth screen handles it
     if (!isAuthenticated && view !== 'AUTH') {
       return (
-        <div {...bind()} className="h-[100dvh] w-full bg-tactical-bg flex items-center justify-center touch-pan-y"> {/* Ensure touch-pan-y allows vertical scroll but captures horizontal for gesture if needed, though we set global touch-action */}
+        <div className="h-[100dvh] w-full bg-tactical-bg flex items-center justify-center">
           <div className="animate-spin-slow">
             <AuthGlobe />
           </div>
@@ -1060,7 +1031,7 @@ const App: React.FC = () => {
   }, [currentTrip]);
 
   return (
-    <div {...bind()} className="app-container font-sans bg-tactical-bg text-tactical-text min-h-[100dvh] pb-safe-bottom touch-pan-y relative shadow-2xl flex flex-col touch-action-pan-y border-x border-tactical-muted/20">
+    <div className="app-container font-sans bg-tactical-bg text-tactical-text min-h-[100dvh] pb-safe-bottom relative shadow-2xl flex flex-col border-x border-tactical-muted/20">
       <ScrollToTop trigger={view} />
       <main className="flex-1 relative flex flex-col w-full">
 
