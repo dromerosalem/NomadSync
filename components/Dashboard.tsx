@@ -74,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                 </div>
             )}
             {/* Sticky Top Section */}
-            <div className="sticky top-0 z-30 bg-tactical-bg border-b border-tactical-muted/10 pb-4 shadow-xl">
+            <div className="sticky top-0 z-30 bg-tactical-bg border-b border-tactical-muted/10 pb-4 shadow-xl transform-gpu">
                 {/* Header */}
                 <header className="px-6 py-4 flex items-center justify-center">
                     <div className="flex items-center gap-2">
