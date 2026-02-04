@@ -213,9 +213,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30"></div>
                 </div>
 
-                <div className="relative z-10 flex flex-col items-center justify-center h-full px-6 text-center w-full max-w-md mx-auto">
-
-
+                {/* Main Content Area - Centered */}
+                <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center w-full max-w-md mx-auto">
                     <h1 className="font-display text-5xl md:text-6xl font-bold text-tactical-accent uppercase tracking-tighter mb-4 drop-shadow-lg">
                         NomadSync
                     </h1>
@@ -249,11 +248,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                             LOG IN
                         </button>
                     </div>
+                </div>
 
-                    <div className="flex gap-4 mt-8 opacity-40">
-                        <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
-                        <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
-                    </div>
+                {/* Footer Area - Anchored Bottom */}
+                <div className="relative z-10 w-full pb-8 pt-4 flex justify-center gap-4 opacity-40">
+                    <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
+                    <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
                 </div>
             </div>
         );
