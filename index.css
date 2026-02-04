@@ -26,7 +26,8 @@ html {
   color-scheme: dark;
   /* Prevent iOS rubber-band scrolling - Relaxed for functionality */
   width: 100%;
-  height: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 body {
@@ -38,17 +39,17 @@ body {
   color-scheme: dark;
   /* Unlock body for scrolling */
   width: 100%;
-  min-height: 100%;
+  min-height: 100vh;
   /* Disable overscroll bounce but allow scroll */
   overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
+  overflow-x: hidden;
 }
 
 /* Ensure the root app container fills the viewport */
 #root {
-  min-height: 100%;
-  height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }

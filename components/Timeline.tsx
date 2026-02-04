@@ -518,7 +518,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
   const tripStartYear = new Date(trip.startDate).getFullYear();
 
   return (
-    <div className="flex flex-col h-full animate-fade-in relative">
+    <div className="flex flex-col animate-fade-in relative">
       <div className="px-6 py-6 pt-8 bg-tactical-bg z-30 sticky top-0 border-b border-tactical-muted/10 shadow-lg">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-start gap-3">
@@ -555,9 +555,10 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
           </div>
         </div>
 
+        {/* Wallet / Budget Quick View */}
         <button
           onClick={onNavigateBudget}
-          className="w-full mt-2 mb-1 bg-gradient-to-r from-[#1A1A18] to-[#0F0F0E] border border-tactical-muted/30 rounded-xl overflow-hidden transition-all hover:border-tactical-accent/50 group active:scale-[0.98] text-left"
+          className="w-full mt-2 mb-1 bg-gradient-to-r from-[#1A1A18] to-[#0F0F0E] border border-tactical-muted/30 rounded-xl overflow-hidden transition-all hover:border-tactical-accent/50 group active:scale-[0.98] text-left shadow-lg"
         >
           <div className="p-4 flex items-center justify-between">
             {/* Left: Wallet Info */}
@@ -638,7 +639,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto p-6 pb-24 relative scrollbar-hide">
+      <div className="p-6 pb-24 relative scrollbar-hide">
         <div className="absolute left-[39px] top-0 bottom-0 w-px bg-tactical-muted/20"></div>
         {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 text-center opacity-50 mt-10">
@@ -664,7 +665,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
       </div>
 
       {canEdit && (
-        <div className="absolute bottom-6 right-6 z-20">
+        <div className="fixed bottom-24 right-6 z-40">
           <button onClick={onAddItem} className="w-14 h-14 bg-tactical-accent hover:bg-yellow-400 text-black rounded-full shadow-[0_0_20px_rgba(255,215,0,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <PlusIcon className="w-8 h-8" />
           </button>

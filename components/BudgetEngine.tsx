@@ -26,6 +26,14 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [settleModalOpen, setSettleModalOpen] = useState(false);
+    const historyScrollRef = React.useRef<HTMLDivElement>(null);
+
+    // Ensure history starts at top when selection changes
+    React.useEffect(() => {
+        if (selectedMemberId && historyScrollRef.current) {
+            historyScrollRef.current.scrollTop = 0;
+        }
+    }, [selectedMemberId]);
 
     // Use Global Trip State (Default to SMART if undefined)
     const useSmartSplit = (trip.budgetViewMode || 'SMART') === 'SMART';
@@ -333,7 +341,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     // JSX
     // ---------------------------------------------------------
     return (
-        <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative">
+        <div className="flex flex-col bg-tactical-bg animate-fade-in relative">
             {/* Header */}
             <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-30 border-b border-tactical-muted/10">
                 <button onClick={onBack} className="text-white hover:text-tactical-accent transition-colors">
@@ -349,7 +357,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
 
 
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-24">
+            <div className="p-6 pb-24">
 
                 {/* 1. Personal Budget Card */}
                 <div className="bg-tactical-card rounded-2xl p-6 border border-tactical-muted/30 shadow-lg relative overflow-hidden mb-8">
@@ -482,61 +490,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                     );
                 })()}
 
-                {/* 4. Ledger / Recent Transactions */}
+                {/* 4. Blood Debts (Dual Mode) */}
                 <div className="mb-8">
-                    <div className="flex justify-between items-center mb-3">
-                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Recent Activity</h3>
-                        <button
-                            onClick={onViewLedger}
-                            className="flex items-center gap-1 text-[10px] font-bold text-tactical-accent uppercase hover:underline"
-                        >
-                            View Ledger <ArrowRightIcon className="w-3 h-3" />
-                        </button>
-                    </div>
-
-                    <div className="space-y-2">
-                        {recentTransactions.map(item => {
-                            const payer = trip.members.find(m => m.id === item.paidBy);
-                            const isSettlement = item.type === ItemType.SETTLEMENT;
-
-                            return (
-                                <div
-                                    key={item.id}
-                                    onClick={() => onItemClick(item)}
-                                    className="bg-tactical-card border border-tactical-muted/20 hover:border-tactical-accent/50 transition-colors rounded-lg p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98]"
-                                >
-                                    <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center shrink-0">
-                                        {getLedgerIcon(item.type)}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-center">
-                                            <h4 className="font-bold text-white text-xs truncate uppercase">{item.title}</h4>
-                                            <span className={`font-mono text-xs font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
-                                                {isSettlement ? '' : '-'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{item.cost?.toFixed(2)}
-                                            </span>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
-                                                {isSettlement ? `${payer?.name.split(' ')[0]} settled debt` : `Paid by ${payer?.name.split(' ')[0]}`}
-                                            </div>
-                                            <div className="text-[9px] text-gray-600">
-                                                {new Date(item.startDate).getDate()} {new Date(item.startDate).toLocaleString('default', { month: 'short' }).toUpperCase()}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                        {recentTransactions.length === 0 && (
-                            <div className="text-center text-gray-500 text-xs py-4 border border-dashed border-gray-700 rounded-lg">
-                                No activities logged yet.
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* 5. Blood Debts (Dual Mode) */}
-                <div>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Balances</h3>
                         {/* Mode Toggle with Role Check */}
@@ -643,21 +598,76 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         </div>
                     )}
                 </div>
+
+                {/* 5. Ledger / Recent Transactions */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-center mb-3">
+                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Recent Activity</h3>
+                        <button
+                            onClick={onViewLedger}
+                            className="flex items-center gap-1 text-[10px] font-bold text-tactical-accent uppercase hover:underline"
+                        >
+                            View Ledger <ArrowRightIcon className="w-3 h-3" />
+                        </button>
+                    </div>
+
+                    <div className="space-y-2">
+                        {recentTransactions.map(item => {
+                            const payer = trip.members.find(m => m.id === item.paidBy);
+                            const isSettlement = item.type === ItemType.SETTLEMENT;
+
+                            return (
+                                <div
+                                    key={item.id}
+                                    onClick={() => onItemClick(item)}
+                                    className="bg-tactical-card border border-tactical-muted/20 hover:border-tactical-accent/50 transition-colors rounded-lg p-3 flex items-center gap-3 cursor-pointer active:scale-[0.98]"
+                                >
+                                    <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center shrink-0">
+                                        {getLedgerIcon(item.type)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="font-bold text-white text-xs truncate uppercase">{item.title}</h4>
+                                            <span className={`font-mono text-xs font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
+                                                {isSettlement ? '' : '-'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{item.cost?.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
+                                                {isSettlement ? `${payer?.name.split(' ')[0]} settled debt` : `Paid by ${payer?.name.split(' ')[0]}`}
+                                            </div>
+                                            <div className="text-[9px] text-gray-600">
+                                                {new Date(item.startDate).getDate()} {new Date(item.startDate).toLocaleString('default', { month: 'short' }).toUpperCase()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                        {recentTransactions.length === 0 && (
+                            <div className="text-center text-gray-500 text-xs py-4 border border-dashed border-gray-700 rounded-lg">
+                                No activities logged yet.
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             {/* Quick Add Floating Button */}
-            <div className="absolute bottom-[2rem] right-6 z-30">
-                <button
-                    onClick={onLogExpense}
-                    className="w-14 h-14 rounded-full bg-tactical-accent text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.4)] border-2 border-black/10 transition-transform active:scale-95 hover:scale-105"
-                >
-                    <PlusIcon className="w-8 h-8" />
-                </button>
-            </div>
+            {!selectedMember && (
+                <div className="fixed bottom-24 right-6 z-30">
+                    <button
+                        onClick={onLogExpense}
+                        className="w-14 h-14 rounded-full bg-tactical-accent text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.6)] border-2 border-black/20 transition-transform active:scale-95 hover:scale-105"
+                    >
+                        <PlusIcon className="w-8 h-8" />
+                    </button>
+                </div>
+            )}
 
             {/* MEMBER DEBT HISTORY OVERLAY */}
             {selectedMember && (
-                <div className="absolute inset-0 z-40 bg-tactical-bg animate-fade-in flex flex-col">
+                <div className="fixed inset-0 z-40 bg-tactical-bg animate-fade-in flex flex-col">
                     <header className="px-6 py-4 flex items-center justify-between bg-tactical-card border-b border-tactical-muted/20">
                         <button onClick={() => setSelectedMemberId(null)} className="text-white hover:text-tactical-accent">
                             <ChevronLeftIcon className="w-6 h-6" />
@@ -739,7 +749,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                         {/* Settle Modal Overlay */}
                         {settleModalOpen && (
-                            <div className="absolute inset-0 bg-black/90 z-50 flex items-center justify-center p-6 backdrop-blur-sm animate-fade-in">
+                            <div className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-6 backdrop-blur-md animate-fade-in">
                                 <div className="w-full max-w-sm bg-tactical-card border border-tactical-muted/40 rounded-xl p-6 shadow-2xl mx-auto">
                                     <div className="text-center mb-4">
                                         <div className="w-12 h-12 bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-3 border border-green-700/50 text-green-500">
@@ -774,7 +784,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+                    <div
+                        ref={historyScrollRef}
+                        className="flex-1 overflow-y-auto p-4 space-y-3 pb-24"
+                    >
                         <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-2">
                             Transaction Evidence
                         </div>

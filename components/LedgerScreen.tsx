@@ -51,7 +51,7 @@ const LedgerScreen: React.FC<LedgerScreenProps> = ({ trip, currentUserId, onBack
     };
 
     return (
-        <div className="flex flex-col h-full bg-tactical-bg animate-fade-in relative">
+        <div className="flex flex-col bg-tactical-bg animate-fade-in relative">
             <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-30 border-b border-tactical-muted/10">
                 <button onClick={onBack} className="text-gray-400 hover:text-white">
                     <ChevronLeftIcon className="w-6 h-6" />
@@ -62,7 +62,7 @@ const LedgerScreen: React.FC<LedgerScreenProps> = ({ trip, currentUserId, onBack
                 <div className="w-6"></div>
             </header>
 
-            <div className="flex-1 overflow-y-auto p-6 scrollbar-hide pb-24 space-y-8">
+            <div className="p-6 scrollbar-hide pb-24 space-y-8">
 
                 {Object.keys(groupedExpenses).length === 0 && (
                     <div className="text-center text-gray-500 mt-10">

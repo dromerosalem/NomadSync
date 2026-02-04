@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { ViewState, Trip, ItineraryItem, ItemType, Member, Role } from './types';
 import CreateMission from './components/CreateMission';
 import Timeline from './components/Timeline';
@@ -129,6 +129,26 @@ const App: React.FC = () => {
       // unless we are in Auth/Dashboard/Profile where the state transition handles it
       window.history.pushState({}, '', '/');
     }
+  }, [view]);
+
+
+  // Global Scroll Reset on View Change
+  // We use useLayoutEffect and a small timeout to ensure this fires AFTER the browser tries to restore scroll
+  useLayoutEffect(() => {
+    // 1. Disable browser's default scroll restoration
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    // 2. Force scroll to top immediately
+    window.scrollTo(0, 0);
+
+    // 3. Double-tap: Ensure it stays at top after a brief delay (catch race conditions)
+    const timeout = setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 10);
+
+    return () => clearTimeout(timeout);
   }, [view]);
 
   // Check for conflicts on mount and periodic
@@ -596,6 +616,30 @@ const App: React.FC = () => {
 
   const canEdit = currentUserRole === 'PATHFINDER' || currentUserRole === 'SCOUT';
 
+  // Scroll Reset Component
+  const ScrollToTop: React.FC<{ trigger: any }> = ({ trigger }) => {
+    useLayoutEffect(() => {
+      // 1. Disable browser's default scroll restoration
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual';
+      }
+
+      // 2. Force scroll to top instantly
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+
+      // 3. Safety net for race conditions (e.g. content paint delay)
+      const timeout = setTimeout(() => {
+        window.scrollTo(0, 0);
+      }, 10);
+
+      return () => clearTimeout(timeout);
+    }, [trigger]);
+
+    return null;
+  };
+
   // Auth Handler
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -1016,7 +1060,8 @@ const App: React.FC = () => {
   }, [currentTrip]);
 
   return (
-    <div {...bind()} className="app-container font-sans bg-tactical-bg text-tactical-text min-h-[100dvh] pb-safe-bottom touch-pan-y relative shadow-2xl flex flex-col overflow-x-hidden touch-action-pan-y border-x border-tactical-muted/20">
+    <div {...bind()} className="app-container font-sans bg-tactical-bg text-tactical-text min-h-[100dvh] pb-safe-bottom touch-pan-y relative shadow-2xl flex flex-col touch-action-pan-y border-x border-tactical-muted/20">
+      <ScrollToTop trigger={view} />
       <main className="flex-1 relative flex flex-col w-full">
 
         {!isAuthenticated && view === 'AUTH' && (

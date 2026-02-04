@@ -228,7 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             </div>
 
             {/* Floating Plot New Path Button */}
-            <div className="absolute bottom-[4.5rem] left-0 right-0 flex justify-center z-40 px-6 pb-2 bg-gradient-to-t from-tactical-bg via-tactical-bg/90 to-transparent pt-8 pointer-events-none">
+            <div className="fixed bottom-20 left-0 right-0 flex justify-center z-40 px-6 pb-2 pt-8 pointer-events-none">
                 <button
                     onClick={onCreateTrip}
                     className="pointer-events-auto bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-3 px-10 rounded-full shadow-[0_0_25px_rgba(255,215,0,0.3)] flex items-center justify-center gap-2 transition-transform hover:scale-105 active:scale-95 border-2 border-black/10"
