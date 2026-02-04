@@ -519,7 +519,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
 
   return (
     <div className="flex flex-col h-full animate-fade-in relative">
-      <div className="px-6 py-6 pt-8 bg-tactical-bg z-10 sticky top-0 border-b border-tactical-muted/10 shadow-lg">
+      <div className="px-6 py-6 pt-8 bg-tactical-bg z-30 sticky top-0 border-b border-tactical-muted/10 shadow-lg">
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-start gap-3">
             <button onClick={onBackToBase} className="mt-1 text-gray-400 hover:text-white transition-colors">

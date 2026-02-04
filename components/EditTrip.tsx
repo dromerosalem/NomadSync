@@ -119,7 +119,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
   return (
     <div className="flex flex-col h-full bg-tactical-bg animate-fade-in">
       {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10">
+      <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-30 border-b border-tactical-muted/10">
         <button onClick={onCancel} className="text-gray-400 hover:text-white">
           <ChevronLeftIcon className="w-6 h-6" />
         </button>

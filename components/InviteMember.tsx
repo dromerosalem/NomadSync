@@ -116,7 +116,7 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
 
     return (
         <div className="flex flex-col h-full bg-tactical-bg animate-fade-in">
-            <header className="px-6 py-4 flex items-center gap-4 sticky top-0 bg-tactical-bg z-20 border-b border-tactical-muted/10">
+            <header className="px-6 py-4 flex items-center gap-4 sticky top-0 bg-tactical-bg z-30 border-b border-tactical-muted/10">
                 <button onClick={onBack} className="text-gray-400 hover:text-white">
                     <ChevronLeftIcon className="w-6 h-6" />
                 </button>

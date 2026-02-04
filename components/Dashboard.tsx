@@ -73,49 +73,50 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                     </p>
                 </div>
             )}
-            {/* Header */}
-            <header className="px-6 py-4 flex items-center justify-center sticky top-0 bg-tactical-bg z-20">
-                <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-tactical-accent animate-pulse'}`}></div>
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'ONLINE'}</span>
-                </div>
-            </header>
+            {/* Sticky Top Section */}
+            <div className="sticky top-0 z-30 bg-tactical-bg border-b border-tactical-muted/10 pb-4 shadow-xl">
+                {/* Header */}
+                <header className="px-6 py-4 flex items-center justify-center">
+                    <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-tactical-accent animate-pulse'}`}></div>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'ONLINE'}</span>
+                    </div>
+                </header>
 
-            {/* Title Section */}
-            <div className="px-6 mb-6 text-center">
-                <h1 className="font-display text-4xl font-bold text-white uppercase leading-none mb-1">
-                    YOUR<br /><span className="text-tactical-accent">DASHBOARD</span>
-                </h1>
-                <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                    TRAVELER: {user.name.toUpperCase()}
-                </p>
-            </div>
+                {/* Title Section */}
+                <div className="px-6 mb-4 text-center">
+                    <h1 className="font-display text-4xl font-bold text-white uppercase leading-none mb-1">
+                        YOUR<br /><span className="text-tactical-accent">DASHBOARD</span>
+                    </h1>
+                    <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
+                        TRAVELER: {user.name.toUpperCase()}
+                    </p>
+                </div>
 
-            {/* Stats Row - Responsive Grid */}
-            <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-[#3A3A35] flex items-center justify-center text-tactical-accent shrink-0">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 22h20" /><path d="M16 10a4 4 0 0 1-4 4 4 4 0 0 1-4-4" /><path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" /><path d="M12 2v2" /></svg>
+                {/* Stats Row - Responsive Grid */}
+                <div className="px-6 grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded bg-[#3A3A35] flex items-center justify-center text-tactical-accent shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 22h20" /><path d="M16 10a4 4 0 0 1-4 4 4 4 0 0 1-4-4" /><path d="M4 8V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2" /><path d="M12 2v2" /></svg>
+                        </div>
+                        <div>
+                            <div className="font-display font-bold text-xl text-white leading-none">{trips.length}</div>
+                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">TRIPS</div>
+                        </div>
                     </div>
-                    <div>
-                        <div className="font-display font-bold text-xl text-white leading-none">{trips.length}</div>
-                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">TRIPS</div>
+                    <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded bg-[#3A3A35] flex items-center justify-center text-tactical-accent shrink-0">
+                            <GlobeIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <div className="font-display font-bold text-xl text-white leading-none">{uniqueCountries.size}</div>
+                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">COUNTRIES</div>
+                        </div>
                     </div>
                 </div>
-                <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex items-center gap-4">
-                    <div className="w-10 h-10 rounded bg-[#3A3A35] flex items-center justify-center text-tactical-accent shrink-0">
-                        <GlobeIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                        <div className="font-display font-bold text-xl text-white leading-none">{uniqueCountries.size}</div>
-                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">COUNTRIES</div>
-                    </div>
-                </div>
-            </div>
 
-            {/* Missions List */}
-            <div className="flex-1 overflow-y-auto px-6 pb-32 scrollbar-hide">
-                <div className="flex items-center justify-between mb-6">
+                {/* Missions List Header */}
+                <div className="px-6 flex items-center justify-between">
                     <div className="border-l-4 border-tactical-accent pl-3">
                         <h2 className="font-display font-bold text-xl text-white uppercase tracking-wide">All Trips</h2>
                     </div>
@@ -126,7 +127,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                         </div>
                     )}
                 </div>
+            </div>
 
+            {/* Missions List Content */}
+            <div className="px-6 pt-6 pb-32">
                 {/* Responsive Grid for Trips */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {trips.map((trip) => {

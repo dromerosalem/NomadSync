@@ -24,11 +24,9 @@ input[type=number] {
 
 html {
   color-scheme: dark;
-  /* Prevent iOS rubber-band scrolling */
-  position: fixed;
+  /* Prevent iOS rubber-band scrolling - Relaxed for functionality */
   width: 100%;
   height: 100%;
-  overflow: hidden;
 }
 
 body {
@@ -38,26 +36,21 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color-scheme: dark;
-  /* Lock body to viewport */
-  position: fixed;
+  /* Unlock body for scrolling */
   width: 100%;
-  height: 100%;
-  overflow: hidden;
-  /* Disable overscroll bounce */
-  overscroll-behavior: none;
+  min-height: 100%;
+  /* Disable overscroll bounce but allow scroll */
+  overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x pan-y;
 }
 
-/* Ensure the root app container fills the viewport and handles scroll internally */
+/* Ensure the root app container fills the viewport */
 #root {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  overflow: hidden;
-  overscroll-behavior: none;
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Hide scrollbar for clean mobile look */

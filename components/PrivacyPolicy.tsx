@@ -8,7 +8,7 @@ interface PrivacyPolicyProps {
 const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onBack }) => {
     return (
         <div className="flex flex-col h-full bg-tactical-bg animate-fade-in">
-            <header className="px-6 py-8 border-b border-tactical-muted/10 sticky top-0 bg-tactical-bg z-10">
+            <header className="px-6 py-8 border-b border-tactical-muted/10 sticky top-0 bg-tactical-bg z-30">
                 <button onClick={onBack} className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest hover:text-white mb-4 transition-colors">
                     <ChevronLeftIcon className="w-5 h-5" /> Back to Base
                 </button>

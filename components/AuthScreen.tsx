@@ -151,7 +151,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
 
     if (mode === 'LANDING') {
         return (
-            <div className="flex flex-col h-full bg-tactical-bg relative overflow-hidden animate-fade-in">
+            <div className="flex flex-col flex-1 w-full min-h-[100dvh] bg-tactical-bg relative overflow-y-auto animate-fade-in">
                 {/* Background Atmospheric Gradient (Desert Sunset Vibe) */}
                 <div className="absolute inset-0 z-0 bg-[#020617] overflow-hidden">
                     {/* The "Glow" - Sunset Horizon */}
@@ -298,7 +298,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
 
     // SIGN UP / LOGIN FORM
     return (
-        <div className="flex flex-col h-full bg-tactical-bg relative animate-fade-in">
+        <div className="flex flex-col flex-1 w-full min-h-[100dvh] bg-tactical-bg relative animate-fade-in overflow-y-auto">
             <div className="absolute inset-0 z-0 opacity-10 pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+CjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+Cjwvc3ZnPg==')]"></div>
 
             {/* 3D Globe Background Layer (Lazy Loaded) - Reused for Forms */}
