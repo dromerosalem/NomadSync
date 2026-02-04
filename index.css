@@ -46,6 +46,7 @@ body {
   /* Disable overscroll bounce */
   overscroll-behavior: none;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y;
 }
 
 /* Ensure the root app container fills the viewport and handles scroll internally */
