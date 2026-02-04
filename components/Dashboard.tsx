@@ -74,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                 </div>
             )}
             {/* Sticky Top Section */}
-            <div className="sticky top-0 z-30 bg-tactical-bg border-b border-tactical-muted/10 pb-4 shadow-xl transform-gpu">
+            <div className="sticky top-0 z-50 bg-tactical-bg border-b border-tactical-muted/10 pb-4 shadow-xl transform-gpu isolation-isolate">
                 {/* Header */}
                 <header className="px-6 py-4 flex items-center justify-center">
                     <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             </div>
 
             {/* Missions List Content */}
-            <div className="px-6 pt-6 pb-32">
+            <div className="px-6 pt-6 pb-32 relative z-10">
                 {/* Responsive Grid for Trips */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {trips.map((trip) => {
