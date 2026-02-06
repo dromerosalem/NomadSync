@@ -31,7 +31,22 @@ export async function analyzeReceiptViaEdge(
     try {
         console.log(`[EdgeAIService] 🚀 Calling analyze-receipt Edge Function (model: ${model})`);
 
+        // Get the current session to ensure JWT is passed
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        
+        // DEBUG: Log token status (remove in production)
+        console.log(`[EdgeAIService] 🔐 Session check: ${accessToken ? `Token found (${accessToken.substring(0, 20)}...)` : 'NO TOKEN'}`);
+        
+        if (!accessToken) {
+            console.error('[EdgeAIService] ❌ No access token found - user may not be logged in');
+            throw new Error('Authentication required. Please log in to use this feature.');
+        }
+
         const { data, error } = await supabase.functions.invoke('analyze-receipt', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            },
             body: {
                 base64Data,
                 mimeType,

@@ -110,31 +110,47 @@ const buildGeminiLitePrompt = (tripStartDate?: string) => {
        DATA EXTRACTION RULES:
        ═══════════════════════════════════════════════════════════════════════
 
-        **MULTI-ITEM EXTRACTION (CRITICAL)**: 
-        - **ROUND TRIP PARSING**: If the document is a Round Trip (Outbound + Return), extract as **TWO** separate 'TRANSPORT' items (split cost 50/50).
-        - **SAME EVENT MERGING**: If multiple tickets/pages refer to the **SAME EVENT** (e.g. Concert, Tour) on the same date/time, merge them into a **SINGLE** 'ACTIVITY' item.
-            - **SUM THE COSTS**: The item 'cost' must be the SUM of all ticket prices.
-            - **LINE ITEMS**: List each ticket as a separate entry in 'receiptItems'.
-        - **DISTINCT EVENTS**: Only create separate items if the events are truly different (different dates, valid round trips, or different venues).
-        - **AGGREGATE COST**: The 'cost' field MUST be the final **TOTAL ORDER AMOUNT**.
-
-        **LAYOVER / CONNECTION PARSING (CRITICAL)**:
-         - **EVERY TRANSPORT LEG IS A SEPARATE ITEM**: If a journey has layovers/connections, extract EACH flight/train/bus segment as its own 'TRANSPORT' item.
-         - Do NOT combine multiple legs into a single item.
-         - Each leg must have its own departure time, arrival time, origin, and destination.
+        **MULTI-ITEM EXTRACTION (CRITICAL - READ CAREFULLY)**: 
+        
+        ⚠️ **PRIORITY ORDER - APPLY IN THIS EXACT SEQUENCE**:
+        
+        1️⃣ **FIRST - CHECK FOR LAYOVERS/CONNECTIONS**:
+           - If ANY leg has a transfer/layover/connection, you MUST extract EACH SEGMENT as a SEPARATE top-level 'TRANSPORT' item in the items array.
+           - A "Transfer" or "Layover" notation = connection point = multiple legs.
+           - Different flight/train/bus numbers = different legs = separate items.
+           - **DO NOT PUT FLIGHT LEGS IN receiptItems**. Each leg is its own item.
+           
+        2️⃣ **THEN - CHECK FOR ROUND TRIP**:
+           - Only AFTER extracting all legs separately, if it's a round trip, you'll have outbound legs + return legs.
+           - A round trip with 1 connection each way = **4 TRANSPORT items** (not 2!).
+           - Split total cost evenly across ALL legs.
+        
+        3️⃣ **SAME EVENT MERGING** (for non-transport):
+           - If multiple tickets refer to the SAME event (Concert, Tour) on same date/time, merge into a SINGLE 'ACTIVITY'.
+        
+        **LAYOVER / CONNECTION PARSING (CRITICAL - THIS OVERRIDES ROUND TRIP LOGIC)**:
+         - **EVERY TRANSPORT SEGMENT = SEPARATE TOP-LEVEL ITEM**: 
+           - London → Porto = 1 item
+           - Porto → São Paulo = 1 item  
+           - São Paulo → Lisbon = 1 item
+           - Lisbon → London = 1 item
+           - TOTAL = 4 items (NOT 2!)
+         
          - **IDENTIFICATION RULES**:
-             - A "Transfer" or "Layover" notation indicates a connection point.
-             - Different flight/train/bus numbers = different legs.
-             - A departure from the same location where you just arrived = start of new leg.
-         - **EXAMPLE - Outbound with 1 Connection**:
-             Document shows: "London 10:10 → Porto 12:35, Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40"
-             Extract as TWO items:
-             1. { type: "TRANSPORT", location: "London", endLocation: "Porto", startDate: "...T10:10", endDate: "...T12:35", ... }
-             2. { type: "TRANSPORT", location: "Porto", endLocation: "Sao Paulo", startDate: "...T13:50", endDate: "...T21:40", ... }
+             - "Transfer in [City]" or "Layover" = new segment starts
+             - Different flight numbers (e.g., TP1329, TP093) = different segments
+             - If you depart from where you just arrived, that's a NEW LEG
+         
+         - **CONCRETE EXAMPLE**:
+             Document: "London 10:10 → Porto 12:35 (TP1329), Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40 (TP093)"
+             You MUST return an items array with TWO separate objects:
+             Item 1: type=TRANSPORT, location=London, endLocation=Porto, startDate=...T10:10, endDate=...T12:35
+             Item 2: type=TRANSPORT, location=Porto, endLocation=Sao Paulo, startDate=...T13:50, endDate=...T21:40
+             This is TWO items for outbound. With return having same pattern = FOUR TOTAL ITEMS.
+         
          - **COST DISTRIBUTION FOR LAYOVERS**:
-             - If the document shows a single total price for all legs, SPLIT EVENLY across all leg items.
-             - If individual leg prices are shown, use those.
-             - Example: Round trip with 4 legs at €500 total → Each leg costs €125.
+             - Single total price for all legs? SPLIT EVENLY across all items.
+             - Example: Round trip with 4 legs at €500 total → Each leg = €125.
 
        **CURRENCY NORMALIZATION (CRITICAL)**:
        - If line items are listed in a different currency (e.g. GBP) than the Final Total (e.g. USD), you MUST convert the line item prices to the Final Total's currency.
@@ -271,39 +287,44 @@ const buildGeminiPremiumPrompt = (tripStartDate?: string) => {
        ═══════════════════════════════════════════════════════════════════════
        
        1. SERVICE CHARGES & TIPS: Type "service", always shared proportionally
-       2. DEPOSITS: If a deposit is SUBTRACTED from the total, note it in details
-          but the 'cost' should be the FINAL PAID AMOUNT (after deposit deduction)
-       3. TAXES: Usually included in prices, don't extract tax breakdown lines
+       2. DEPOSITS: 'cost' = FINAL PAID AMOUNT (after deposit deduction)
+       3. TAXES: Usually included, don't extract tax breakdown lines
        4. DISCOUNTS/VOUCHERS: Account for these when validating totals
         
-        **MULTI-ITEM vs SINGLE ITEM (CRITICAL)**:
-        - **ROUND TRIP**: Split into TWO separate 'TRANSPORT' items (Outbound / Return).
-        - **SAME EVENT (e.g. Concert)**: Merge multiple tickets for the SAME event into ONE 'ACTIVITY' item.
-            - Sum all ticket costs into the final 'cost'.
-            - List individual tickets in 'receiptItems'.
+        **MULTI-ITEM EXTRACTION (CRITICAL - READ CAREFULLY)**:
+        
+        ⚠️ **PRIORITY ORDER - APPLY IN THIS EXACT SEQUENCE**:
+        
+        1️⃣ **FIRST - CHECK FOR LAYOVERS/CONNECTIONS**:
+           - If ANY leg has a transfer/layover/connection, EACH SEGMENT = SEPARATE top-level 'TRANSPORT' item.
+           - Different flight numbers = different legs = separate items.
+           - **DO NOT PUT FLIGHT LEGS IN receiptItems**. Each leg is its own item.
+           
+        2️⃣ **THEN - CHECK FOR ROUND TRIP**:
+           - A round trip with 1 connection each way = **4 TRANSPORT items** (not 2!).
+           - Split total cost evenly across ALL legs.
+        
+        3️⃣ **SAME EVENT MERGING** (non-transport only):
+           - Multiple tickets for SAME event → merge into ONE 'ACTIVITY'.
 
-        **LAYOVER / CONNECTION PARSING (CRITICAL)**:
-         - **EVERY TRANSPORT LEG IS A SEPARATE ITEM**: If a journey has layovers/connections, extract EACH flight/train/bus segment as its own 'TRANSPORT' item.
-         - Do NOT combine multiple legs into a single item.
-         - Each leg must have its own departure time, arrival time, origin, and destination.
-         - **IDENTIFICATION RULES**:
-             - A "Transfer" or "Layover" notation indicates a connection point.
-             - Different flight/train/bus numbers = different legs.
-             - A departure from the same location where you just arrived = start of new leg.
-         - **EXAMPLE - Outbound with 1 Connection**:
-             Document shows: "London 10:10 → Porto 12:35, Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40"
-             Extract as TWO items:
-             1. { type: "TRANSPORT", location: "London", endLocation: "Porto", startDate: "...T10:10", endDate: "...T12:35", ... }
-             2. { type: "TRANSPORT", location: "Porto", endLocation: "Sao Paulo", startDate: "...T13:50", endDate: "...T21:40", ... }
-         - **COST DISTRIBUTION FOR LAYOVERS**:
-             - If the document shows a single total price for all legs, SPLIT EVENLY across all leg items.
-             - If individual leg prices are shown, use those.
-             - Example: Round trip with 4 legs at €500 total → Each leg costs €125.
+        **LAYOVER / CONNECTION PARSING (OVERRIDES SIMPLE ROUND TRIP)**:
+         - **EVERY TRANSPORT SEGMENT = SEPARATE TOP-LEVEL ITEM**: 
+           - London → Porto = 1 item
+           - Porto → São Paulo = 1 item  
+           - São Paulo → Lisbon = 1 item
+           - Lisbon → London = 1 item
+           - TOTAL = 4 items (NOT 2!)
+         
+         - **IDENTIFICATION**: "Transfer in [City]" or different flight numbers = new segment
+         
+         - **CONCRETE EXAMPLE**:
+             Input: "London 10:10 → Porto 12:35 (TP1329), Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40 (TP093)"
+             Output: TWO items for outbound. With return = FOUR TOTAL ITEMS.
+         
+         - **COST**: Split total evenly. €500 for 4 legs → €125 each.
 
         5. TRANSPORT LOCATION RULES (CRITICAL):
-           - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
-           - 'location' = Origin (City/Airport/Station)
-           - 'endLocation' = Destination (City/Airport/Station)
+           - For TRANSPORT, 'location' = Origin, 'endLocation' = Destination
        
        ═══════════════════════════════════════════════════════════════════════
        OUTPUT SCHEMA:
@@ -440,27 +461,37 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
            - 'location' = Origin (City/Airport/Station)
            - 'endLocation' = Destination (City/Airport/Station)
 
-        **MULTI-ITEM LOGIC**:
-            - **ROUND TRIP**: Split into TWO items (start/end logic applies to each).
-            - **SAME EVENT**: Merge multiple tickets into ONE item. Sum the costs.
+        **MULTI-ITEM EXTRACTION (CRITICAL - READ CAREFULLY)**:
+        
+        ⚠️ **PRIORITY ORDER - APPLY IN THIS EXACT SEQUENCE**:
+        
+        1️⃣ **FIRST - CHECK FOR LAYOVERS/CONNECTIONS**:
+           - If ANY leg has a transfer/layover/connection, EACH SEGMENT = SEPARATE top-level 'TRANSPORT' item.
+           - Different flight numbers = different legs = separate items.
+           - **DO NOT PUT FLIGHT LEGS IN receiptItems**. Each leg is its own item.
+           
+        2️⃣ **THEN - CHECK FOR ROUND TRIP**:
+           - A round trip with 1 connection each way = **4 TRANSPORT items** (not 2!).
+           - Split total cost evenly across ALL legs.
+        
+        3️⃣ **SAME EVENT MERGING** (non-transport only):
+           - Multiple tickets for SAME event → merge into ONE 'ACTIVITY'.
 
-        **LAYOVER / CONNECTION PARSING (CRITICAL)**:
-         - **EVERY TRANSPORT LEG IS A SEPARATE ITEM**: If a journey has layovers/connections, extract EACH flight/train/bus segment as its own 'TRANSPORT' item.
-         - Do NOT combine multiple legs into a single item.
-         - Each leg must have its own departure time, arrival time, origin, and destination.
-         - **IDENTIFICATION RULES**:
-             - A "Transfer" or "Layover" notation indicates a connection point.
-             - Different flight/train/bus numbers = different legs.
-             - A departure from the same location where you just arrived = start of new leg.
-         - **EXAMPLE - Outbound with 1 Connection**:
-             Document shows: "London 10:10 → Porto 12:35, Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40"
-             Extract as TWO items:
-             1. { type: "TRANSPORT", location: "London", endLocation: "Porto", startDate: "...T10:10", endDate: "...T12:35", ... }
-             2. { type: "TRANSPORT", location: "Porto", endLocation: "Sao Paulo", startDate: "...T13:50", endDate: "...T21:40", ... }
-         - **COST DISTRIBUTION FOR LAYOVERS**:
-             - If the document shows a single total price for all legs, SPLIT EVENLY across all leg items.
-             - If individual leg prices are shown, use those.
-             - Example: Round trip with 4 legs at €500 total → Each leg costs €125.
+        **LAYOVER / CONNECTION PARSING (OVERRIDES SIMPLE ROUND TRIP)**:
+         - **EVERY TRANSPORT SEGMENT = SEPARATE TOP-LEVEL ITEM**: 
+           - London → Porto = 1 item
+           - Porto → São Paulo = 1 item  
+           - São Paulo → Lisbon = 1 item
+           - Lisbon → London = 1 item
+           - TOTAL = 4 items (NOT 2!)
+         
+         - **IDENTIFICATION**: "Transfer in [City]" or different flight numbers = new segment
+         
+         - **CONCRETE EXAMPLE**:
+             Input: "London 10:10 → Porto 12:35 (TP1329), Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40 (TP093)"
+             Output: TWO items for outbound. With return = FOUR TOTAL ITEMS.
+         
+         - **COST**: Split total evenly. €500 for 4 legs → €125 each.
         
         ═══════════════════════════════════════════════════════════════════════
         TAX HANDLING (CRITICAL):
@@ -667,13 +698,51 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERNAL AUTH VALIDATION (Required since gateway verify_jwt is disabled)
+    // ═══════════════════════════════════════════════════════════════════════
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('[analyze-receipt] ❌ Missing or invalid Authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required. Missing Authorization header.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate the JWT using Supabase client
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: authHeader },
+        },
+      }
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: userData, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !userData?.user) {
+      console.error('[analyze-receipt] ❌ Invalid JWT:', authError?.message || 'No user found');
+      return new Response(
+        JSON.stringify({ error: 'Invalid or expired authentication token.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[analyze-receipt] ✅ Authenticated user: ${userData.user.email}`);
+    // ═══════════════════════════════════════════════════════════════════════
+
     const { base64Data, mimeType = 'image/jpeg', tripStartDate, textInput, model = 'lite' } = await req.json();
 
     if (!base64Data && !textInput) {
       return new Response(
         JSON.stringify({ error: 'Either base64Data or textInput is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      )
     }
 
     let result: { items: any[], confidence: number, reasoning?: string, usage?: any };
