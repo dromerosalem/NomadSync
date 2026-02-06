@@ -411,8 +411,12 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
         <div className="flex flex-col items-center">
-          <div className="px-3 py-1 rounded-full border border-tactical-muted/30 bg-tactical-card text-[10px] uppercase font-bold tracking-widest text-gray-500">
-            {initialItem?.id ? 'Updating Item' : 'Private Item'}
+          <div className={`px-3 py-1 rounded-full border text-[10px] uppercase font-bold tracking-widest ${initialItem?.id ? 'border-tactical-muted/30 bg-tactical-card text-gray-500'
+              : isPrivate
+                ? 'border-gray-600 bg-gray-900 text-gray-400'
+                : 'border-tactical-accent/30 bg-tactical-accent/10 text-tactical-accent'
+            }`}>
+            {initialItem?.id ? 'Updating Item' : (isPrivate ? 'Private Item' : 'Shared Item')}
           </div>
           {queueLength !== undefined && queueLength > 1 && (
             <div className="text-[10px] text-tactical-accent font-bold mt-1 tracking-widest animate-pulse">
@@ -451,14 +455,14 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         </div>
 
         {/* Privacy Toggle */}
-        <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-4 flex items-center justify-between">
+        <div className={`border rounded-xl p-4 flex items-center justify-between ${!isPrivate ? 'bg-tactical-accent/5 border-tactical-accent/30' : 'bg-tactical-card border-tactical-muted/20'}`}>
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${isPrivate ? 'bg-gray-700 text-white' : 'bg-black/20 text-gray-500'}`}>
-              {isPrivate ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+            <div className={`p-2 rounded-lg ${!isPrivate ? 'bg-tactical-accent text-black' : 'bg-black/20 text-gray-500'}`}>
+              {!isPrivate ? <EyeIcon className="w-5 h-5" /> : <EyeOffIcon className="w-5 h-5" />}
             </div>
             <div>
-              <div className="font-display font-bold text-white uppercase text-sm tracking-wide">
-                {isPrivate ? 'Private Item' : 'Share Item'}
+              <div className={`font-display font-bold uppercase text-sm tracking-wide ${!isPrivate ? 'text-white' : 'text-gray-400'}`}>
+                {isPrivate ? 'Private Item' : 'Shared Item'}
               </div>
               <div className="text-xs text-gray-500">
                 {isOwner
@@ -471,9 +475,9 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           {isOwner ? (
             <button
               onClick={() => setIsPrivate(!isPrivate)}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${isPrivate ? 'bg-gray-600' : 'bg-tactical-muted/30'}`}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${!isPrivate ? 'bg-tactical-accent' : 'bg-tactical-muted/30'}`}
             >
-              <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${isPrivate ? 'translate-x-6' : 'translate-x-0'}`}></div>
+              <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${!isPrivate ? 'translate-x-6' : 'translate-x-0'}`}></div>
             </button>
           ) : (
             <div className="px-2 py-1 rounded bg-black/40 border border-white/10 text-[9px] font-bold text-gray-500 uppercase">
