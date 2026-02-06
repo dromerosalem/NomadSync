@@ -125,7 +125,7 @@ const AddItem: React.FC<AddItemProps> = ({ onClose, onSelectType, onScannedItem,
 
       {/* Loading Overlay */}
       {isScanning && (
-        <div className="absolute inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center backdrop-blur-sm">
           <ScanIcon className="w-16 h-16 text-tactical-accent animate-pulse mb-4" />
           <div className="font-display text-xl font-bold text-white uppercase tracking-widest">Adding Item...</div>
           <div className="text-sm text-gray-400 mt-2">Analyzing item details</div>

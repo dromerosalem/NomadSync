@@ -735,7 +735,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 />
             )}
             {isScanning && (
-                <div className="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm px-8 text-center transition-all duration-500">
+                <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm px-8 text-center transition-all duration-500">
                     <div className="relative mb-12">
                         {isPremiumScan ? (
                             <LaserScannerIcon className="w-24 h-24 text-tactical-accent drop-shadow-[0_0_15px_rgba(255,215,0,0.3)]" />
