@@ -47,16 +47,11 @@ const INSPIRING_PHRASES = [
 ];
 
 const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoading }) => {
+  const [step, setStep] = useState<1 | 2>(1); // Step 1: Logistics, Step 2: Financials
+
+  // Step 1 State
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
-  const [budget, setBudget] = useState('2000');
-  const [dailyBudget, setDailyBudget] = useState('');
-  const [showDailyBudget, setShowDailyBudget] = useState(false);
-  const [baseCurrency, setBaseCurrency] = useState('USD');
-  const [budgetViewMode, setBudgetViewMode] = useState<'SMART' | 'DIRECT'>('SMART');
-  const randomSubheader = useMemo(() => INSPIRING_PHRASES[Math.floor(Math.random() * INSPIRING_PHRASES.length)], []);
-
-  // Location Metadata
   const [locationMetadata, setLocationMetadata] = useState<{ lat: number, lon: number, countryCode: string } | undefined>();
 
   // Calendar State
@@ -64,10 +59,28 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
 
+  // Step 2 State
+  const [budget, setBudget] = useState('2000');
+  const [dailyBudget, setDailyBudget] = useState('');
+  const [showDailyBudget, setShowDailyBudget] = useState(false);
+  const [baseCurrency, setBaseCurrency] = useState('USD');
+  const [budgetViewMode, setBudgetViewMode] = useState<'SMART' | 'DIRECT'>('SMART');
+
+  const randomSubheader = useMemo(() => INSPIRING_PHRASES[Math.floor(Math.random() * INSPIRING_PHRASES.length)], []);
+
+  const handleNext = () => {
+    if (name && location && startDate) {
+      setStep(2);
+    }
+  };
+
+  const handleBackStep = () => {
+    setStep(1);
+  };
+
   const handleSubmit = () => {
     if (name && location && startDate) {
       const mockMembers: Member[] = [];
-
       // Default to single day trip if no end date selected
       onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency, locationMetadata, parseInt(dailyBudget) || 0, budgetViewMode);
     }
@@ -103,7 +116,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
         setStartDate(clickedDate);
         setEndDate(null);
       } else if (isSameDay(clickedDate, startDate)) {
-        // Deselect if clicking start again? No, let's keep it simple.
+        // Deselect logic if needed
       } else {
         setEndDate(clickedDate);
       }
@@ -137,9 +150,13 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
     <div className="flex flex-col h-full animate-fade-in bg-tactical-bg">
       {/* Header */}
       <header className="px-6 py-4 flex items-center justify-between sticky top-0 bg-tactical-bg z-30 border-b border-tactical-muted/10">
-        <button onClick={onBack} className="text-gray-400 hover:text-white">
+        <button onClick={step === 1 ? onBack : handleBackStep} className="text-gray-400 hover:text-white">
           <ChevronLeftIcon className="w-6 h-6" />
         </button>
+        <div className="flex gap-2">
+          <div className={`h-1.5 w-6 rounded-full transition-colors duration-300 ${step === 1 ? 'bg-tactical-accent' : 'bg-gray-700'}`}></div>
+          <div className={`h-1.5 w-6 rounded-full transition-colors duration-300 ${step === 2 ? 'bg-tactical-accent' : 'bg-gray-700'}`}></div>
+        </div>
         <div className="w-6"></div> {/* Spacer */}
       </header>
 
@@ -147,183 +164,199 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
       <div className="flex-1 overflow-y-auto scrollbar-hide p-6">
         <header className="mb-8 mt-2">
           <h1 className="font-display text-4xl font-bold text-tactical-accent uppercase leading-tight mb-2">
-            Chart Your<br />Adventure
+            {step === 1 ? "Chart Your\nAdventure" : "Fund The\nJourney"}
           </h1>
           <p className="text-tactical-muted tracking-widest text-xs uppercase font-medium">
-            {randomSubheader}
+            {step === 1 ? randomSubheader : "Set your boundaries, then break them."}
           </p>
         </header>
 
-        {/* Responsive Grid Layout for Tablet+ */}
-        <div className="space-y-8 md:space-y-0 md:grid md:grid-cols-2 md:gap-8">
+        <div className="space-y-8">
 
-          {/* Left Column: Inputs */}
-          <div className="space-y-8">
-            {/* Mission Name */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Name</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Spain Adventure"
-                className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
-              />
-            </div>
+          {/* STEP 1: LOGISTICS */}
+          {step === 1 && (
+            <div className="animate-fade-in space-y-8">
+              {/* Mission Name */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Name</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Spain Adventure"
+                  className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors"
+                />
+              </div>
 
-            {/* Base Location */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Departure City</label>
-              <PlaceAutocomplete
-                value={location}
-                onChange={(val, meta) => {
-                  setLocation(val);
-                  if (meta) {
-                    setLocationMetadata({ lat: meta.lat, lon: meta.lon, countryCode: meta.countryCode });
-                  }
-                }}
-                placeholder="Enter origin city"
-              />
-            </div>
+              {/* Base Location */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Departure City</label>
+                <PlaceAutocomplete
+                  value={location}
+                  onChange={(val, meta) => {
+                    setLocation(val);
+                    if (meta) {
+                      setLocationMetadata({ lat: meta.lat, lon: meta.lon, countryCode: meta.countryCode });
+                    }
+                  }}
+                  placeholder="Enter origin city"
+                />
+              </div>
 
-            {/* Budget */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ({getCurrencySymbol(baseCurrency)})</label>
-              <input
-                type="number"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                placeholder="2000"
-                className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <p className="text-[10px] text-gray-500">This budget is private to you and tracked separately from other members.</p>
-            </div>
-
-            {/* Daily Budget (Optional Toggle) */}
-            <div className="space-y-4">
-              {!showDailyBudget ? (
-                <button
-                  type="button"
-                  onClick={() => setShowDailyBudget(true)}
-                  className="w-full py-3 border border-dashed border-tactical-muted/30 rounded-lg text-tactical-muted text-xs font-bold uppercase tracking-wider hover:border-tactical-accent/50 hover:text-tactical-accent transition-all flex items-center justify-center gap-2"
-                >
-                  <span className="text-lg">+</span> Set Daily Spending Limit
-                </button>
-              ) : (
-                <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-                  <div className="flex justify-between items-center">
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Daily Budget ({getCurrencySymbol(baseCurrency)})</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowDailyBudget(false);
-                        setDailyBudget('');
-                      }}
-                      className="text-[10px] text-red-500/70 hover:text-red-500 uppercase font-bold tracking-tighter"
-                    >
-                      Remove Limit
-                    </button>
+              {/* Calendar */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Dates</label>
+                <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20">
+                  <div className="flex justify-between items-center mb-6">
+                    <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>
+                    <h3 className="font-display font-bold text-white uppercase tracking-wider">
+                      {monthNames[currentMonth]} {currentYear}
+                    </h3>
+                    <button onClick={handleNextMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">›</button>
                   </div>
-                  <input
-                    type="number"
-                    value={dailyBudget}
-                    onChange={(e) => setDailyBudget(e.target.value)}
-                    placeholder="e.g. 150"
-                    className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    autoFocus
-                  />
-                  <p className="text-[10px] text-gray-500">Resets daily at 00:00. You'll get notified if you exceed this limit.</p>
+
+                  <div className="grid grid-cols-7 gap-2 text-center text-sm">
+                    {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(d => (
+                      <span key={d} className="text-tactical-muted font-bold text-[10px] tracking-widest">{d}</span>
+                    ))}
+
+                    {/* Empty spaces */}
+                    {Array.from({ length: firstDayOfWeek }, (_, i) => (
+                      <div key={`empty-${i}`} className="p-2"></div>
+                    ))}
+
+                    {/* Days */}
+                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+                      <button
+                        key={day}
+                        onClick={() => handleDateClick(day)}
+                        className={`p-2 rounded-full text-xs transition-all duration-200 ${getDayClass(day)}`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-            </div>
-
-            {/* Base Currency */}
-            <CurrencySelector
-              label="Trip Currency"
-              value={baseCurrency}
-              onChange={setBaseCurrency}
-            />
-
-            {/* Split Mode Selector */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Expense Split Mode</label>
-              <div className="flex items-center gap-2 bg-tactical-card rounded-lg p-1 border border-tactical-muted/30">
-                <button
-                  type="button"
-                  onClick={() => setBudgetViewMode('DIRECT')}
-                  className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'DIRECT' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
-                >
-                  Direct View
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBudgetViewMode('SMART')}
-                  className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'SMART' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
-                >
-                  Smart Route
-                </button>
               </div>
-              <p className="text-[10px] text-gray-500">
-                {budgetViewMode === 'SMART'
-                  ? 'Smart Route optimizes group settlements with fewer transfers.'
-                  : 'Direct View shows exact individual debts between members.'}
-              </p>
             </div>
-          </div>
+          )}
 
-          {/* Right Column: Calendar */}
-          <div className="space-y-2 h-full flex flex-col">
-            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trip Dates</label>
-            <div className="bg-tactical-card rounded-xl p-6 border border-tactical-muted/20 flex-1">
-              <div className="flex justify-between items-center mb-6">
-                <button onClick={handlePrevMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">‹</button>
-                <h3 className="font-display font-bold text-white uppercase tracking-wider">
-                  {monthNames[currentMonth]} {currentYear}
-                </h3>
-                <button onClick={handleNextMonth} className="text-gray-400 text-xl w-8 h-8 flex items-center justify-center hover:text-white hover:bg-tactical-highlight rounded-full transition-colors">›</button>
+          {/* STEP 2: FINANCIALS */}
+          {step === 2 && (
+            <div className="animate-fade-in space-y-8">
+              {/* Budget */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Personal Budget ({getCurrencySymbol(baseCurrency)})</label>
+                <input
+                  type="number"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  placeholder="2000"
+                  className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <p className="text-[10px] text-gray-500">This budget is private to you and tracked separately from other members.</p>
               </div>
 
-              <div className="grid grid-cols-7 gap-2 text-center text-sm">
-                {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map(d => (
-                  <span key={d} className="text-tactical-muted font-bold text-[10px] tracking-widest">{d}</span>
-                ))}
-
-                {/* Empty spaces for start of month */}
-                {Array.from({ length: firstDayOfWeek }, (_, i) => (
-                  <div key={`empty-${i}`} className="p-2"></div>
-                ))}
-
-                {/* Days */}
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
+              {/* Daily Budget (Optional Toggle) */}
+              <div className="space-y-4">
+                {!showDailyBudget ? (
                   <button
-                    key={day}
-                    onClick={() => handleDateClick(day)}
-                    className={`p-2 rounded-full text-xs transition-all duration-200 ${getDayClass(day)}`}
+                    type="button"
+                    onClick={() => setShowDailyBudget(true)}
+                    className="w-full py-3 border border-dashed border-tactical-muted/30 rounded-lg text-tactical-muted text-xs font-bold uppercase tracking-wider hover:border-tactical-accent/50 hover:text-tactical-accent transition-all flex items-center justify-center gap-2"
                   >
-                    {day}
+                    <span className="text-lg">+</span> Set Daily Spending Limit
                   </button>
-                ))}
+                ) : (
+                  <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Daily Budget ({getCurrencySymbol(baseCurrency)})</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDailyBudget(false);
+                          setDailyBudget('');
+                        }}
+                        className="text-[10px] text-red-500/70 hover:text-red-500 uppercase font-bold tracking-tighter"
+                      >
+                        Remove Limit
+                      </button>
+                    </div>
+                    <input
+                      type="number"
+                      value={dailyBudget}
+                      onChange={(e) => setDailyBudget(e.target.value)}
+                      placeholder="e.g. 150"
+                      className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-4 text-tactical-text placeholder-tactical-muted focus:outline-none focus:border-tactical-accent transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      autoFocus
+                    />
+                    <p className="text-[10px] text-gray-500">Resets daily at 00:00. You'll get notified if you exceed this limit.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Base Currency */}
+              <CurrencySelector
+                label="Trip Currency"
+                value={baseCurrency}
+                onChange={setBaseCurrency}
+              />
+
+              {/* Split Mode Selector */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Expense Split Mode</label>
+                <div className="flex items-center gap-2 bg-tactical-card rounded-lg p-1 border border-tactical-muted/30">
+                  <button
+                    type="button"
+                    onClick={() => setBudgetViewMode('DIRECT')}
+                    className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'DIRECT' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    Direct View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBudgetViewMode('SMART')}
+                    className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'SMART' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
+                  >
+                    Smart Route
+                  </button>
+                </div>
+                <p className="text-[10px] text-gray-500">
+                  {budgetViewMode === 'SMART'
+                    ? 'Smart Route optimizes group settlements with fewer transfers.'
+                    : 'Direct View shows exact individual debts between members.'}
+                </p>
               </div>
             </div>
-          </div>
+          )}
 
         </div>
 
         {/* Action Button - Spans full width */}
         <div className="pt-8 pb-2">
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading || !name || !location || !startDate}
-            className="w-full bg-tactical-accent hover:bg-yellow-500 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,215,0,0.2)]"
-          >
-            {isLoading ? (
-              <span>SYNCHRONIZING TRIP...</span>
-            ) : (
-              <>
-                START YOUR ADVENTURE <ArrowRightIcon className="w-6 h-6" />
-              </>
-            )}
-          </button>
+          {step === 1 ? (
+            <button
+              onClick={handleNext}
+              disabled={!name || !location || !startDate}
+              className="w-full bg-white hover:bg-gray-200 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              START PLANNING <ArrowRightIcon className="w-6 h-6" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="w-full bg-tactical-accent hover:bg-yellow-500 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(255,215,0,0.2)]"
+            >
+              {isLoading ? (
+                <span>SYNCHRONIZING TRIP...</span>
+              ) : (
+                <>
+                  CHART ADVENTURE <ArrowRightIcon className="w-6 h-6" />
+                </>
+              )}
+            </button>
+          )}
         </div>
 
       </div>
