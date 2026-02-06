@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { getMissionCover } from '../utils/assetUtils';
 import { Trip, ItineraryItem, ItemType } from '../types';
-import { getCurrencySymbol } from '../utils/currencyUtils';
+import { getCurrencySymbol, formatAmountWhole } from '../utils/currencyUtils';
 import MissionGlobe from './MissionGlobe';
 import TacticalImage from './TacticalImage';
 import { NotificationManager } from '../services/NotificationManager';
@@ -571,10 +571,10 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
               </div>
               <div className="font-mono text-xl text-white leading-none">
                 <span className={remainingBudget < 0 ? "text-red-500 font-bold" : "text-white font-bold"}>
-                  {getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalCost.toFixed(0)}
+                  {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTotalCost)}
                 </span>
                 <span className="text-gray-600 text-sm mx-1.5">/</span>
-                <span className="text-gray-500 text-sm">{getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}</span>
+                <span className="text-gray-500 text-sm">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(userBudget)}</span>
               </div>
             </div>
 
