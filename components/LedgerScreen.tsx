@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trip, ItineraryItem, ItemType } from '../types';
 import { ChevronLeftIcon, ShoppingBagIcon, WrenchIcon, FuelIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, EyeOffIcon, BanknoteIcon } from './Icons';
-import { getCurrencySymbol } from '../utils/currencyUtils';
+import { getCurrencySymbol, formatAmount } from '../utils/currencyUtils';
 
 interface LedgerScreenProps {
     trip: Trip;
@@ -105,11 +105,11 @@ const LedgerScreen: React.FC<LedgerScreenProps> = ({ trip, currentUserId, onBack
                                                 </h3>
                                                 <div className="flex flex-col items-end shrink-0">
                                                     <span className={`font-mono font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
-                                                        {isSettlement ? '' : '-'}{getCurrencySymbol(baseCurrency)}{item.cost?.toFixed(2)}
+                                                        {isSettlement ? '' : '-'}{getCurrencySymbol(baseCurrency)}{formatAmount(item.cost || 0)}
                                                     </span>
                                                     {item.currencyCode && item.currencyCode !== baseCurrency && item.originalAmount != null && (
                                                         <span className="text-[10px] font-mono text-gray-500 leading-none mt-0.5">
-                                                            ({getCurrencySymbol(item.currencyCode)}{Number(item.originalAmount).toFixed(2)})
+                                                            ({getCurrencySymbol(item.currencyCode)}{formatAmount(Number(item.originalAmount))})
                                                         </span>
                                                     )}
                                                 </div>

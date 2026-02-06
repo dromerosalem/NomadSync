@@ -3,7 +3,7 @@ import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
 import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon } from './Icons';
 import { sanitizeAsset } from '../utils/assetUtils';
 import AtmosphericAvatar from './AtmosphericAvatar';
-import { getCurrencySymbol } from '../utils/currencyUtils';
+import { getCurrencySymbol, formatAmountWhole, formatAmount } from '../utils/currencyUtils';
 import { Money } from '../utils/money';
 import { useCachedCalculation } from '../hooks/useCachedCalculation';
 
@@ -369,8 +369,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                     <div className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest mb-1">My Personal Budget</div>
                     <div className="flex items-baseline gap-2 mb-4">
-                        <span className="font-display text-5xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalSpend.toFixed(0)}</span>
-                        <span className="font-mono text-gray-500 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{userBudget}</span>
+                        <span className="font-display text-5xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTotalSpend)}</span>
+                        <span className="font-mono text-gray-500 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(userBudget)}</span>
                     </div>
 
                     <div className="flex justify-between items-end mb-2">
@@ -386,7 +386,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                     <div className="flex justify-between items-center text-xs border-t border-white/5 pt-3">
                         <span className="text-gray-500 uppercase">Trip ends in {daysRemaining} days</span>
-                        <span className="text-white font-bold">Remaining: {getCurrencySymbol(trip.baseCurrency || 'USD')}{remaining.toFixed(0)}</span>
+                        <span className="text-white font-bold">Remaining: {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(remaining)}</span>
                     </div>
                 </div>
 
@@ -403,8 +403,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                 )}
                             </div>
                             <div className="flex items-baseline gap-2">
-                                <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTodaySpend.toFixed(0)}</span>
-                                <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{dailyBudget}</span>
+                                <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTodaySpend)}</span>
+                                <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(dailyBudget)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-gray-800 rounded-full mt-2 overflow-hidden">
                                 <div
@@ -418,7 +418,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                 {isOverDailyBudget ? 'Over Limit' : 'Left Today'}
                             </div>
                             <div className={`font-bold font-mono text-sm ${isOverDailyBudget ? 'text-tactical-accent' : 'text-tactical-accent'}`}>
-                                {isOverDailyBudget ? '+' : ''}{getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(dailyBudget - myTodaySpend).toFixed(0)}
+                                {isOverDailyBudget ? '+' : ''}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(dailyBudget - myTodaySpend))}
                             </div>
                         </div>
                     </div>
@@ -444,7 +444,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                         <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">{getCategoryName(type)}</span>
                                     </div>
                                     <div className="flex items-baseline gap-1 mb-2">
-                                        <span className="font-display text-xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{spent.toFixed(0)}</span>
+                                        <span className="font-display text-xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(spent)}</span>
                                     </div>
                                     <div className="h-1.5 bg-black rounded-full overflow-hidden">
                                         <div className="h-full bg-tactical-accent" style={{ width: `${percent}%` }}></div>
@@ -470,8 +470,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Group Spending Progress</span>
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalSpend.toFixed(0)}</span>
-                                    <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{groupTotalBudget.toLocaleString()}</span>
+                                    <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(groupTotalSpend)}</span>
+                                    <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(groupTotalBudget)}</span>
                                 </div>
                                 <div className="h-1 w-24 bg-gray-800 rounded-full mt-2 overflow-hidden">
                                     <div
@@ -543,8 +543,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                             <div>
                                                 <div className="font-bold text-white text-sm">{member.name}</div>
                                                 <div className="text-[10px] font-bold uppercase tracking-widest mt-0.5">
-                                                    {isOwed && <span className="text-tactical-accent">OWES YOU {getCurrencySymbol(trip.baseCurrency || 'USD')}{balance.toFixed(0)}</span>}
-                                                    {doesOwe && <span className="text-red-500">PAY THEM {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(balance).toFixed(0)}</span>}
+                                                    {isOwed && <span className="text-tactical-accent">OWES YOU {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(balance)}</span>}
+                                                    {doesOwe && <span className="text-red-500">PAY THEM {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(balance))}</span>}
                                                     {isSettled && <span className="text-gray-600">ALL SETTLED</span>}
                                                 </div>
                                             </div>
@@ -552,10 +552,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                                         <div className="flex items-center gap-3">
                                             {isOwed && (
-                                                <span className="text-white text-sm font-bold font-mono">+{getCurrencySymbol(trip.baseCurrency || 'USD')}{balance.toFixed(0)}</span>
+                                                <span className="text-white text-sm font-bold font-mono">+{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(balance)}</span>
                                             )}
                                             {doesOwe && (
-                                                <span className="text-red-500 text-sm font-bold font-mono">-{getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(balance).toFixed(0)}</span>
+                                                <span className="text-red-500 text-sm font-bold font-mono">-{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(balance))}</span>
                                             )}
                                             <ChevronLeftIcon className="w-4 h-4 text-gray-600 rotate-180" />
                                         </div>
@@ -629,7 +629,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                         <div className="flex justify-between items-center">
                                             <h4 className="font-bold text-white text-xs truncate uppercase">{item.title}</h4>
                                             <span className={`font-mono text-xs font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
-                                                {isSettlement ? '' : '-'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{item.cost?.toFixed(2)}
+                                                {isSettlement ? '' : '-'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(item.cost || 0)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
@@ -655,7 +655,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
             {/* Quick Add Floating Button */}
             {!selectedMember && (
-                <div className="fixed bottom-24 right-6 z-30">
+                <div className="fixed bottom-12 right-6 z-30">
                     <button
                         onClick={onLogExpense}
                         className="w-14 h-14 rounded-full bg-tactical-accent text-black flex items-center justify-center shadow-[0_0_20px_rgba(255,215,0,0.6)] border-2 border-black/20 transition-transform active:scale-95 hover:scale-105"

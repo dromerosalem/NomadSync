@@ -665,7 +665,7 @@ const Timeline: React.FC<TimelineProps> = ({ trip, availableTags = [], canEdit, 
       </div>
 
       {canEdit && (
-        <div className="fixed bottom-24 right-6 z-40">
+        <div className="fixed bottom-12 right-6 z-40">
           <button onClick={onAddItem} className="w-14 h-14 bg-tactical-accent hover:bg-yellow-400 text-black rounded-full shadow-[0_0_20px_rgba(255,215,0,0.4)] flex items-center justify-center transition-transform hover:scale-110 active:scale-95">
             <PlusIcon className="w-8 h-8" />
           </button>

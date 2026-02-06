@@ -26,7 +26,18 @@ export const getCurrencySymbol = (code: string): string => {
     return CURRENCY_SYMBOLS[code] || code;
 };
 
+export const formatAmount = (amount: number | undefined | null): string => {
+    const val = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+    return val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+export const formatAmountWhole = (amount: number | undefined | null): string => {
+    const val = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+    return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
+};
+
 export const formatCurrency = (amount: number, code: string): string => {
     const symbol = getCurrencySymbol(code);
-    return `${symbol}${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${symbol}${formatAmount(amount)}`;
 };
+

@@ -57,6 +57,21 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     // Visibility State
     const [showInTimeline, setShowInTimeline] = useState(initialItem?.showInTimeline !== false);
 
+    // Helper for formatting large numbers with commas in inputs
+    const formatInputAmount = (val: string) => {
+        if (!val) return "";
+        const parts = val.split('.');
+        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        return parts.length > 1 ? `${integerPart}.${parts[1]}` : integerPart;
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value.replace(/,/g, '');
+        if (/^\d*\.?\d*$/.test(val)) {
+            setOriginalAmount(val);
+        }
+    };
+
     useEffect(() => {
         if (initialItem) {
             setShowInTimeline(initialItem.showInTimeline !== false);
@@ -74,6 +89,18 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
     const [splitWith, setSplitWith] = useState<string[]>(initialItem?.splitWith || activeMembers.map(m => m.id));
 
     const [splitMode, setSplitMode] = useState<'EQUAL' | 'CUSTOM' | 'ITEMIZED'>('EQUAL');
+
+    // Dynamic Font Size for large numbers
+    const getFontSizeClasses = () => {
+        const len = formatInputAmount(originalAmount).length;
+        if (len <= 8) return { symbol: 'text-4xl', input: 'text-6xl' };
+        if (len <= 10) return { symbol: 'text-3xl', input: 'text-5xl' };
+        if (len <= 14) return { symbol: 'text-2xl', input: 'text-4xl' };
+        if (len <= 18) return { symbol: 'text-xl', input: 'text-3xl' };
+        return { symbol: 'text-lg', input: 'text-2xl' };
+    };
+
+    const fontClasses = getFontSizeClasses();
     const [customAmounts, setCustomAmounts] = useState<Record<string, string>>({});
     const [receiptItems, setReceiptItems] = useState<ReceiptItem[]>(initialItem?.receiptItems || []);
 
@@ -786,18 +813,19 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                         />
                     </div>
 
-                    <div className="flex items-baseline justify-center gap-1">
-                        <span className={`text-4xl font-bold font-display ${isSettlement ? 'text-green-500' : 'text-white'}`}>
+                    <div className="flex items-baseline justify-center gap-1 w-full overflow-hidden px-4">
+                        <span className={`${fontClasses.symbol} font-bold font-display transition-all duration-200 ${isSettlement ? 'text-green-500' : 'text-white'}`}>
                             {getCurrencySymbol(currencyCode)}
                         </span>
                         <input
-                            type="number"
-                            value={originalAmount}
-                            onChange={(e) => setOriginalAmount(e.target.value)}
+                            type="text"
+                            inputMode="decimal"
+                            value={formatInputAmount(originalAmount)}
+                            onChange={handleAmountChange}
                             placeholder="0"
                             disabled={isSettlement}
-                            style={{ width: `${Math.max(1, originalAmount.length)}ch` }}
-                            className={`bg-transparent text-6xl font-display font-bold text-white outline-none placeholder-gray-800 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield] text-center min-w-[1ch] p-0 ${isSettlement ? 'cursor-not-allowed opacity-90' : ''}`}
+                            style={{ width: `${Math.max(1, formatInputAmount(originalAmount).length)}ch` }}
+                            className={`bg-transparent ${fontClasses.input} font-display font-bold text-white outline-none placeholder-gray-800 text-center min-w-[1ch] p-0 transition-all duration-200 ${isSettlement ? 'cursor-not-allowed opacity-90' : ''}`}
                         />
                     </div>
 

@@ -108,6 +108,71 @@ export class CurrencyService {
         data[`${from}_${to}`] = rate;
         localStorage.setItem(key, JSON.stringify(data));
     }
+
+    // --- Extended Currency Search & Caching ---
+
+    private readonly extendedCurrencyCacheKey = 'nomadsync_extended_currencies';
+
+    /**
+     * Search for currencies by code or name via edge function.
+     * Returns matching currencies from ExchangeRate-API.
+     */
+    async searchCurrencies(query: string): Promise<{ code: string; name: string }[]> {
+        if (!query || query.length < 2) return [];
+
+        try {
+            console.log(`[CurrencyService] 🔍 Searching currencies: "${query}"`);
+            
+            const { data, error } = await supabase.functions.invoke('search-currencies', {
+                body: { query }
+            });
+
+            if (error) {
+                console.error('[CurrencyService] Search error:', error);
+                return [];
+            }
+
+            return data?.currencies || [];
+        } catch (error) {
+            console.error('[CurrencyService] Search failed:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Cache a selected extended currency for the current day.
+     * This allows the currency to appear in future searches without API calls.
+     */
+    cacheSelectedCurrency(currency: { code: string; name: string }): void {
+        const today = new Date().toISOString().split('T')[0];
+        const key = `${this.extendedCurrencyCacheKey}_${today}`;
+        
+        let cached = this.getCachedCurrencies();
+        
+        // Avoid duplicates
+        if (!cached.some(c => c.code === currency.code)) {
+            cached.push(currency);
+            localStorage.setItem(key, JSON.stringify(cached));
+            console.log(`[CurrencyService] ✅ Cached extended currency: ${currency.code}`);
+        }
+    }
+
+    /**
+     * Get cached extended currencies for the current day.
+     */
+    getCachedCurrencies(): { code: string; name: string }[] {
+        const today = new Date().toISOString().split('T')[0];
+        const key = `${this.extendedCurrencyCacheKey}_${today}`;
+        
+        const cached = localStorage.getItem(key);
+        if (!cached) return [];
+
+        try {
+            return JSON.parse(cached);
+        } catch (e) {
+            return [];
+        }
+    }
 }
 
 export const currencyService = new CurrencyService();

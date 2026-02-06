@@ -95,6 +95,21 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
   const [exchangeRate, setExchangeRate] = useState<number>(initialItem?.exchangeRate || 1);
   const [convertedCost, setConvertedCost] = useState<number>(initialItem?.cost || 0);
 
+  // Helper for formatting large numbers with commas in inputs
+  const formatInputAmount = (val: string) => {
+    if (!val) return "";
+    const parts = val.split('.');
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return parts.length > 1 ? `${integerPart}.${parts[1]}` : integerPart;
+  };
+
+  const handleCostChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/,/g, '');
+    if (/^\d*\.?\d*$/.test(val)) {
+      setCost(val);
+    }
+  };
+
   // Fetch Exchange Rate when currency or date changes
   useEffect(() => {
     const fetchRate = async () => {
@@ -126,6 +141,17 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
 
     fetchRate();
   }, [currencyCode, baseCurrency, startDate, cost]);
+
+  // Dynamic Font Size for large numbers
+  const getFontSizeClasses = () => {
+    const len = formatInputAmount(cost).length;
+    if (len <= 8) return { symbol: 'text-xl', input: 'text-4xl sm:text-5xl' };
+    if (len <= 12) return { symbol: 'text-lg', input: 'text-3xl sm:text-4xl' };
+    if (len <= 16) return { symbol: 'text-base', input: 'text-2xl sm:text-3xl' };
+    return { symbol: 'text-sm', input: 'text-xl sm:text-2xl' };
+  };
+
+  const fontClasses = getFontSizeClasses();
 
   const extractCleanDetails = (detailsStr?: string | null) => {
     if (!detailsStr) return '';
@@ -776,8 +802,8 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
               onClick={() => setIsAddingResource(true)}
               disabled={resources.length >= 10}
               className={`flex items-center gap-2 px-3 py-2 text-[10px] font-bold uppercase tracking-widest transition-colors ${resources.length >= 10
-                  ? 'text-gray-600 cursor-not-allowed'
-                  : 'text-gray-500 hover:text-tactical-accent'
+                ? 'text-gray-600 cursor-not-allowed'
+                : 'text-gray-500 hover:text-tactical-accent'
                 }`}
             >
               <PlusIcon className="w-3 h-3" />
@@ -846,13 +872,15 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
                 onChange={setCurrencyCode}
               />
               <div className="flex items-baseline text-tactical-accent">
-                <span className="text-xl font-bold mr-1.5 opacity-60">{getCurrencySymbol(currencyCode)}</span>
+                <span className={`${fontClasses.symbol} font-bold mr-1.5 opacity-60 transition-all duration-200`}>{getCurrencySymbol(currencyCode)}</span>
                 <input
-                  type="number"
-                  value={cost}
-                  onChange={(e) => setCost(e.target.value)}
-                  className="bg-transparent w-32 sm:w-40 text-4xl sm:text-5xl font-display font-bold text-right outline-none placeholder-tactical-muted/20 selection:bg-tactical-accent selection:text-black"
+                  type="text"
+                  inputMode="decimal"
+                  value={formatInputAmount(cost)}
+                  onChange={handleCostChange}
+                  className={`bg-transparent ${fontClasses.input} font-display font-bold text-right outline-none placeholder-tactical-muted/20 selection:bg-tactical-accent selection:text-black transition-all duration-200`}
                   placeholder="0.00"
+                  style={{ width: `${Math.max(4, formatInputAmount(cost).length)}ch` }}
                 />
               </div>
             </div>

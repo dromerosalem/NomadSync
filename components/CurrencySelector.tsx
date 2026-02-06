@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { SearchIcon } from './Icons';
 import { getCurrencySymbol } from '../utils/currencyUtils';
+import { currencyService } from '../services/CurrencyService';
 
 export const SUPPORTED_CURRENCIES = [
     { code: 'USD', name: 'US Dollar' },
@@ -42,6 +43,7 @@ export const SUPPORTED_CURRENCIES = [
 ];
 
 const COMMON_CODES = ['USD', 'EUR', 'GBP', 'PLN'];
+const PREDEFINED_CODES = new Set(SUPPORTED_CURRENCIES.map(c => c.code));
 
 interface CurrencySelectorProps {
     value: string;
@@ -60,8 +62,12 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [search, setSearch] = useState('');
+    const [extendedCurrencies, setExtendedCurrencies] = useState<{ code: string; name: string }[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-    const filteredCurrencies = useMemo(() => {
+    // Filter predefined currencies locally (instant)
+    const filteredPredefined = useMemo(() => {
         if (!search) return SUPPORTED_CURRENCIES;
         const lowSearch = search.toLowerCase();
         return SUPPORTED_CURRENCIES.filter(c =>
@@ -70,14 +76,127 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
         );
     }, [search]);
 
-    const commonCurrencies = SUPPORTED_CURRENCIES.filter(c => COMMON_CODES.includes(c.code));
-    const selectedCurrency = SUPPORTED_CURRENCIES.find(c => c.code === value) || { code: value, name: value };
+    // Filter cached extended currencies locally (instant)
+    const filteredCached = useMemo(() => {
+        if (!search) return [];
+        const lowSearch = search.toLowerCase();
+        const cached = currencyService.getCachedCurrencies();
+        return cached.filter(c =>
+            !PREDEFINED_CODES.has(c.code) && (
+                c.code.toLowerCase().includes(lowSearch) ||
+                c.name.toLowerCase().includes(lowSearch)
+            )
+        );
+    }, [search]);
 
-    const handleSelect = (code: string) => {
-        onChange(code);
+    // Debounced API search for extended currencies
+    const searchExtendedCurrencies = useCallback(async (query: string) => {
+        if (query.length < 2) {
+            setExtendedCurrencies([]);
+            return;
+        }
+
+        // Check if we have enough local results
+        const localResults = [...filteredPredefined, ...filteredCached];
+        if (localResults.length >= 5) {
+            setExtendedCurrencies([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const results = await currencyService.searchCurrencies(query);
+            // Filter out predefined currencies from API results
+            const extended = results.filter(c => !PREDEFINED_CODES.has(c.code));
+            setExtendedCurrencies(extended);
+        } catch (error) {
+            console.error('[CurrencySelector] Search error:', error);
+            setExtendedCurrencies([]);
+        } finally {
+            setIsSearching(false);
+        }
+    }, [filteredPredefined, filteredCached]);
+
+    // Debounce search input (300ms)
+    useEffect(() => {
+        if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+        }
+
+        if (search.length >= 2 && filteredPredefined.length === 0 && filteredCached.length === 0) {
+            debounceRef.current = setTimeout(() => {
+                searchExtendedCurrencies(search);
+            }, 300);
+        } else {
+            setExtendedCurrencies([]);
+        }
+
+        return () => {
+            if (debounceRef.current) {
+                clearTimeout(debounceRef.current);
+            }
+        };
+    }, [search, filteredPredefined.length, filteredCached.length, searchExtendedCurrencies]);
+
+    // Reset state when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setSearch('');
+            setExtendedCurrencies([]);
+            setIsSearching(false);
+        }
+    }, [isOpen]);
+
+    const commonCurrencies = SUPPORTED_CURRENCIES.filter(c => COMMON_CODES.includes(c.code));
+
+    // Find selected currency in all sources
+    const selectedCurrency = useMemo(() => {
+        const predefined = SUPPORTED_CURRENCIES.find(c => c.code === value);
+        if (predefined) return predefined;
+
+        const cached = currencyService.getCachedCurrencies().find(c => c.code === value);
+        if (cached) return cached;
+
+        return { code: value, name: value };
+    }, [value]);
+
+    const handleSelect = (currency: { code: string; name: string }) => {
+        // Cache extended currencies on selection
+        if (!PREDEFINED_CODES.has(currency.code)) {
+            currencyService.cacheSelectedCurrency(currency);
+        }
+        onChange(currency.code);
         setIsOpen(false);
         setSearch('');
     };
+
+    // Combine all results for display
+    const hasLocalResults = filteredPredefined.length > 0 || filteredCached.length > 0;
+    const hasExtendedResults = extendedCurrencies.length > 0;
+    const noResults = search && !hasLocalResults && !hasExtendedResults && !isSearching;
+
+    const renderCurrencyButton = (c: { code: string; name: string }, isExtended = false) => (
+        <button
+            key={c.code}
+            onClick={() => handleSelect(c)}
+            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${value === c.code ? 'bg-tactical-accent/10 border border-tactical-accent/30' : 'hover:bg-tactical-card group'}`}
+        >
+            <div className="flex items-center gap-4">
+                <div className={`w-10 h-10 rounded bg-black/40 border ${isExtended ? 'border-tactical-accent/20' : 'border-white/5'} flex items-center justify-center font-mono font-bold text-gray-400 group-hover:text-tactical-accent group-hover:border-tactical-accent/30 transition-all`}>
+                    {getCurrencySymbol(c.code)}
+                </div>
+                <div className="text-left">
+                    <div className="text-sm font-bold text-white">{c.code}</div>
+                    <div className="text-[10px] text-gray-500 uppercase tracking-wider">{c.name}</div>
+                </div>
+            </div>
+            {value === c.code && (
+                <div className="text-tactical-accent">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </div>
+            )}
+        </button>
+    );
 
     return (
         <>
@@ -133,7 +252,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                                 <input
                                     autoFocus
                                     type="text"
-                                    placeholder="SEARCH BY CODE OR EMITTER..."
+                                    placeholder="SEARCH BY CODE OR NAME..."
                                     value={search}
                                     onChange={(e) => setSearch(e.target.value)}
                                     className="w-full bg-black/40 border border-tactical-muted/30 rounded-xl py-4 pl-12 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-tactical-accent uppercase font-mono text-sm transition-all"
@@ -149,7 +268,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                                         {commonCurrencies.map(c => (
                                             <button
                                                 key={c.code}
-                                                onClick={() => handleSelect(c.code)}
+                                                onClick={() => handleSelect(c)}
                                                 className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${value === c.code ? 'bg-tactical-accent/20 border-tactical-accent' : 'bg-tactical-card border-tactical-muted/20 hover:border-tactical-accent/50'}`}
                                             >
                                                 <div className="w-10 h-10 rounded-lg bg-black/40 border border-white/5 flex items-center justify-center font-mono font-bold text-tactical-accent shrink-0">
@@ -165,41 +284,51 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                                 </div>
                             )}
 
-                            <div>
-                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2 mb-3">
-                                    {search ? `Search Results (${filteredCurrencies.length})` : 'Global Manifest'}
+                            {/* Local Results (Predefined + Cached) */}
+                            {(hasLocalResults || !search) && (
+                                <div>
+                                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-2 mb-3">
+                                        {search ? `Search Results (${filteredPredefined.length + filteredCached.length})` : 'Global Manifest'}
+                                    </div>
+                                    <div className="space-y-1">
+                                        {(search ? filteredPredefined : SUPPORTED_CURRENCIES).map(c => renderCurrencyButton(c))}
+                                        {filteredCached.map(c => renderCurrencyButton(c))}
+                                    </div>
                                 </div>
-                                <div className="space-y-1">
-                                    {filteredCurrencies.map(c => (
-                                        <button
-                                            key={c.code}
-                                            onClick={() => handleSelect(c.code)}
-                                            className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${value === c.code ? 'bg-tactical-accent/10 border border-tactical-accent/30' : 'hover:bg-tactical-card group'}`}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded bg-black/40 border border-white/5 flex items-center justify-center font-mono font-bold text-gray-400 group-hover:text-tactical-accent group-hover:border-tactical-accent/30 transition-all">
-                                                    {getCurrencySymbol(c.code)}
-                                                </div>
-                                                <div className="text-left">
-                                                    <div className="text-sm font-bold text-white">{c.code}</div>
-                                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider">{c.name}</div>
-                                                </div>
-                                            </div>
-                                            {value === c.code && (
-                                                <div className="text-tactical-accent">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                                                </div>
-                                            )}
-                                        </button>
-                                    ))}
-                                    {filteredCurrencies.length === 0 && (
-                                        <div className="text-center py-10">
-                                            <div className="text-gray-600 text-xs font-bold uppercase tracking-widest mb-2">No Match In manifest</div>
-                                            <div className="text-[10px] text-gray-700">Check encryption or try another code.</div>
-                                        </div>
-                                    )}
+                            )}
+
+                            {/* Extended Currencies from API */}
+                            {hasExtendedResults && (
+                                <div className="mt-6">
+                                    <div className="text-[10px] font-bold text-tactical-accent uppercase tracking-widest px-2 mb-3">
+                                        Extended Currencies ({extendedCurrencies.length})
+                                    </div>
+                                    <div className="space-y-1">
+                                        {extendedCurrencies.map(c => renderCurrencyButton(c, true))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* Loading State */}
+                            {isSearching && (
+                                <div className="flex items-center justify-center py-8">
+                                    <div className="flex items-center gap-3 text-gray-500">
+                                        <svg className="animate-spin w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span className="text-xs font-bold uppercase tracking-widest">Searching extended currencies...</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* No Results */}
+                            {noResults && (
+                                <div className="text-center py-10">
+                                    <div className="text-gray-600 text-xs font-bold uppercase tracking-widest mb-2">No Match Found</div>
+                                    <div className="text-[10px] text-gray-700">Try a different code or currency name.</div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>,
