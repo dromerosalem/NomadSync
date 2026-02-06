@@ -412,11 +412,11 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
         </button>
         <div className="flex flex-col items-center">
           <div className={`px-3 py-1 rounded-full border text-[10px] uppercase font-bold tracking-widest ${initialItem?.id ? 'border-tactical-muted/30 bg-tactical-card text-gray-500'
-              : isPrivate
-                ? 'border-gray-600 bg-gray-900 text-gray-400'
-                : 'border-tactical-accent/30 bg-tactical-accent/10 text-tactical-accent'
+            : isPrivate
+              ? 'border-gray-600 bg-gray-900 text-gray-400'
+              : 'border-tactical-accent/30 bg-tactical-accent/10 text-tactical-accent'
             }`}>
-            {initialItem?.id ? 'Updating Item' : (isPrivate ? 'Private Item' : 'Shared Item')}
+            {isPrivate ? 'Private Item' : 'Shared Item'}
           </div>
           {queueLength !== undefined && queueLength > 1 && (
             <div className="text-[10px] text-tactical-accent font-bold mt-1 tracking-widest animate-pulse">
@@ -462,11 +462,11 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
             </div>
             <div>
               <div className={`font-display font-bold uppercase text-sm tracking-wide ${!isPrivate ? 'text-white' : 'text-gray-400'}`}>
-                {isPrivate ? 'Private Item' : 'Shared Item'}
+                {!isPrivate ? 'Shared to Trip' : 'Private (Only You)'}
               </div>
               <div className="text-xs text-gray-500">
                 {isOwner
-                  ? (isPrivate ? 'Only visible to you' : 'Visible to everyone in the trip')
+                  ? (!isPrivate ? 'Visible to everyone in the trip' : 'Only visible to you')
                   : 'Created by another traveler (Locked)'}
               </div>
             </div>
@@ -475,7 +475,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ type, onClose, onSave, tripStartDat
           {isOwner ? (
             <button
               onClick={() => setIsPrivate(!isPrivate)}
-              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${!isPrivate ? 'bg-tactical-accent' : 'bg-tactical-muted/30'}`}
+              className={`w-12 h-6 rounded-full p-1 transition-colors duration-200 ease-in-out ${!isPrivate ? 'bg-tactical-accent' : 'bg-gray-700'}`}
             >
               <div className={`w-4 h-4 rounded-full bg-white shadow-sm transform transition-transform duration-200 ${!isPrivate ? 'translate-x-6' : 'translate-x-0'}`}></div>
             </button>

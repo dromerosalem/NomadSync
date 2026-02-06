@@ -653,7 +653,7 @@ const App: React.FC = () => {
     });
   };
 
-  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number) => {
+  const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number, budgetViewMode?: 'SMART' | 'DIRECT') => {
     setIsLoading(true);
     try {
       const creatorMember = { ...currentUser, budget: budget, dailyBudget: dailyBudget || 0 };
@@ -671,7 +671,7 @@ const App: React.FC = () => {
         baseCurrency,
         members,
         status: calculateTripStatus(startDate, endDate),
-        budgetViewMode: 'SMART',
+        budgetViewMode: budgetViewMode || 'SMART',
         coverImage: null
       };
 
@@ -701,6 +701,7 @@ const App: React.FC = () => {
         startDate: updatedTrip.startDate,
         endDate: updatedTrip.endDate,
         baseCurrency: updatedTrip.baseCurrency,
+        budgetViewMode: updatedTrip.budgetViewMode,
         status: calculateTripStatus(updatedTrip.startDate, updatedTrip.endDate)
       });
 

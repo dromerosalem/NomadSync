@@ -494,27 +494,9 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Balances</h3>
-                        {/* Mode Toggle with Role Check */}
-                        <div className="relative">
-                            {!isPathfinder && (
-                                <div className="absolute inset-0 z-10 bg-black/50 flex items-center justify-center rounded-lg border border-gray-700 backdrop-blur-[1px]">
-                                    <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                                        <LockIcon className="w-3 h-3" /> Locked
-                                    </div>
-                                </div>
-                            )}
-                            <button
-                                onClick={() => isPathfinder && onToggleBudgetMode(useSmartSplit ? 'DIRECT' : 'SMART')}
-                                disabled={!isPathfinder}
-                                className={`flex items-center gap-2 bg-black/40 rounded-lg p-1 border border-tactical-muted/30 ${!isPathfinder ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                                <div className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${!useSmartSplit ? 'bg-tactical-accent text-black' : 'text-gray-500'}`}>
-                                    Direct View
-                                </div>
-                                <div className={`px-2 py-1 rounded text-[9px] font-bold uppercase transition-colors ${useSmartSplit ? 'bg-tactical-accent text-black' : 'text-gray-500'}`}>
-                                    Smart Route
-                                </div>
-                            </button>
+                        {/* Split Mode indicator */}
+                        <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
+                            {useSmartSplit ? 'Smart Route' : 'Direct View'}
                         </div>
                     </div>
 

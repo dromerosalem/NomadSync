@@ -6,7 +6,7 @@ import PlaceAutocomplete from './PlaceAutocomplete';
 import { LocationResult } from '../services/LocationService';
 
 interface CreateMissionProps {
-  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number) => void;
+  onCreate: (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number, budgetViewMode?: 'SMART' | 'DIRECT') => void;
   onBack: () => void;
   isLoading: boolean;
 }
@@ -53,6 +53,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
   const [dailyBudget, setDailyBudget] = useState('');
   const [showDailyBudget, setShowDailyBudget] = useState(false);
   const [baseCurrency, setBaseCurrency] = useState('USD');
+  const [budgetViewMode, setBudgetViewMode] = useState<'SMART' | 'DIRECT'>('SMART');
   const randomSubheader = useMemo(() => INSPIRING_PHRASES[Math.floor(Math.random() * INSPIRING_PHRASES.length)], []);
 
   // Location Metadata
@@ -68,7 +69,7 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
       const mockMembers: Member[] = [];
 
       // Default to single day trip if no end date selected
-      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency, locationMetadata, parseInt(dailyBudget) || 0);
+      onCreate(name, location, parseInt(budget) || 0, startDate, endDate || startDate, mockMembers, baseCurrency, locationMetadata, parseInt(dailyBudget) || 0, budgetViewMode);
     }
   };
 
@@ -242,6 +243,32 @@ const CreateMission: React.FC<CreateMissionProps> = ({ onCreate, onBack, isLoadi
               value={baseCurrency}
               onChange={setBaseCurrency}
             />
+
+            {/* Split Mode Selector */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Expense Split Mode</label>
+              <div className="flex items-center gap-2 bg-tactical-card rounded-lg p-1 border border-tactical-muted/30">
+                <button
+                  type="button"
+                  onClick={() => setBudgetViewMode('DIRECT')}
+                  className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'DIRECT' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Direct View
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBudgetViewMode('SMART')}
+                  className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'SMART' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
+                >
+                  Smart Route
+                </button>
+              </div>
+              <p className="text-[10px] text-gray-500">
+                {budgetViewMode === 'SMART'
+                  ? 'Smart Route optimizes group settlements with fewer transfers.'
+                  : 'Direct View shows exact individual debts between members.'}
+              </p>
+            </div>
           </div>
 
           {/* Right Column: Calendar */}

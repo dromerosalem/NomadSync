@@ -28,6 +28,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
   const [budget, setBudget] = useState(currentUser?.budget?.toString() || '');
   const [dailyBudget, setDailyBudget] = useState(currentUser?.dailyBudget?.toString() || '');
   const [showDailyBudget, setShowDailyBudget] = useState(!!currentUser?.dailyBudget);
+  const [budgetViewMode, setBudgetViewMode] = useState<'SMART' | 'DIRECT'>(trip.budgetViewMode || 'SMART');
 
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date(trip.startDate));
@@ -49,6 +50,7 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
         longitude,
         countryCode,
         baseCurrency,
+        budgetViewMode,
         startDate,
         endDate,
         members: updatedMembers // Pass updated members with new budget
@@ -217,6 +219,32 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
             onChange={setBaseCurrency}
           />
           <p className="text-[10px] text-gray-500 mt-1">All expenses for this trip will be converted to this currency.</p>
+
+          {/* Split Mode Selector */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Expense Split Mode</label>
+            <div className="flex items-center gap-2 bg-tactical-card rounded-lg p-1 border border-tactical-muted/30">
+              <button
+                type="button"
+                onClick={() => setBudgetViewMode('DIRECT')}
+                className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'DIRECT' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
+              >
+                Direct View
+              </button>
+              <button
+                type="button"
+                onClick={() => setBudgetViewMode('SMART')}
+                className={`flex-1 px-3 py-2 rounded text-xs font-bold uppercase transition-colors ${budgetViewMode === 'SMART' ? 'bg-tactical-accent text-black' : 'text-gray-500 hover:text-white'}`}
+              >
+                Smart Route
+              </button>
+            </div>
+            <p className="text-[10px] text-gray-500">
+              {budgetViewMode === 'SMART'
+                ? 'Smart Route optimizes group settlements with fewer transfers.'
+                : 'Direct View shows exact individual debts between members.'}
+            </p>
+          </div>
 
           {/* Interactive Calendar */}
           <div className="space-y-2">
