@@ -118,6 +118,24 @@ const buildGeminiLitePrompt = (tripStartDate?: string) => {
         - **DISTINCT EVENTS**: Only create separate items if the events are truly different (different dates, valid round trips, or different venues).
         - **AGGREGATE COST**: The 'cost' field MUST be the final **TOTAL ORDER AMOUNT**.
 
+        **LAYOVER / CONNECTION PARSING (CRITICAL)**:
+         - **EVERY TRANSPORT LEG IS A SEPARATE ITEM**: If a journey has layovers/connections, extract EACH flight/train/bus segment as its own 'TRANSPORT' item.
+         - Do NOT combine multiple legs into a single item.
+         - Each leg must have its own departure time, arrival time, origin, and destination.
+         - **IDENTIFICATION RULES**:
+             - A "Transfer" or "Layover" notation indicates a connection point.
+             - Different flight/train/bus numbers = different legs.
+             - A departure from the same location where you just arrived = start of new leg.
+         - **EXAMPLE - Outbound with 1 Connection**:
+             Document shows: "London 10:10 → Porto 12:35, Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40"
+             Extract as TWO items:
+             1. { type: "TRANSPORT", location: "London", endLocation: "Porto", startDate: "...T10:10", endDate: "...T12:35", ... }
+             2. { type: "TRANSPORT", location: "Porto", endLocation: "Sao Paulo", startDate: "...T13:50", endDate: "...T21:40", ... }
+         - **COST DISTRIBUTION FOR LAYOVERS**:
+             - If the document shows a single total price for all legs, SPLIT EVENLY across all leg items.
+             - If individual leg prices are shown, use those.
+             - Example: Round trip with 4 legs at €500 total → Each leg costs €125.
+
        **CURRENCY NORMALIZATION (CRITICAL)**:
        - If line items are listed in a different currency (e.g. GBP) than the Final Total (e.g. USD), you MUST convert the line item prices to the Final Total's currency.
        - Use the ratio (Total / Sum of original items) to convert each item.
@@ -264,6 +282,24 @@ const buildGeminiPremiumPrompt = (tripStartDate?: string) => {
             - Sum all ticket costs into the final 'cost'.
             - List individual tickets in 'receiptItems'.
 
+        **LAYOVER / CONNECTION PARSING (CRITICAL)**:
+         - **EVERY TRANSPORT LEG IS A SEPARATE ITEM**: If a journey has layovers/connections, extract EACH flight/train/bus segment as its own 'TRANSPORT' item.
+         - Do NOT combine multiple legs into a single item.
+         - Each leg must have its own departure time, arrival time, origin, and destination.
+         - **IDENTIFICATION RULES**:
+             - A "Transfer" or "Layover" notation indicates a connection point.
+             - Different flight/train/bus numbers = different legs.
+             - A departure from the same location where you just arrived = start of new leg.
+         - **EXAMPLE - Outbound with 1 Connection**:
+             Document shows: "London 10:10 → Porto 12:35, Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40"
+             Extract as TWO items:
+             1. { type: "TRANSPORT", location: "London", endLocation: "Porto", startDate: "...T10:10", endDate: "...T12:35", ... }
+             2. { type: "TRANSPORT", location: "Porto", endLocation: "Sao Paulo", startDate: "...T13:50", endDate: "...T21:40", ... }
+         - **COST DISTRIBUTION FOR LAYOVERS**:
+             - If the document shows a single total price for all legs, SPLIT EVENLY across all leg items.
+             - If individual leg prices are shown, use those.
+             - Example: Round trip with 4 legs at €500 total → Each leg costs €125.
+
         5. TRANSPORT LOCATION RULES (CRITICAL):
            - For TRANSPORT (flights, trains, etc.), ALWAYS separate Origin and Destination.
            - 'location' = Origin (City/Airport/Station)
@@ -405,8 +441,26 @@ const buildGroqMaverickPrompt = (tripStartDate?: string) => {
            - 'endLocation' = Destination (City/Airport/Station)
 
         **MULTI-ITEM LOGIC**:
-           - **ROUND TRIP**: Split into TWO items (start/end logic applies to each).
-           - **SAME EVENT**: Merge multiple tickets into ONE item. Sum the costs.
+            - **ROUND TRIP**: Split into TWO items (start/end logic applies to each).
+            - **SAME EVENT**: Merge multiple tickets into ONE item. Sum the costs.
+
+        **LAYOVER / CONNECTION PARSING (CRITICAL)**:
+         - **EVERY TRANSPORT LEG IS A SEPARATE ITEM**: If a journey has layovers/connections, extract EACH flight/train/bus segment as its own 'TRANSPORT' item.
+         - Do NOT combine multiple legs into a single item.
+         - Each leg must have its own departure time, arrival time, origin, and destination.
+         - **IDENTIFICATION RULES**:
+             - A "Transfer" or "Layover" notation indicates a connection point.
+             - Different flight/train/bus numbers = different legs.
+             - A departure from the same location where you just arrived = start of new leg.
+         - **EXAMPLE - Outbound with 1 Connection**:
+             Document shows: "London 10:10 → Porto 12:35, Transfer 1h15m, Porto 13:50 → Sao Paulo 21:40"
+             Extract as TWO items:
+             1. { type: "TRANSPORT", location: "London", endLocation: "Porto", startDate: "...T10:10", endDate: "...T12:35", ... }
+             2. { type: "TRANSPORT", location: "Porto", endLocation: "Sao Paulo", startDate: "...T13:50", endDate: "...T21:40", ... }
+         - **COST DISTRIBUTION FOR LAYOVERS**:
+             - If the document shows a single total price for all legs, SPLIT EVENLY across all leg items.
+             - If individual leg prices are shown, use those.
+             - Example: Round trip with 4 legs at €500 total → Each leg costs €125.
         
         ═══════════════════════════════════════════════════════════════════════
         TAX HANDLING (CRITICAL):
