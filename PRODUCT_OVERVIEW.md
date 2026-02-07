@@ -7,22 +7,22 @@
 
 ```mermaid
 graph TD
-    subgraph Client [Client-Side (PWA)]
-        UI[React 19 + Tailwind UI]
-        Router[React Router]
-        State[Local Global State]
+    subgraph Client ["Client-Side (PWA)"]
+        UI["React 19 + Tailwind UI"]
+        Router["React Router"]
+        State["Local Global State"]
     end
 
-    subgraph Backend [Supabase Backend]
+    subgraph Backend ["Supabase Backend"]
         Auth[Authentication]
-        DB[(PostgreSQL Database)]
-        Realtime[Realtime Subscriptions]
-        Storage[File Storage]
-        Edge[Edge Functions]
+        DB[("PostgreSQL Database")]
+        Realtime["Realtime Subscriptions"]
+        Storage["File Storage"]
+        Edge["Edge Functions"]
     end
 
-    subgraph External [External Services]
-        Gemini[Google Gemini AI]
+    subgraph External ["External Services"]
+        Gemini["Google Gemini AI"]
     end
 
     UI --> Auth
