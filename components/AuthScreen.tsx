@@ -214,12 +214,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                 </div>
 
                 {/* Main Content Area - Centered */}
-                <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center w-full max-w-md mx-auto">
+                <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 pt-20 pb-12 text-center w-full max-w-md mx-auto">
                     <h1 className="font-display text-5xl md:text-6xl font-bold text-tactical-accent uppercase tracking-tighter mb-4 drop-shadow-lg">
                         NomadSync
                     </h1>
 
-                    <div className="h-64 flex items-center justify-center">
+                    <div className="h-32 md:h-64 flex items-center justify-center">
                         {/* Character Silhouette placeholder or visual */}
                         <div className="w-1 h-32 bg-gradient-to-b from-transparent via-tactical-accent to-transparent opacity-50 blur-sm"></div>
                     </div>
