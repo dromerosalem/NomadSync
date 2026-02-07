@@ -1,6 +1,6 @@
 # Technical Specification: NomadSync Backend (Supabase)
 
-**Version:** 2.0
+**Version:** 2.1
 **Context:** PWA Group Travel Companion
 **Target Platform:** Supabase (PostgreSQL, Auth, Edge Functions, Storage)
 
@@ -16,7 +16,9 @@ This document defines the backend architecture required to support the "NomadSyn
     *   **Auth**: Supabase Auth (Email + Google OAuth).
     *   **Storage**: Supabase Storage (Trip Covers, Receipt Images).
     *   **Edge Functions**: Deno (AI analysis, Emails).
-*   **External APIs**: Google Gemini Flash 2.0 (Receipt Analysis).
+*   **AI Models**:
+    *   **Standard Tier**: Google Gemini Flash 2.5 Lite, Llama 4 Maverick (via Groq).
+    *   **Premium Tier**: Google Gemini Flash 2.5 (Premium).
 
 ### Data Flow
 1.  **Client (React/PWA)** interacts with Supabase via `@supabase/supabase-js`.
@@ -87,6 +89,7 @@ The core table. Acts as both the Calendar Event and the Financial Ledger Entry.
 | `created_by` | uuid | FK -> `profiles.id` | Who logged the item. |
 | `is_private` | boolean | Default false | If true, only visible to `created_by`. |
 | `details` | text | | Notes, confirmation codes. |
+| `receipt_items` | jsonb | | **Itemized Data**: Array of objects (`name`, `price`, `quantity`) extracted from receipts. |
 
 ### 3.5. Expense Splits
 Defines exactly how much each person owes for a specific `itinerary_item`.
@@ -120,11 +123,14 @@ Defines exactly how much each person owes for a specific `itinerary_item`.
 ### 5.2. Edge Function: Receipt Scanning (AI Proxy)
 **Function Name:** `analyze-receipt`
 *   **Trigger**: POST from Client.
-*   **AI Model**: Google Gemini Flash 2.0.
+*   **Orchestator**:
+    *   **Primary Round-Robin**: Randomly selects between **Gemini Flash 2.5 Lite** and **Llama 4 Maverick**.
+    *   **Fallback**: If primary model confidence < 90%, retries with **Gemini Flash 2.5 Premium**.
 *   **Logic**:
     1.  Receives image/PDF.
-    2.  Sends prompt to Gemini to extract date, total, merchant, and line items.
-    3.  Returns structured JSON.
+    2.  Selects AI model based on orchestration logic.
+    3.  Extracts: Date, Total, Merchant, Currency, and **Line Items**.
+    4.  Returns structured JSON including `receiptItems` array.
 
 ### 5.3. Edge Function: Invites
 **Function Name:** `send-invite`

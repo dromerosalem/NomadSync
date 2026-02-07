@@ -14,7 +14,7 @@ NomadSync is a modern PWA designed to be the ultimate companion for group travel
 ## ✨ Key Features
 
 *   **Itinerary Hub**: Visual timeline and interactive maps for your entire journey.
-*   **Smart Expenses**: Split bills, scan receipts with AI (Gemini), and track real-time balances.
+*   **Smart Expenses**: Split bills, scan receipts with AI (Gemini + Llama), and track real-time balances.
 *   **Offline-First**: Access your data anywhere, even without a signal.
 *   **Squad Sync**: Real-time updates and role-based permissions for your travel group.
 
@@ -24,7 +24,7 @@ Built with a focus on performance and developer experience:
 
 *   **Frontend**: React 19, Vite, Tailwind CSS, TypeScript.
 *   **Backend**: Supabase (Auth, Postgres, Realtime, Storage).
-*   **AI**: Google Gemini (Receipt Analysis).
+*   **AI**: Google Gemini & Llama (Receipt Analysis).
 
 ## 🚀 Run Locally
 
