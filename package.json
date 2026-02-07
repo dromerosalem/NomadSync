@@ -14,6 +14,7 @@
     "@fontsource/chakra-petch": "^5.2.7",
     "@fontsource/inter": "^5.2.8",
     "@google/genai": "^1.35.0",
+    "@khmyznikov/pwa-install": "^0.6.3",
     "@supabase/supabase-js": "^2.90.1",
     "@types/leaflet": "^1.9.21",
     "@use-gesture/react": "^10.3.1",

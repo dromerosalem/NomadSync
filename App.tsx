@@ -27,6 +27,7 @@ import AuthGlobe from './components/AuthGlobe';
 import ConflictResolver from './components/ConflictResolver';
 import { SyncLog, db } from './db/LocalDatabase';
 import { persistenceService } from './services/persistenceService';
+import PWAInstall from './components/PWAInstall';
 
 
 const INITIAL_USER: Member = {
@@ -330,11 +331,15 @@ const App: React.FC = () => {
     // Show Loading/Globe if strictly loading, otherwise Auth screen handles it
     if (!isAuthenticated && view !== 'AUTH') {
       return (
-        <div className="h-[100dvh] w-full bg-tactical-bg flex items-center justify-center">
-          <div className="animate-spin-slow">
-            <AuthGlobe />
-          </div>
-          <p className="absolute mt-32 text-xs font-mono text-tactical-accent animate-pulse">CONNECTING...</p>
+        <div className="min-h-[100dvh] bg-tactical-bg text-gray-100 font-sans selection:bg-tactical-accent selection:text-black">
+          <PWAInstall />
+          {/* Main Content Area */}
+          <main className="pb-24 lg:pb-0">
+            <div className="animate-spin-slow">
+              <AuthGlobe />
+            </div>
+            <p className="absolute mt-32 text-xs font-mono text-tactical-accent animate-pulse">CONNECTING...</p>
+          </main>
         </div>
       );
     }
@@ -1033,6 +1038,7 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container font-sans bg-tactical-bg text-tactical-text min-h-[100dvh] pb-safe-bottom relative shadow-2xl flex flex-col border-x border-tactical-muted/20">
+      <PWAInstall />
       <ScrollToTop trigger={view} />
       <main className="flex-1 relative flex flex-col w-full">
 
