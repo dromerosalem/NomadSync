@@ -2,19 +2,46 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# NomadSync: Group Travel Refined
 
-This contains everything you need to run your app locally.
+NomadSync is a modern PWA designed to be the ultimate companion for group travel. It combines itinerary management, real-time collaboration, and smart expense tracking into a single, offline-first application.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1Ic7LsBms24nxMvlX-_jVAuVJiItX8nUp
+## 📖 Documentation
 
-## Run Locally
+*   **[Product Overview](PRODUCT_OVERVIEW.md)**: Detailed breakdown of features, architecture, and core pillars.
+*   **[Technical Specification](BACKEND_SPEC.md)**: In-depth view of the tech stack, database schema, and security policies.
 
-**Prerequisites:**  Node.js
+## ✨ Key Features
 
+*   **Itinerary Hub**: Visual timeline and interactive maps for your entire journey.
+*   **Smart Expenses**: Split bills, scan receipts with AI (Gemini), and track real-time balances.
+*   **Offline-First**: Access your data anywhere, even without a signal.
+*   **Squad Sync**: Real-time updates and role-based permissions for your travel group.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## 🛠️ Tech Stack
+
+Built with a focus on performance and developer experience:
+
+*   **Frontend**: React 19, Vite, Tailwind CSS, TypeScript.
+*   **Backend**: Supabase (Auth, Postgres, Realtime, Storage).
+*   **AI**: Google Gemini (Receipt Analysis).
+
+## 🚀 Run Locally
+
+**Prerequisites:** Node.js 20+
+
+1.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
+
+2.  **Configure Environment:**
+    Set the `GEMINI_API_KEY` and Supabase credentials in [.env.local](.env.local).
+
+3.  **Start the App:**
+    ```bash
+    npm run dev
+    ```
+
+4.  **View in Browser:**
+    Open [http://localhost:5173](http://localhost:5173).
