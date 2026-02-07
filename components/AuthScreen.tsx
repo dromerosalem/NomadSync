@@ -151,7 +151,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
 
     if (mode === 'LANDING') {
         return (
-            <div className="flex flex-col flex-1 w-full min-h-[100dvh] bg-tactical-bg relative overflow-y-auto animate-fade-in">
+            <div className="flex flex-col flex-1 w-full min-h-[100dvh] bg-tactical-bg relative overflow-hidden animate-fade-in">
                 {/* Background Atmospheric Gradient (Desert Sunset Vibe) */}
                 <div className="absolute inset-0 z-0 bg-[#020617] overflow-hidden">
                     {/* The "Glow" - Sunset Horizon */}

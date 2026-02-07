@@ -52,7 +52,16 @@ const PWAInstall: React.FC = () => {
         const element = pwaInstallRef.current;
         element.addEventListener('pwa-user-choice-result-event', handleUserChoice);
 
+        // Trigger the dialog to show automatically on iOS/other platforms
+        // Use a small delay to ensure the element is fully registered
+        const timer = setTimeout(() => {
+            if (element && typeof element.showDialog === 'function') {
+                element.showDialog(true); // force=true to show even if previously dismissed by library
+            }
+        }, 500);
+
         return () => {
+            clearTimeout(timer);
             element.removeEventListener('pwa-user-choice-result-event', handleUserChoice);
         };
     }, [shouldRender]);
