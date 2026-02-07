@@ -41,8 +41,8 @@ Extends Supabase `auth.users`.
 | `email` | text | Unique, Not Null | Mirrored from auth for easier querying. |
 | `full_name` | text | | Display name (e.g., "Alex Wanderer"). |
 | `avatar_url` | text | | Path to Supabase Storage bucket `avatars`. |
-| `travel_experience` | text | Default 'Novice' | Gamification rank. |
-| `total_trips` | int | Default 0 | Gamification stat. |
+| `class_level` | text | Default 'Pathfinder' | Gamification rank. |
+| `total_miles` | float | Default 0.0 | Gamification stat. |
 
 ### 3.2. Trips
 Stores the high-level adventure data.
