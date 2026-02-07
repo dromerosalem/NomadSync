@@ -4,6 +4,7 @@ import { Trip, Member } from '../types';
 import { MenuIcon, BellIcon, GridIcon, GlobeIcon, SendIcon, UserIcon, MapPinIcon, PlusIcon, WalletIcon } from './Icons';
 import { getMissionCover, sanitizeAsset } from '../utils/assetUtils';
 import AtmosphericGradient from './AtmosphericGradient';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 interface DashboardProps {
     user: Member;
@@ -15,6 +16,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectTrip, onCreateTrip, onNavigateProfile }) => {
+    const isOnline = useNetworkStatus();
 
     const getStatusStyle = (status?: string) => {
         switch (status) {
@@ -78,18 +80,23 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                 {/* Header */}
                 <header className="px-6 py-4 flex items-center justify-center">
                     <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-yellow-500 animate-pulse' : 'bg-tactical-accent animate-pulse'}`}></div>
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{isLoading ? 'SYNCING...' : 'ONLINE'}</span>
+                        <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isLoading ? 'bg-yellow-500 animate-pulse' :
+                                !isOnline ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' :
+                                    'bg-tactical-accent animate-pulse shadow-[0_0_8px_rgba(255,215,0,0.6)]'
+                            }`}></div>
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                            {isLoading ? 'SYNCING...' : !isOnline ? 'OFFLINE' : 'ONLINE'}
+                        </span>
                     </div>
                 </header>
 
                 {/* Title Section */}
                 <div className="px-6 mb-4 text-center">
                     <h1 className="font-display text-4xl font-bold text-white uppercase leading-none mb-1">
-                        YOUR<br /><span className="text-tactical-accent">DASHBOARD</span>
+                        DISOVERY<br /><span className="text-tactical-accent">DECK</span>
                     </h1>
                     <p className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">
-                        TRAVELER: {user.name.toUpperCase()}
+                        ON THE ROAD WITH: {user.name.toUpperCase()}
                     </p>
                 </div>
 

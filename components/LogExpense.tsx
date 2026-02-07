@@ -11,6 +11,7 @@ import CurrencySelector from './CurrencySelector';
 import { compressImage } from '../utils/imageCompression';
 import { UploadSecurityService } from '../services/UploadSecurityService';
 import { TacticalAlert } from './TacticalAlert';
+import TacticalDatePicker from './TacticalDatePicker';
 
 interface LogExpenseProps {
     onClose: () => void;
@@ -902,12 +903,10 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
 
                     <div>
                         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 block">Date</label>
-                        <input
-                            type="datetime-local"
+                        <TacticalDatePicker
+                            label="Date"
                             value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            disabled={isSettlement}
-                            className="w-full bg-tactical-card border border-tactical-muted/30 rounded-lg p-3 text-white focus:border-tactical-accent outline-none disabled:opacity-60 disabled:cursor-not-allowed"
+                            onChange={(newDate) => setDate(formatDateForInput(newDate))}
                         />
                     </div>
                 </div>
