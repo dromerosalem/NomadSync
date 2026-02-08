@@ -9,8 +9,9 @@
 graph TD
     subgraph Client ["Client-Side (PWA)"]
         UI["React 19 + Tailwind UI"]
-        Router["React Router"]
-        State["Local Global State"]
+        Router["Ionic React Router"]
+        Sync["URL <-> ViewState Sync"]
+        State["TripContext (Global State)"]
     end
 
     subgraph Backend ["Supabase Backend"]
@@ -52,6 +53,7 @@ Stop arguing about money and start enjoying the trip.
 Built for the realities of travel.
 - **Offline-First**: Access your itinerary and log expenses even without a signal. Changes sync when you're back online.
 - **PWA Installation**: Install as a native-like app on your phone for quick access.
+- **Deep Linking**: Share specific trips or items via URL. Seamlessly navigate between app states.
 - **Performance**: Lightning-fast interaction tailored for mobile use.
 
 ### 4. Squad Management

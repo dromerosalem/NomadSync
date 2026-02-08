@@ -10,7 +10,7 @@ This document defines the backend architecture required to support the "NomadSyn
 ## 2. Architecture Overview
 
 ### Tech Stack
-*   **Frontend**: React 19, Vite, TypeScript, Tailwind CSS, Shadcn/ui, Lucide Icons.
+*   **Frontend**: React 19, Ionic React, Ionic Router, Vite, TypeScript, Tailwind CSS, Shadcn/ui, Lucide Icons.
 *   **Backend**: Supabase.
     *   **Database**: PostgreSQL 15+.
     *   **Auth**: Supabase Auth (Email + Google OAuth).
@@ -150,7 +150,12 @@ NomadSync employs a **Local-First** architecture to ensure functionality in low-
 *   **Cache API**: Stores static assets (JS/CSS bundles) and map tiles (`nomadsync-map-tiles-v1`) for offline map rendering.
 *   **LocalStorage**: Stores lightweight state like `nomadsync_device_id` and Auth tokens.
 
-### 6.2. Synchronization Logic
+### 6.2. Navigation & Routing
+*   **Ionic React Router**: Manages application state via URL synchronization.
+*   **Deep Linking**: Supports direct access to specific trips (`/journey/:tripId`) and views (`/dashboard`, `/profile`).
+*   **Scroll Management**: Custom handling for intuitive scroll position retention and resetting between views.
+
+### 6.3. Synchronization Logic
 *   **Optimistic UI**: All user actions (creates, updates) are applied immediately to the local `Dexie` database and reflected in the UI.
 *   **Background Sync**:
     *   A **Status Queue** tracks all local changes.

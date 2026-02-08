@@ -78,11 +78,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
             {/* Sticky Top Section */}
             <div className="sticky top-0 z-50 bg-tactical-bg border-b border-tactical-muted/10 pb-4 shadow-xl transform-gpu isolation-isolate">
                 {/* Header */}
-                <header className="px-6 py-4 flex items-center justify-center">
+                <header className="dashboard-header px-6 py-4 flex items-center justify-center relative z-10">
                     <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full transition-all duration-500 ${isLoading ? 'bg-yellow-500 animate-pulse' :
-                                !isOnline ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' :
-                                    'bg-tactical-accent animate-pulse shadow-[0_0_8px_rgba(255,215,0,0.6)]'
+                            !isOnline ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' :
+                                'bg-tactical-accent animate-pulse shadow-[0_0_8px_rgba(255,215,0,0.6)]'
                             }`}></div>
                         <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
                             {isLoading ? 'SYNCING...' : !isOnline ? 'OFFLINE' : 'ONLINE'}
@@ -148,7 +148,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                             <div
                                 key={trip.id}
                                 onClick={() => onSelectTrip(trip)}
-                                className="relative rounded-2xl overflow-hidden h-64 group cursor-pointer border border-transparent hover:border-tactical-accent/50 transition-all active:scale-[0.98]"
+                                className="trip-card group relative h-64 rounded-2xl overflow-hidden cursor-pointer shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:shadow-tactical-accent/20 bg-tactical-card border border-white/5"
                             >
                                 {/* Background Image */}
                                 {/* Background Gradient */}
@@ -234,8 +234,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, trips, isLoading, onSelectT
                 <div className="h-8"></div>
             </div>
 
-            {/* Floating Plot New Path Button */}
-            <div className="fixed bottom-20 left-0 right-0 flex justify-center z-40 px-6 pb-2 pt-8 pointer-events-none">
+            {/* Floating Action Button - Start New Trip */}
+            <div className="start-adventure-btn fixed bottom-20 left-0 right-0 flex justify-center z-[9999] px-6 pb-2 pt-8 pointer-events-none">
                 <button
                     onClick={onCreateTrip}
                     className="pointer-events-auto bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-3 px-10 rounded-full shadow-[0_0_25px_rgba(255,215,0,0.3)] flex items-center justify-center gap-2 transition-transform hover:scale-105 active:scale-95 border-2 border-black/10"

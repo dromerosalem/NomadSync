@@ -164,7 +164,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
 
           {item.type === ItemType.TRANSPORT ? (
             <>
-              <div className="h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+              <div className="timeline-card-header h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
                 <div
                   className="absolute inset-0 opacity-[0.2] mix-blend-overlay pointer-events-none"
                   style={{
@@ -194,7 +194,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                 )}
               </div>
 
-              <div className="p-5">
+              <div className="timeline-card-content p-5">
                 <h3 className="font-display font-bold text-white text-lg tracking-wide uppercase mb-3">{item.title}</h3>
                 {/* Details */}
                 {item.details && (
@@ -234,7 +234,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
           ) : item.type === ItemType.FOOD ? (
             <>
               {/* Premium Gradient Header */}
-              <div className="h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+              <div className="timeline-card-header h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
                 {/* SVG Noise Texture */}
                 <div
                   className="absolute inset-0 opacity-[0.2] mix-blend-overlay pointer-events-none"
@@ -264,7 +264,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                 </div>
               </div>
 
-              <div className="p-5">
+              <div className="timeline-card-content p-5">
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <h3 className="font-display font-bold text-white text-xl tracking-wide uppercase leading-tight">{item.title}</h3>
@@ -302,7 +302,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
             </>
           ) : item.type === ItemType.STAY ? (
             <>
-              <div className="h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+              <div className="timeline-card-header h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
                 <div
                   className="absolute inset-0 opacity-[0.2] mix-blend-overlay pointer-events-none"
                   style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}
@@ -322,7 +322,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                   </div>
                 </div>
               </div>
-              <div className="p-4 pt-3">
+              <div className="timeline-card-content p-4 pt-3">
                 <h3 className="font-display font-bold text-white text-lg tracking-wide mb-1">{item.title}</h3>
                 <p className="text-gray-400 text-sm mb-4">{item.location}</p>
                 <div className="flex gap-2 mb-3">
@@ -352,7 +352,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
             </>
           ) : (
             <>
-              <div className="h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
+              <div className="timeline-card-header h-28 w-full relative overflow-hidden" style={{ background: theme.gradient }}>
                 <div
                   className="absolute inset-0 opacity-[0.2] mix-blend-overlay pointer-events-none"
                   style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")` }}
@@ -372,7 +372,7 @@ const ItemCard: React.FC<{ item: ItineraryItem, tripYear: number, isLast: boolea
                   </div>
                 </div>
               </div>
-              <div className="p-4 pt-4">
+              <div className="timeline-card-content p-4 pt-4">
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display font-bold text-white text-lg tracking-wide mb-1 truncate uppercase">{item.title}</h3>
