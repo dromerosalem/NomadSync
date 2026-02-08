@@ -307,12 +307,12 @@ ion-app {
 /* 2. iOS Specific Overrides */
 
 /* "Start New Adventure" Button - Fix Safe Area Position */
-.ios .start-adventure-btn {
+.start-adventure-btn {
   /* 
-     Increased to 4.5rem (72px) to ensure margin ABOVE the footer.
-     Footer ~50px + Safe Area.
-     72px + Safe Area > 50px + Safe Area.
-     Gap ~22px.
+     Applied globally to handle edge cases (like iPhone 17 Pro / iOS 26) where .ios class might not be detected.
+     4.5rem (72px) + safe-area ensures clearance on all devices.
+     - iOS (Safe Area ~34px): 106px bottom. Clears 84px footer.
+     - Android/Desktop (Safe Area 0): 72px bottom. Clears ~56px footer.
   */
   bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
   padding-bottom: 0 !important;
