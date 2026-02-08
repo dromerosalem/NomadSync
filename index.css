@@ -1,3 +1,21 @@
+/* Ionic Core CSS */
+@import "@ionic/react/css/core.css";
+
+/* Ionic Dark Mode (apply globally) */
+@import "@ionic/react/css/palettes/dark.always.css";
+
+/* Ionic optional CSS utilities */
+@import "@ionic/react/css/normalize.css";
+@import "@ionic/react/css/structure.css";
+@import "@ionic/react/css/typography.css";
+@import "@ionic/react/css/padding.css";
+@import "@ionic/react/css/float-elements.css";
+@import "@ionic/react/css/text-alignment.css";
+@import "@ionic/react/css/text-transformation.css";
+@import "@ionic/react/css/flex-utils.css";
+@import "@ionic/react/css/display.css";
+
+/* Fonts */
 @import "@fontsource/inter/400.css";
 @import "@fontsource/inter/500.css";
 @import "@fontsource/inter/600.css";
@@ -62,6 +80,26 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Enable native scrolling inside Ionic's IonApp wrapper */
+ion-app {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Don't add overflow here - it breaks fixed positioning for child elements */
+  overflow: visible;
+}
+
+/* Main app container handles the scrolling */
+.app-container {
+  min-height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;

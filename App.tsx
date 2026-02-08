@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import { useLocation, useHistory } from 'react-router-dom';
+import { IonPage, useIonRouter } from '@ionic/react';
 import { ViewState, Trip, ItineraryItem, ItemType, Member, Role } from './types';
 import CreateMission from './components/CreateMission';
 import Timeline from './components/Timeline';
@@ -89,34 +91,67 @@ const App: React.FC = () => {
   const [pendingJoinTripId, setPendingJoinTripId] = useState<string | null>(null);
   const [activeConflict, setActiveConflict] = useState<SyncLog | null>(null);
 
-  // Sync URL with Privacy/Terms Views (For Google Compliance)
+  // Router hooks for URL sync
+  const history = useHistory();
+  const location = useLocation();
+
+  // Map ViewState to URL paths (static routes only)
+  const VIEW_TO_PATH: Partial<Record<ViewState, string>> = {
+    AUTH: '/auth',
+    DASHBOARD: '/dashboard',
+    PROFILE: '/profile',
+    PRIVACY: '/privacy',
+    TERMS: '/terms',
+    ONBOARDING: '/welcome',
+  };
+
+  // Static Route URL Sync (View → URL)
   useEffect(() => {
-    const path = window.location.pathname;
-    if (view === 'PRIVACY') {
-      if (path !== '/privacy') window.history.pushState({}, '', '/privacy');
-    } else if (view === 'TERMS') {
-      if (path !== '/terms') window.history.pushState({}, '', '/terms');
-    } else if (path === '/privacy' || path === '/terms') {
-      // If we are in any other view but the URL is still /privacy or /terms, reset it
-      // unless we are in Auth/Dashboard/Profile where the state transition handles it
-      window.history.pushState({}, '', '/');
+    const currentPath = location.pathname;
+    const targetPath = VIEW_TO_PATH[view];
+
+    // Only sync static routes here; trip-specific routes handled after currentTripId is declared
+    if (targetPath && currentPath !== targetPath && !currentPath.startsWith('/journey/')) {
+      history.push(targetPath);
     }
   }, [view]);
 
+  // Static Route URL Sync (URL → View)
+  useEffect(() => {
+    const path = location.pathname;
+
+    if (path === '/auth' && view !== 'AUTH') setView('AUTH');
+    else if (path === '/dashboard' && view !== 'DASHBOARD') setView('DASHBOARD');
+    else if (path === '/profile' && view !== 'PROFILE') setView('PROFILE');
+    else if (path === '/privacy' && view !== 'PRIVACY') setView('PRIVACY');
+    else if (path === '/terms' && view !== 'TERMS') setView('TERMS');
+    else if (path === '/welcome' && view !== 'ONBOARDING') setView('ONBOARDING');
+    // Trip-specific URL → View sync is handled after currentTripId declaration
+  }, [location.pathname]);
+
 
   // Global Scroll Reset on View Change
-  // We use useLayoutEffect and a small timeout to ensure this fires AFTER the browser tries to restore scroll
+  // Reset scroll position when navigating between views
   useLayoutEffect(() => {
     // 1. Disable browser's default scroll restoration
     if ('scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
     }
 
-    // 2. Force scroll to top immediately
+    // 2. Reset scroll on the actual scroll container (.app-container)
+    const scrollContainer = document.querySelector('.app-container');
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0;
+    }
+
+    // 3. Also reset window scroll as fallback
     window.scrollTo(0, 0);
 
-    // 3. Double-tap: Ensure it stays at top after a brief delay (catch race conditions)
+    // 4. Double-tap: Ensure it stays at top after a brief delay (catch race conditions)
     const timeout = setTimeout(() => {
+      if (scrollContainer) {
+        scrollContainer.scrollTop = 0;
+      }
       window.scrollTo(0, 0);
     }, 10);
 
@@ -575,6 +610,49 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const currentTrip = useMemo(() => trips.find(t => t.id === currentTripId) || null, [trips, currentTripId]);
+
+  // Trip-specific URL Sync (View → URL)
+  useEffect(() => {
+    const currentPath = location.pathname;
+
+    if (view === 'TIMELINE' && currentTripId) {
+      const tripPath = `/journey/${currentTripId}`;
+      if (currentPath !== tripPath) {
+        history.push(tripPath);
+      }
+    } else if (view === 'BUDGET' && currentTripId) {
+      const budgetPath = `/journey/${currentTripId}/budget`;
+      if (currentPath !== budgetPath) {
+        history.push(budgetPath);
+      }
+    } else if (view === 'LEDGER' && currentTripId) {
+      const ledgerPath = `/journey/${currentTripId}/ledger`;
+      if (currentPath !== ledgerPath) {
+        history.push(ledgerPath);
+      }
+    }
+  }, [view, currentTripId]);
+
+  // Trip-specific URL Sync (URL → View for deep links/back navigation)
+  useEffect(() => {
+    const path = location.pathname;
+
+    if (path.match(/^\/journey\/([^/]+)\/budget$/)) {
+      const tripId = path.split('/')[2];
+      if (currentTripId !== tripId) setCurrentTripId(tripId);
+      if (view !== 'BUDGET') setView('BUDGET');
+    }
+    else if (path.match(/^\/journey\/([^/]+)\/ledger$/)) {
+      const tripId = path.split('/')[2];
+      if (currentTripId !== tripId) setCurrentTripId(tripId);
+      if (view !== 'LEDGER') setView('LEDGER');
+    }
+    else if (path.match(/^\/journey\/([^/]+)$/)) {
+      const tripId = path.split('/')[2];
+      if (currentTripId !== tripId) setCurrentTripId(tripId);
+      if (view !== 'TIMELINE') setView('TIMELINE');
+    }
+  }, [location.pathname]);
 
   // Selection State
   const [selectedItemType, setSelectedItemType] = useState<ItemType | null>(null);
