@@ -309,18 +309,13 @@ ion-app {
 /* "Start New Adventure" Button - Fix Safe Area Position */
 .ios .start-adventure-btn {
   /* 
-     Standard Tab Bar height ~50px. 
-     Safe area ~34px. 
-     Total ~84px.
-     We need to be above that.
-     3.5rem = 56px.
-     So bottom = 56px + safe-area.
-     If safe-area=34, bottom=90px. Clears 84px footer.
-     If safe-area=0, bottom=56px. Clears 50px footer.
+     Increased to 4.5rem (72px) to ensure margin ABOVE the footer.
+     Footer ~50px + Safe Area.
+     72px + Safe Area > 50px + Safe Area.
+     Gap ~22px.
   */
-  bottom: calc(3.5rem + env(safe-area-inset-bottom)) !important;
+  bottom: calc(4.5rem + env(safe-area-inset-bottom)) !important;
   padding-bottom: 0 !important;
-  /* Reset padding hack */
 }
 
 /* Trip Cards - Make them more compact on iOS */
