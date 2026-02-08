@@ -138,7 +138,55 @@ Defines exactly how much each person owes for a specific `itinerary_item`.
 
 ---
 
-## 6. Implementation Checklist
+## 6. Client-Side & Offline Architecture (Local-First)
+
+### 6.1. Storage Stratagy
+NomadSync employs a **Local-First** architecture to ensure functionality in low-connectivity environments (e.g., remote travel locations).
+*   **IndexedDB (Dexie.js)**: The primary persistent store for application data.
+    *   `trips`: Stores full trip details.
+    *   `items`: Stores all itinerary items and their `receipt_items`.
+    *   `trip_members`: Stores member roles and profiles.
+    *   `sync_queue`: Queues mutations (`INSERT`, `UPDATE`, `DELETE`) that occur while offline.
+*   **Cache API**: Stores static assets (JS/CSS bundles) and map tiles (`nomadsync-map-tiles-v1`) for offline map rendering.
+*   **LocalStorage**: Stores lightweight state like `nomadsync_device_id` and Auth tokens.
+
+### 6.2. Synchronization Logic
+*   **Optimistic UI**: All user actions (creates, updates) are applied immediately to the local `Dexie` database and reflected in the UI.
+*   **Background Sync**:
+    *   A **Status Queue** tracks all local changes.
+    *   **Trigger**: The Service Worker listens for `sync` events, or the app attempts to flush the queue when the network status becomes `online`.
+    *   **Conflict Resolution**: Server timestamps generally win. Non-conflicting field updates are merged intelligently.
+
+---
+
+## 7. Notification System (Mission Intel)
+
+### 7.1. Architecture
+*   **Protocol**: Web Push API with VAPID authentication.
+*   **Backend**: Supabase Edge Function (`push-dispatch`).
+*   **Provider**: `@negrel/webpush` (Deno compatible).
+
+### 7.2. Components
+1.  **Frontend**:
+    *   `NotificationManager` requests permission and subscribes the user agent to the push service.
+    *   Stores `subscription` object + unique `device_id` in Supabase table `user_devices`.
+2.  **Service Worker (`sw.js`)**:
+    *   Listens for `push` events.
+    *   Displays system notifications with Deep Linking support (e.g., clicking opens specific trip).
+3.  **Edge Function (`push-dispatch`)**:
+    *   Triggered via Database Webhooks (Database Trigger -> HTTP Request).
+    *   Fetches target devices from `user_devices`.
+    *   Broadcasts payloads using VAPID keys.
+
+### 7.3. Triggers (The "When")
+| Event | Trigger Condition | Notification Title | Target Audience |
+| :--- | :--- | :--- | :--- |
+| **New Intel** | `INSERT` on `itinerary_items` | "New Mission Intel" | All other Trip Members (excluding creator). |
+| **Duty Call** | `INSERT` on `trip_members` | "Mission Invite" | The specific user invited. |
+
+---
+
+## 8. Implementation Checklist
 1.  [x] **Init Supabase Project**
 2.  [x] **Database Schema Migration**
 3.  [x] **Storage Buckets Setup**
