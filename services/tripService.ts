@@ -8,8 +8,8 @@ export const tripService = {
 
     async fetchUserTrips(userId: string): Promise<Trip[]> {
         try {
-            // 1. Try Network
-            const { data, error } = await supabase
+            // 1. Try Network with 5s Timeout
+            const fetchPromise = supabase
                 .from('trip_members')
                 .select(`
         role,
@@ -44,6 +44,12 @@ export const tripService = {
         )
       `)
                 .eq('user_id', userId);
+
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Network timeout')), 5000)
+            );
+
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
             if (error) throw error;
 
@@ -83,8 +89,12 @@ export const tripService = {
             await db.trips.bulkPut(trips);
             return trips;
 
-        } catch (networkError) {
-            console.warn('[tripService] Network failed, falling back to local DB', networkError);
+        } catch (networkError: any) {
+            if (networkError.message === 'Network timeout') {
+                console.warn('[tripService] Network timed out (5s), falling back to local DB');
+            } else {
+                console.warn('[tripService] Network failed, falling back to local DB', networkError);
+            }
             const cachedTrips = await db.trips.toArray();
             return cachedTrips;
         }
@@ -96,8 +106,8 @@ export const tripService = {
 
     async fetchTripItinerary(tripId: string): Promise<ItineraryItem[]> {
         try {
-            // 1. Try Network
-            const { data, error } = await supabase
+            // 1. Try Network with 5s Timeout
+            const fetchPromise = supabase
                 .from('itinerary_items')
                 .select(`
         *,
@@ -107,6 +117,12 @@ export const tripService = {
         )
       `)
                 .eq('trip_id', tripId);
+
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Network timeout')), 5000)
+            );
+
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
             if (error) throw error;
 
@@ -151,8 +167,12 @@ export const tripService = {
             await db.items.bulkPut(items);
             return items;
 
-        } catch (networkError) {
-            console.warn('[tripService] Network failed, falling back to local DB', networkError);
+        } catch (networkError: any) {
+            if (networkError.message === 'Network timeout') {
+                console.warn('[tripService] Itinerary fetch timed out (5s), falling back to local DB');
+            } else {
+                console.warn('[tripService] Network failed, falling back to local DB', networkError);
+            }
             const cachedItems = await db.items.where('tripId').equals(tripId).toArray();
             return cachedItems;
         }

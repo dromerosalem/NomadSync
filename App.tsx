@@ -22,6 +22,8 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import Onboarding from './components/Onboarding';
 import VerificationBridge from './components/VerificationBridge';
+import ForgotPassword from './components/ForgotPassword';
+import UpdatePasswordBridge from './components/UpdatePasswordBridge';
 import { supabase } from './services/supabaseClient';
 import { tripService } from './services/tripService';
 import { userService } from './services/userService';
@@ -84,6 +86,8 @@ const App: React.FC = () => {
     if (path === '/privacy') return 'PRIVACY';
     if (path === '/terms') return 'TERMS';
     if (path === '/verified') return 'VERIFIED' as ViewState;
+    if (path === '/update-password') return 'UPDATE_PASSWORD';
+    if (path === '/forgot-password') return 'FORGOT_PASSWORD';
 
     return localStorage.getItem(LAST_USER_KEY) ? 'DASHBOARD' : 'AUTH';
   });
@@ -103,6 +107,8 @@ const App: React.FC = () => {
     PRIVACY: '/privacy',
     TERMS: '/terms',
     ONBOARDING: '/welcome',
+    FORGOT_PASSWORD: '/forgot-password',
+    UPDATE_PASSWORD: '/update-password',
   };
 
   // Static Route URL Sync (View → URL)
@@ -126,6 +132,8 @@ const App: React.FC = () => {
     else if (path === '/privacy' && view !== 'PRIVACY') setView('PRIVACY');
     else if (path === '/terms' && view !== 'TERMS') setView('TERMS');
     else if (path === '/welcome' && view !== 'ONBOARDING') setView('ONBOARDING');
+    else if (path === '/forgot-password' && view !== 'FORGOT_PASSWORD') setView('FORGOT_PASSWORD');
+    else if (path === '/update-password' && view !== 'UPDATE_PASSWORD') setView('UPDATE_PASSWORD');
     // Trip-specific URL → View sync is handled after currentTripId declaration
   }, [location.pathname]);
 
@@ -207,6 +215,19 @@ const App: React.FC = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state change:', _event, session?.user?.id);
+
+      // Handle PASSWORD_RECOVERY event — route to the update password screen
+      if (_event === 'PASSWORD_RECOVERY' && session) {
+        setView('UPDATE_PASSWORD');
+        return;
+      }
+
+      // Skip normal auth handling when on the update-password bridge.
+      // The UpdatePasswordBridge component manages its own session lifecycle (signOut after update).
+      if (window.location.pathname === '/update-password') {
+        return;
+      }
+
       if (session) {
         setIsAuthenticated(true);
         // Request persistence on login/state change
@@ -1125,7 +1146,16 @@ const App: React.FC = () => {
             onAuthSuccess={handleAuthSuccess}
             onViewPrivacy={() => setView('PRIVACY')}
             onViewTerms={() => setView('TERMS')}
+            onForgotPassword={() => setView('FORGOT_PASSWORD')}
           />
+        )}
+
+        {!isAuthenticated && view === 'FORGOT_PASSWORD' && (
+          <ForgotPassword onBack={() => setView('AUTH')} />
+        )}
+
+        {view === 'UPDATE_PASSWORD' && (
+          <UpdatePasswordBridge />
         )}
 
         {view === 'PRIVACY' && (

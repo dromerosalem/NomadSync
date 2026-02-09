@@ -36,11 +36,17 @@ export const userService = {
 
     async fetchProfile(userId: string): Promise<Partial<Member>> {
         try {
-            const { data, error } = await supabase
+            const fetchPromise = supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', userId)
                 .single();
+
+            const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Network timeout')), 5000)
+            );
+
+            const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
             if (error) throw error;
             if (!data) return {};
@@ -57,8 +63,12 @@ export const userService = {
             localStorage.setItem(`profile_cache_${userId}`, JSON.stringify(profile));
 
             return profile;
-        } catch (error) {
-            console.warn('Network profile fetch failed, checking cache...', error);
+        } catch (error: any) {
+            if (error.message === 'Network timeout') {
+               console.warn('Profile fetch timed out (5s), checking cache...');
+            } else {
+               console.warn('Network profile fetch failed, checking cache...', error);
+            }
             // Fallback to cache
             const cached = localStorage.getItem(`profile_cache_${userId}`);
             if (cached) {

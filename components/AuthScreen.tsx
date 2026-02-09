@@ -12,11 +12,12 @@ interface AuthScreenProps {
     onAuthSuccess: (user: { name: string; email: string }) => void;
     onViewPrivacy: () => void;
     onViewTerms: () => void;
+    onForgotPassword: () => void;
 }
 
 type AuthMode = 'LANDING' | 'SIGNUP' | 'LOGIN';
 
-const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, onViewTerms }) => {
+const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, onViewTerms, onForgotPassword }) => {
     const [mode, setMode] = useState<AuthMode>('LANDING');
     const [showEmailForm, setShowEmailForm] = useState(false);
     const [name, setName] = useState('');
@@ -151,7 +152,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
 
     if (mode === 'LANDING') {
         return (
-            <div className="flex flex-col flex-1 w-full min-h-[100dvh] bg-tactical-bg relative overflow-hidden animate-fade-in">
+            <div className="fixed inset-0 z-50 flex flex-col w-full h-[100dvh] bg-tactical-bg overflow-hidden animate-fade-in">
                 {/* Background Atmospheric Gradient (Desert Sunset Vibe) */}
                 <div className="absolute inset-0 z-0 bg-[#020617] overflow-hidden">
                     {/* The "Glow" - Sunset Horizon */}
@@ -234,26 +235,22 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                         <div className="w-2 h-1 bg-tactical-muted rounded-full"></div>
                     </div>
 
-                    <div className="w-full space-y-4 max-w-sm">
+                    <div className="w-full max-w-sm flex justify-center">
                         <button
                             onClick={() => { setMode('SIGNUP'); setShowEmailForm(false); }}
                             className="w-full bg-tactical-accent hover:bg-yellow-400 text-black font-display font-bold text-lg py-4 rounded-xl flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,215,0,0.3)] transition-all"
                         >
                             START YOUR ADVENTURE <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>
                         </button>
-                        <button
-                            onClick={() => { setMode('LOGIN'); setShowEmailForm(false); }}
-                            className="w-full bg-transparent hover:bg-white/5 border border-tactical-accent/50 text-tactical-accent font-display font-bold text-lg py-4 rounded-xl transition-all"
-                        >
-                            LOG IN
-                        </button>
                     </div>
                 </div>
 
                 {/* Footer Area - Anchored Bottom */}
-                <div className="relative z-10 w-full pb-8 pt-4 flex justify-center gap-4 opacity-40">
-                    <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
-                    <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
+                <div className="mt-auto w-full pb-12 px-6 z-10 max-w-md mx-auto">
+                    <div className="flex justify-center gap-6 opacity-30">
+                        <button onClick={onViewPrivacy} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
+                        <button onClick={onViewTerms} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
+                    </div>
                 </div>
             </div>
         );
@@ -391,6 +388,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                                 className="w-full bg-transparent border border-gray-700 focus:border-tactical-accent p-4 text-white font-bold uppercase tracking-wider outline-none transition-colors placeholder-gray-800"
                             />
                         </div>
+                        {mode === 'LOGIN' && (
+                            <button
+                                onClick={onForgotPassword}
+                                className="text-tactical-accent text-[10px] font-bold uppercase tracking-widest mt-2 hover:text-white transition-colors self-end"
+                            >
+                                Forgot Password?
+                            </button>
+                        )}
                     </div>
                 )}
             </div>
@@ -414,25 +419,23 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                 </div>
             )}
 
-            <div className="p-6 z-10 w-full max-w-md mx-auto">
-                <div className="text-center">
-                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">
-                        {mode === 'SIGNUP' ? 'Already have an account?' : 'Don\'t have an account?'}
+            <div className="mt-auto pb-12 px-6 z-10 w-full max-w-md mx-auto">
+                <button
+                    onClick={() => { setMode(mode === 'SIGNUP' ? 'LOGIN' : 'SIGNUP'); setShowEmailForm(false); }}
+                    className="group flex flex-col items-center justify-center gap-1.5 mb-12 animate-fade-in w-full transition-all hover:scale-105"
+                >
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] group-hover:text-gray-400 transition-colors">
+                        {mode === 'SIGNUP' ? 'Already have an account?' : "Don't have an account?"}
                     </span>
-                    <button
-                        onClick={() => { setMode(mode === 'SIGNUP' ? 'LOGIN' : 'SIGNUP'); setShowEmailForm(false); }}
-                        className="text-white font-bold uppercase tracking-widest text-xs border-b border-tactical-accent pb-0.5 hover:text-tactical-accent transition-colors"
-                    >
-                        {mode === 'SIGNUP' ? 'LOG IN' : 'SIGN UP FOR FREE'}
-                    </button>
+                    <span className="text-tactical-accent font-display font-bold text-sm uppercase tracking-[0.2em] group-hover:text-yellow-300 transition-colors border-b border-transparent group-hover:border-yellow-300 pb-0.5">
+                        {mode === 'SIGNUP' ? 'Log In' : 'Sign Up'}
+                    </span>
+                </button>
 
-                    <div className="flex justify-center gap-4 mt-8 opacity-40">
-                        <button onClick={onViewPrivacy} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
-                        <button onClick={onViewTerms} className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
-                    </div>
+                <div className="flex justify-center gap-6 mt-10 opacity-30">
+                    <button onClick={onViewPrivacy} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors">Privacy Policy</button>
+                    <button onClick={onViewTerms} className="text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors">Terms of Service</button>
                 </div>
-
-
             </div>
         </div>
     );
