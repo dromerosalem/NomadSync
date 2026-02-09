@@ -79,13 +79,24 @@ const App: React.FC = () => {
     }
   });
 
+  // Ref to flag that we detected an email verification on initial load.
+  // Must be set BEFORE Supabase clears the hash from the URL.
+  const isBrowserVerification = useRef(false);
+
   const [view, setView] = useState<ViewState>(() => {
     // If we have a user, start at DASHBOARD
     // We check specific paths first to honor deep links
     const path = window.location.pathname;
+    const hash = window.location.hash;
     if (path === '/privacy') return 'PRIVACY';
     if (path === '/terms') return 'TERMS';
-    if (path === '/verified') return 'VERIFIED' as ViewState;
+    if (path === '/verified' || hash.includes('type=signup') || hash.includes('type=email')) {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+      if (!isStandalone) {
+        isBrowserVerification.current = true;
+      }
+      return 'VERIFIED' as ViewState;
+    }
     if (path === '/update-password') return 'UPDATE_PASSWORD';
     if (path === '/forgot-password') return 'FORGOT_PASSWORD';
 
@@ -109,6 +120,7 @@ const App: React.FC = () => {
     ONBOARDING: '/welcome',
     FORGOT_PASSWORD: '/forgot-password',
     UPDATE_PASSWORD: '/update-password',
+    VERIFIED: '/verified',
   };
 
   // Static Route URL Sync (View → URL)
@@ -134,6 +146,7 @@ const App: React.FC = () => {
     else if (path === '/welcome' && view !== 'ONBOARDING') setView('ONBOARDING');
     else if (path === '/forgot-password' && view !== 'FORGOT_PASSWORD') setView('FORGOT_PASSWORD');
     else if (path === '/update-password' && view !== 'UPDATE_PASSWORD') setView('UPDATE_PASSWORD');
+    else if (path === '/verified' && view !== 'VERIFIED') setView('VERIFIED' as ViewState);
     // Trip-specific URL → View sync is handled after currentTripId declaration
   }, [location.pathname]);
 
@@ -222,9 +235,16 @@ const App: React.FC = () => {
         return;
       }
 
-      // Skip normal auth handling when on the update-password bridge.
-      // The UpdatePasswordBridge component manages its own session lifecycle (signOut after update).
-      if (window.location.pathname === '/update-password') {
+      // Handle email verification — use the ref flag set during initial state
+      // (before Supabase cleared the hash from the URL)
+      if (isBrowserVerification.current) {
+        setView('VERIFIED' as ViewState);
+        return;
+      }
+
+      // Skip normal auth handling when on bridge screens.
+      // These components manage their own session lifecycle (signOut after completion).
+      if (window.location.pathname === '/update-password' || window.location.pathname === '/verified') {
         return;
       }
 

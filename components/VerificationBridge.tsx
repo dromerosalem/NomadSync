@@ -1,6 +1,31 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle } from 'lucide-react';
+import { supabase } from '../services/supabaseClient';
 
 const VerificationBridge: React.FC = () => {
+    const [ready, setReady] = useState(false);
+
+    // Sign out the browser session immediately — the PWA handles the real login
+    useEffect(() => {
+        const cleanup = async () => {
+            try {
+                await supabase.auth.signOut();
+            } catch (err) {
+                console.error('Bridge signOut error:', err);
+            }
+            setReady(true);
+        };
+        cleanup();
+    }, []);
+
+    if (!ready) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen bg-tactical-bg p-6 text-center">
+                <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="flex flex-col items-center justify-center h-screen bg-tactical-bg p-6 text-center animate-fade-in relative overflow-hidden">
             {/* Background Atmosphere */}
@@ -10,29 +35,30 @@ const VerificationBridge: React.FC = () => {
             </div>
 
             <div className="z-10 max-w-md w-full">
-                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-green-500/50 box-glow animate-pulse">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
+                <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-green-500/50 animate-pulse">
+                    <CheckCircle className="w-10 h-10 text-green-500" />
                 </div>
 
                 <h1 className="font-display text-4xl font-bold text-green-500 uppercase tracking-tighter mb-4 drop-shadow-lg">
-                    Access Granted
+                    Email Verified
                 </h1>
 
-                <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-12 leading-relaxed">
-                    Your identity has been verified.<br />Secure connection established.
+                <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-6 leading-relaxed">
+                    Your account is now active and ready to go.
                 </p>
 
-                <a
-                    href="/"
-                    className="w-full bg-green-500 hover:bg-green-400 text-black font-display font-black text-lg py-5 rounded-none flex items-center justify-center gap-3 shadow-[0_0_20px_rgba(74,222,128,0.3)] transition-all uppercase tracking-widest"
-                >
-                    Return to NomadSync
-                </a>
+                <div className="w-full bg-white/5 border border-green-500/20 rounded-xl p-6 mb-8 text-center">
+                    <p className="text-white text-base font-bold mb-2">
+                        You can close this tab now.
+                    </p>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                        Open the <span className="text-green-400 font-bold">NomadSync</span> app from your Home Screen to start your journey.
+                    </p>
+                </div>
 
-                <div className="mt-8 text-[10px] text-gray-600 font-mono uppercase">
-                    Session ID: {Math.random().toString(36).substring(7).toUpperCase()}
+                <div className="flex items-center gap-3 justify-center text-gray-500 text-xs font-bold uppercase tracking-widest">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    Verification complete
                 </div>
             </div>
         </div>
