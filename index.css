@@ -42,6 +42,12 @@ input[type=number] {
 
 html {
   color-scheme: dark;
+  /* Force consistent base font size across all devices */
+  /* Prevents devices with larger text settings (like iPhone 17 Pro with 19px) from scaling up the entire UI */
+  font-size: 16px !important;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   /* Prevent iOS rubber-band scrolling */
   width: 100%;
   height: 100%;
