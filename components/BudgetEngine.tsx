@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
-import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon } from './Icons';
+import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon, PiggyBankIcon, PiggyBankBrokenIcon } from './Icons';
 import { sanitizeAsset } from '../utils/assetUtils';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { getCurrencySymbol, formatAmountWhole, formatAmount } from '../utils/currencyUtils';
@@ -45,7 +45,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
     // Generate a unique cache key based on data version
     // We include item count to catch quick updates if timestamp isn't perfectly synced yet
-    const cacheKey = `budget_calc_v1_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}`;
+    const cacheKey = `budget_calc_v1_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length} `;
 
     const { result: calculationData, isComputing: isCalculating } = useCachedCalculation(cacheKey, async () => {
         // NOTE: This runs asynchronously if cache miss
@@ -190,48 +190,110 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         const pDebtNumbers: Record<string, number> = {};
         Object.keys(pDebt).forEach(id => pDebtNumbers[id] = pDebt[id].toNumber());
 
-        // --- DAILY SPEND CALCULATION ---
-        // Filter transactions where I PAID today (using local time)
+        // --- DAILY SPEND CALCULATION & PIGGY BANK ---
+        // Filter transactions (my share) for today (using local time)
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
 
+        // Trip Start Date (at midnight)
+        const tripStartDate = new Date(trip.startDate);
+        tripStartDate.setHours(0, 0, 0, 0);
+
         let todaySpend = new Money(0);
+        let previousDaysSpend = new Money(0);
+
+        const member = trip.members.find(m => m.id === currentUserId);
+        const dailyBudgetMoney = new Money(member?.dailyBudget || 0);
+
         trip.items.forEach(item => {
-            if (item.paidBy === currentUserId && new Date(item.startDate) >= startOfToday) {
-                todaySpend = todaySpend.add(new Money(item.cost || 0));
+            const itemDate = new Date(item.startDate);
+            itemDate.setHours(0, 0, 0, 0); // Normalize item date to start of day
+
+            if (item.isPrivate) return;
+
+            const cost = new Money(item.cost || 0);
+            const splitWith = item.splitWith || [];
+            const splitDetails = item.splitDetails || {};
+            const hasCustomSplit = Object.keys(splitDetails).length > 0;
+
+            // Consumption tracking (My Share)
+            let myShare = new Money(0);
+            if (hasCustomSplit && splitDetails[currentUserId] !== undefined) {
+                myShare = new Money(splitDetails[currentUserId]);
+            } else if (splitWith.includes(currentUserId)) {
+                myShare = cost.divide(splitWith.length || 1);
+            }
+
+            if (myShare.greaterThan(0)) {
+                if (itemDate.getTime() === startOfToday.getTime()) {
+                    todaySpend = todaySpend.add(myShare);
+                } else if (itemDate.getTime() >= tripStartDate.getTime() && itemDate.getTime() < startOfToday.getTime()) {
+                    previousDaysSpend = previousDaysSpend.add(myShare);
+                }
             }
         });
 
+        // --- PIGGY BANK CALCULATION ---
+        // 1. Previous Days Balance (Fixed for the day)
+        // Days Elapsed excluding today
+        const timeDiff = startOfToday.getTime() - tripStartDate.getTime();
+        const daysElapsedPrevious = Math.max(0, Math.floor(timeDiff / (1000 * 3600 * 24)));
+
+        const totalBudgetEarnedPrevious = dailyBudgetMoney.multiply(daysElapsedPrevious);
+        const previousBalance = totalBudgetEarnedPrevious.subtract(previousDaysSpend);
+
+        // 2. Today's Overdraft (Live)
+        // We only penalize if todaySpend > dailyBudget. We do NOT credit savings until tomorrow.
+        let todayOverdraft = new Money(0);
+        if (todaySpend.greaterThan(dailyBudgetMoney)) {
+            todayOverdraft = todaySpend.subtract(dailyBudgetMoney);
+        }
+
+        // 3. Final Piggy Bank Balance
+        const piggyBankBalance = previousBalance.subtract(todayOverdraft);
+
+        // Return all needed values
         return {
             myTotalSpend: myTotal.toNumber(),
             myTotalPaid: myPaid.toNumber(),
             myTotalReceived: myReceived.toNumber(),
-            myTodaySpend: todaySpend.toNumber(),
             groupTotalSpend: groupTotal.toNumber(),
             categorySpend: catSpendNumbers,
             pairwiseDebt: pDebtNumbers,
             smartTransfers: transfers,
             recentTransactions: transactions.slice(0, 3),
-            daysUntilEnd: dRemaining
+            daysUntilEnd: dRemaining,
+            settlement: {
+                owed: 0, // Placeholder, not explicitly calculated in this snippet
+                owedTo: 0 // Placeholder, not explicitly calculated in this snippet
+            },
+            daily: {
+                spent: todaySpend.toNumber(),
+                isOver: todaySpend.greaterThan(dailyBudgetMoney),
+                piggyBank: {
+                    balance: piggyBankBalance.toNumber(),
+                    isBroken: piggyBankBalance.lessThan(0)
+                }
+            }
         };
-    }, [trip.id, trip.updatedAt, trip.items.length]);
+    }, [trip.id, trip.updatedAt, trip.items.length, currentUserId, currentUser?.dailyBudget, trip.startDate]);
 
     const {
         myTotalSpend,
         myTotalPaid,
         myTotalReceived,
-        myTodaySpend,
         groupTotalSpend,
         categorySpend,
         pairwiseDebt,
         smartTransfers,
         recentTransactions,
-        daysUntilEnd
+        daysUntilEnd,
+        daily,
+        settlement
     } = calculationData || {
         myTotalSpend: 0,
         myTotalPaid: 0,
         myTotalReceived: 0,
-        myTodaySpend: 0,
         groupTotalSpend: 0,
         categorySpend: {
             [ItemType.FOOD]: 0,
@@ -244,7 +306,19 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         pairwiseDebt: {},
         smartTransfers: [],
         recentTransactions: [],
-        daysUntilEnd: 0
+        daysUntilEnd: 0,
+        daily: {
+            spent: 0,
+            isOver: false,
+            piggyBank: {
+                balance: 0,
+                isBroken: false
+            }
+        },
+        settlement: {
+            owed: 0,
+            owedTo: 0
+        }
     };
 
     // Derived UI Stats
@@ -253,8 +327,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     const daysRemaining = daysUntilEnd;
 
     // Daily Budget Logic
+    const myTodaySpend = daily.spent;
+    const isOverDailyBudget = daily.isOver;
+    const piggyBank = daily.piggyBank;
     const dailyProgressBar = dailyBudget > 0 ? Math.min((myTodaySpend / dailyBudget) * 100, 100) : 0;
-    const isOverDailyBudget = dailyBudget > 0 && myTodaySpend > dailyBudget;
 
 
     // Helper: Get Display Balance for Main List AND Detail View
@@ -315,7 +391,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             case ItemType.SETTLEMENT: return <BanknoteIcon className="w-4 h-4 text-green-500" />;
             default: return <WrenchIcon className="w-4 h-4 text-yellow-500" />;
         }
-    }
+    };
 
     const getCategoryName = (type: ItemType) => {
         switch (type) {
@@ -390,35 +466,89 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                     </div>
                 </div>
 
-                {/* 1.5. Daily Budget Widget (Optional) */}
+                {/* 1.5. Unified Daily Tracker & Piggy Bank */}
                 {dailyBudget > 0 && (
-                    <div className={`mb-8 border rounded-xl p-4 flex justify-between items-center transition-colors ${isOverDailyBudget ? 'bg-tactical-accent/5 border-tactical-accent/20' : 'bg-black/40 border-tactical-muted/20'}`}>
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between mb-1">
+                    <div className="mb-8 bg-tactical-card border border-tactical-muted/20 rounded-2xl overflow-hidden shadow-lg">
+                        {/* Header / Daily Progress */}
+                        <div className={`p-5 ${isOverDailyBudget ? 'bg-tactical-accent/5' : ''}`}>
+                            <div className="flex items-center justify-between mb-2">
                                 <span className={`text-[10px] font-bold uppercase tracking-widest ${isOverDailyBudget ? 'text-tactical-accent' : 'text-gray-500'}`}>Daily Tracker</span>
-                                {isOverDailyBudget && (
-                                    <span className="text-[9px] font-mono font-bold text-tactical-accent/80 uppercase tracking-tighter">
-                                        Limit Exceeded
+                                <div className="text-[10px] font-bold text-gray-400">
+                                    {isOverDailyBudget ? 'LIMIT EXCEEDED' : 'LEFT TODAY'}
+                                </div>
+                            </div>
+
+                            <div className="flex items-end justify-between mb-3">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="font-display text-3xl font-bold text-white leading-none">
+                                        {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTodaySpend)}
                                     </span>
-                                )}
+                                    <span className="text-xs text-gray-600 font-bold">
+                                        / {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(dailyBudget)}
+                                    </span>
+                                </div>
+                                <div className={`font-mono text-sm font-bold ${isOverDailyBudget ? 'text-tactical-accent' : 'text-gray-300'}`}>
+                                    {isOverDailyBudget ? '+' : ''}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(dailyBudget - myTodaySpend))}
+                                </div>
                             </div>
-                            <div className="flex items-baseline gap-2">
-                                <span className="font-display text-2xl font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTodaySpend)}</span>
-                                <span className="text-xs text-gray-600 font-bold">/ {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(dailyBudget)}</span>
-                            </div>
-                            <div className="h-1.5 w-full bg-gray-800 rounded-full mt-2 overflow-hidden">
+
+                            <div className="h-2 w-full bg-gray-800 rounded-full overflow-hidden">
                                 <div
-                                    className="h-full bg-tactical-accent transition-all duration-700"
-                                    style={{ width: `${dailyProgressBar}%` }}
+                                    className={`h-full rounded-full transition-all duration-700 ${isOverDailyBudget ? 'bg-red-500' : 'bg-tactical-accent'}`}
+                                    style={{ width: `${Math.min(100, (myTodaySpend / (dailyBudget || 1)) * 100)}%` }}
                                 ></div>
                             </div>
                         </div>
-                        <div className="ml-4 text-right">
-                            <div className="text-[9px] font-bold text-gray-500 uppercase tracking-widest mb-0.5">
-                                {isOverDailyBudget ? 'Over Limit' : 'Left Today'}
+
+                        {/* Footer: Piggy Bank — Visual Pig */}
+                        <div className="px-5 py-4 border-t border-white/5 flex items-center justify-between bg-black/20">
+                            <div className="flex items-center gap-3">
+                                {/* Actual Pig SVG */}
+                                <div className={`relative w-14 h-14 rounded-full flex items-center justify-center ${piggyBank.isBroken ? 'bg-red-500/10' : 'bg-pink-500/10'}`}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className="w-10 h-10">
+                                        {/* Pig body */}
+                                        <ellipse cx="32" cy="36" rx="20" ry="16" fill={piggyBank.isBroken ? '#ef4444' : '#f472b6'} opacity="0.9" />
+                                        {/* Pig head */}
+                                        <circle cx="48" cy="30" r="10" fill={piggyBank.isBroken ? '#ef4444' : '#f472b6'} opacity="0.9" />
+                                        {/* Snout */}
+                                        <ellipse cx="55" cy="31" rx="5" ry="4" fill={piggyBank.isBroken ? '#dc2626' : '#ec4899'} />
+                                        {/* Nostrils */}
+                                        <circle cx="54" cy="30" r="1" fill={piggyBank.isBroken ? '#991b1b' : '#be185d'} />
+                                        <circle cx="56" cy="30" r="1" fill={piggyBank.isBroken ? '#991b1b' : '#be185d'} />
+                                        {/* Eye */}
+                                        <circle cx="46" cy="27" r="1.5" fill="white" />
+                                        <circle cx="46" cy="27" r="0.8" fill={piggyBank.isBroken ? '#450a0a' : '#1a1a1a'} />
+                                        {/* Ear */}
+                                        <path d="M44 22 Q42 16 46 18 Q49 20 47 24" fill={piggyBank.isBroken ? '#dc2626' : '#ec4899'} />
+                                        {/* Legs */}
+                                        <rect x="20" y="48" width="4" height="6" rx="2" fill={piggyBank.isBroken ? '#ef4444' : '#f472b6'} />
+                                        <rect x="28" y="48" width="4" height="6" rx="2" fill={piggyBank.isBroken ? '#ef4444' : '#f472b6'} />
+                                        <rect x="36" y="48" width="4" height="6" rx="2" fill={piggyBank.isBroken ? '#ef4444' : '#f472b6'} />
+                                        <rect x="44" y="48" width="4" height="6" rx="2" fill={piggyBank.isBroken ? '#ef4444' : '#f472b6'} />
+                                        {/* Tail */}
+                                        <path d="M12 34 Q8 30 10 26 Q12 24 11 28" stroke={piggyBank.isBroken ? '#ef4444' : '#f472b6'} strokeWidth="2" fill="none" strokeLinecap="round" />
+                                        {/* Coin slot on top */}
+                                        <rect x="28" y="19" width="10" height="2" rx="1" fill={piggyBank.isBroken ? '#991b1b' : '#be185d'} />
+                                        {/* Crack lines if broken */}
+                                        {piggyBank.isBroken && (
+                                            <>
+                                                <path d="M30 28 L26 36 L30 40 L28 46" stroke="#fca5a5" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                                <path d="M38 26 L40 32 L36 38" stroke="#fca5a5" strokeWidth="2" fill="none" strokeLinecap="round" />
+                                            </>
+                                        )}
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div className="text-[10px] font-bold uppercase tracking-wider text-pink-400">
+                                        Piggy Bank
+                                    </div>
+                                    <div className="text-[9px] text-gray-500 mt-0.5">
+                                        {piggyBank.isBroken ? 'Overdraft from previous days' : 'Accumulated savings'}
+                                    </div>
+                                </div>
                             </div>
-                            <div className={`font-bold font-mono text-sm ${isOverDailyBudget ? 'text-tactical-accent' : 'text-tactical-accent'}`}>
-                                {isOverDailyBudget ? '+' : ''}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(dailyBudget - myTodaySpend))}
+                            <div className={`font-display text-xl font-bold ${piggyBank.isBroken ? 'text-red-500' : 'text-green-400'}`}>
+                                {piggyBank.isBroken ? '-' : '+'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(piggyBank.balance))}
                             </div>
                         </div>
                     </div>
@@ -560,17 +690,17 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     const isMeInvolved = tx.from === currentUserId || tx.to === currentUserId;
 
                                     return (
-                                        <div key={idx} className={`flex items-center justify-between p-2 rounded ${isMeInvolved ? 'bg-tactical-accent/10 border border-tactical-accent/20' : 'bg-transparent'}`}>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-xs font-bold uppercase ${tx.from === currentUserId ? 'text-white' : 'text-gray-400'}`}>
-                                                    {fromUser?.name.split(' ')[0]}
+                                        <div key={idx} className={`flex items-center justify-between p-2 rounded ${isMeInvolved ? 'bg-tactical-accent/10 border-tactical-accent/20' : 'bg-transparent'}`}>
+                                            <div className="flex items-center gap-2 flex-1 min-w-0 mr-2">
+                                                <span className={`text-xs font-bold uppercase truncate ${tx.from === currentUserId ? 'text-white' : 'text-gray-400'}`}>
+                                                    {fromUser?.name || 'Unknown'}
                                                 </span>
-                                                <ArrowRightIcon className="w-3 h-3 text-gray-600" />
-                                                <span className={`text-xs font-bold uppercase ${tx.to === currentUserId ? 'text-white' : 'text-gray-400'}`}>
-                                                    {toUser?.name.split(' ')[0]}
+                                                <ArrowRightIcon className="w-3 h-3 text-gray-600 shrink-0" />
+                                                <span className={`text-xs font-bold uppercase truncate ${tx.to === currentUserId ? 'text-white' : 'text-gray-400'}`}>
+                                                    {toUser?.name || 'Unknown'}
                                                 </span>
                                             </div>
-                                            <div className="font-mono text-xs font-bold text-tactical-muted">
+                                            <div className="font-mono text-xs font-bold text-tactical-muted shrink-0">
                                                 {getCurrencySymbol(trip.baseCurrency || 'USD')}{tx.amount.toFixed(2)}
                                             </div>
                                         </div>
@@ -610,13 +740,13 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-center">
                                             <h4 className="font-bold text-white text-xs truncate uppercase">{item.title}</h4>
-                                            <span className={`font-mono text-xs font-bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'}`}>
+                                            <span className={`font - mono text - xs font - bold ${isSettlement ? 'text-green-500' : 'text-tactical-accent'} `}>
                                                 {isSettlement ? '' : '-'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(item.cost || 0)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">
-                                                {isSettlement ? `${payer?.name.split(' ')[0]} settled debt` : `Paid by ${payer?.name.split(' ')[0]}`}
+                                                {isSettlement ? `${payer?.name.split(' ')[0]} settled debt` : `Paid by ${payer?.name.split(' ')[0]} `}
                                             </div>
                                             <div className="text-[9px] text-gray-600">
                                                 {new Date(item.startDate).getDate()} {new Date(item.startDate).toLocaleString('default', { month: 'short' }).toUpperCase()}
@@ -705,7 +835,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
                             <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
                                 <div className="text-[8px] font-bold text-gray-500 uppercase">My Balance</div>
-                                <div className={`font-mono text-sm font-bold ${(myTotalPaid - myTotalReceived - myTotalSpend) >= -0.01 ? 'text-tactical-accent' : 'text-red-500'}`}>
+                                <div className={`font - mono text - sm font - bold ${(myTotalPaid - myTotalReceived - myTotalSpend) >= -0.01 ? 'text-tactical-accent' : 'text-red-500'} `}>
                                     {getCurrencySymbol(trip.baseCurrency || 'USD')}{(myTotalPaid - myTotalReceived - myTotalSpend).toFixed(2)}
                                 </div>
                             </div>
@@ -803,7 +933,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             return (
                                 <div key={item.id} className="bg-tactical-card border border-tactical-muted/10 rounded-lg p-3 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className={`text-xs font-bold uppercase px-2 py-1 rounded ${labelColor}`}>
+                                        <div className={`text - xs font - bold uppercase px - 2 py - 1 rounded ${labelColor} `}>
                                             {label}
                                         </div>
                                         <div>
@@ -812,7 +942,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className={`font-bold font-mono text-sm ${isSettlement ? 'text-green-500' : (iPaid ? 'text-tactical-accent' : 'text-red-500')}`}>
+                                        <div className={`font - bold font - mono text - sm ${isSettlement ? 'text-green-500' : (iPaid ? 'text-tactical-accent' : 'text-red-500')} `}>
                                             {isSettlement ? 'PAID' : (iPaid ? 'lent' : 'borrowed')} {getCurrencySymbol(trip.baseCurrency || 'USD')}{transactionAmount.toFixed(2)}
                                         </div>
                                     </div>

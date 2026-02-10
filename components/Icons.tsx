@@ -342,3 +342,27 @@ export const TrashIcon = ({ className }: { className?: string }) => (
     <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
   </svg>
 );
+
+export const PiggyBankIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M19 5c-1.5 0-2.8.6-3.8 1.5l-1.6 1.6C12.8 7.3 11.2 7 9.5 7H8a2 2 0 0 0-2 2v2.5a3 3 0 0 0 3 3h4c.6 0 1.2-.2 1.7-.5l3-3c.8-.8 2-1 3.5-.5" />
+    <path d="M15 12h.01" />
+    <path d="M7 16v4" />
+    <path d="M17 12v6" />
+    <path d="M22 6c0-1.7-1.3-3-3-3-1.7 0-3 1.3-3 3" />
+    <path d="M2.5 9c-.8 0-1.5.7-1.5 1.5S1.7 12 2.5 12h1.6a9.9 9.9 0 0 0 5.4 6" />
+  </svg>
+);
+
+export const PiggyBankBrokenIcon = ({ className }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M15.5 13L13 15l-1.5-1.5" />
+    <path d="M20.5 7c-1.2 0-2.4.4-3.3 1.2L16 9.4" />
+    <path d="M10 9H8a2 2 0 0 0-2 2v2.5c0 .6.2 1.2.6 1.6" />
+    <path d="M16 11.5V18" />
+    <path d="M7 16v4" />
+    <path d="M21.5 7a3 3 0 0 0-3-3c-1.7 0-3 1.3-3 3" />
+    <path d="M2.5 9c-.8 0-1.5.7-1.5 1.5S1.7 12 2.5 12h1.6a9.9 9.9 0 0 0 3.9 4.5" />
+    <path d="M17.8 13.2 21 17" />
+  </svg>
+);
