@@ -127,8 +127,8 @@ const InviteMember: React.FC<InviteMemberProps> = ({ trip, onBack, onInvite }) =
 
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
-                {/* Mission URL */}
-                <div className="space-y-2">
+                {/* Mission URL - Hidden for now */}
+                <div className="hidden space-y-2">
                     <div className="flex items-center gap-2 text-[10px] font-bold text-tactical-accent uppercase tracking-widest">
                         <LinkIcon className="w-3 h-3" /> Trip Link
                     </div>
