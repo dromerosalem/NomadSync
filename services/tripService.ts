@@ -79,7 +79,7 @@ export const tripService = {
                         status: m.status,
                         budget: m.personal_budget || 0,
                         dailyBudget: m.daily_budget || 0,
-                        dailyBudgetStartedAt: m.daily_budget_started_at || undefined,
+                        dailyBudgetStartedAt: m.daily_budget_started_at ?? null,
                         isCurrentUser: m.user_id === userId
                     })),
                     updatedAt: new Date(trip.updated_at || Date.now()).getTime()
@@ -334,7 +334,7 @@ export const tripService = {
         if (error) throw error;
     },
 
-    async updateMemberBudget(tripId: string, userId: string, budget: number, dailyBudget?: number, dailyBudgetStartedAt?: string): Promise<void> {
+    async updateMemberBudget(tripId: string, userId: string, budget: number, dailyBudget?: number, dailyBudgetStartedAt?: string | null): Promise<void> {
         const updatePayload: any = { personal_budget: budget };
         if (dailyBudget !== undefined) {
             updatePayload.daily_budget = dailyBudget;

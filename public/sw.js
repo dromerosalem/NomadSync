@@ -1,5 +1,5 @@
 
-const CACHE_NAME = 'nomadsync-cache-v12';
+const CACHE_NAME = 'nomadsync-cache-v13';
 const ASSETS_TO_CACHE = [
     '/',
     '/index.html',

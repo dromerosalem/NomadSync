@@ -49,8 +49,8 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
           // First-time activation — start fresh from right now
           startedAt = new Date().toISOString();
         } else if (!hasDailyBudget) {
-          // Removing daily budget — clear the timestamp
-          startedAt = undefined;
+          // Removing daily budget — explicitly clear so DB column is nulled
+          startedAt = null;
         }
         // If already had a daily budget and still has one, preserve existing startedAt
 

@@ -841,8 +841,9 @@ const App: React.FC = () => {
 
       const budgetChanged = newMember && oldMember && newMember.budget !== oldMember.budget;
       const dailyBudgetChanged = newMember && oldMember && newMember.dailyBudget !== oldMember.dailyBudget;
+      const startedAtChanged = newMember && oldMember && newMember.dailyBudgetStartedAt !== oldMember.dailyBudgetStartedAt;
 
-      if (budgetChanged || dailyBudgetChanged) {
+      if (budgetChanged || dailyBudgetChanged || startedAtChanged) {
         await tripService.updateMemberBudget(updatedTrip.id, currentUser.id, newMember!.budget || 0, newMember!.dailyBudget, newMember!.dailyBudgetStartedAt);
       }
 

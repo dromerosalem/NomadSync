@@ -52,7 +52,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     }, []);
 
     const todayDateStr = new Date().toDateString();
-    const cacheKey = `budget_calc_v5_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}`;
+    const memberForCache = trip.members.find(m => m.id === currentUserId);
+    const cacheKey = `budget_calc_v6_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}_${memberForCache?.dailyBudget || 0}_${memberForCache?.dailyBudgetStartedAt || 'none'}`;
 
     const { result: calculationData, isComputing: isCalculating } = useCachedCalculation(cacheKey, async () => {
         // NOTE: This runs asynchronously if cache miss
@@ -221,11 +222,12 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             if (item.isPrivate) return;
             if (!item.isDailyExpense) return; // Only count Budget Engine expenses
 
-            const itemDate = new Date(item.startDate);
+            const itemStartDate = new Date(item.startDate);
+            const itemDate = new Date(itemStartDate);
             itemDate.setHours(0, 0, 0, 0);
 
-            // Skip items from before daily budget was activated
-            if (activationMidnight && itemDate < activationMidnight) return;
+            // Skip items from before daily budget was activated (Precise timestamp check)
+            if (activationDate && itemStartDate < activationDate) return;
 
             const cost = new Money(item.cost || 0);
             const splitWith = item.splitWith || [];
@@ -254,22 +256,22 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         // --- PIGGY BANK: Simple day-by-day leftover ---
         // For each completed day: leftover = dailyBudget - daySpend
         // Piggy Bank = sum of all leftovers
-        // Start from user's daily budget activation date (fresh start per user)
-        const piggyStart = activationMidnight
-            ? (tripStartDate > activationMidnight ? tripStartDate : activationMidnight)
-            : tripStartDate;
-
+        // Only runs if user has an activation date — no activation = no piggy bank history
         let piggyBalance = new Money(0);
-        const tripEndDateMidnight = new Date(trip.endDate);
-        tripEndDateMidnight.setHours(0, 0, 0, 0);
-        // Stop at whichever comes first: today or trip end
-        const piggyEnd = startOfToday < tripEndDateMidnight ? startOfToday : tripEndDateMidnight;
-        const d = new Date(piggyStart);
-        while (d < piggyEnd) {
-            const dateKey = d.toDateString();
-            const daySpent = daySpendMap[dateKey] || new Money(0);
-            piggyBalance = piggyBalance.add(dailyBudgetMoney.subtract(daySpent));
-            d.setDate(d.getDate() + 1);
+
+        if (activationMidnight && dailyBudgetMoney.greaterThan(0)) {
+            const piggyStart = tripStartDate > activationMidnight ? tripStartDate : activationMidnight;
+            const tripEndDateMidnight = new Date(trip.endDate);
+            tripEndDateMidnight.setHours(0, 0, 0, 0);
+            // Stop at whichever comes first: today or trip end
+            const piggyEnd = startOfToday < tripEndDateMidnight ? startOfToday : tripEndDateMidnight;
+            const d = new Date(piggyStart);
+            while (d < piggyEnd) {
+                const dateKey = d.toDateString();
+                const daySpent = daySpendMap[dateKey] || new Money(0);
+                piggyBalance = piggyBalance.add(dailyBudgetMoney.subtract(daySpent));
+                d.setDate(d.getDate() + 1);
+            }
         }
 
         // Return all needed values

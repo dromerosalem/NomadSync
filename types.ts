@@ -26,7 +26,7 @@ export interface Member {
   pendingPastExpensesInvitation?: boolean; // Flag for late joiners invited to share past expenses
   onboardingCompleted?: boolean;
   dailyBudget?: number; // Optional daily spending limit
-  dailyBudgetStartedAt?: string; // ISO timestamp of when daily budget was activated
+  dailyBudgetStartedAt?: string | null; // ISO timestamp of when daily budget was activated (null = cleared)
 }
 
 export interface ReceiptItem {

@@ -43,9 +43,12 @@ const calculateDailyAndPiggyBank = (
         itemDate.setHours(0, 0, 0, 0);
 
         // Skip items from before daily budget was activated
-        const activationMidnight = dailyBudgetStartedAt ? new Date(dailyBudgetStartedAt) : null;
-        if (activationMidnight) activationMidnight.setHours(0, 0, 0, 0);
-        if (activationMidnight && itemDate < activationMidnight) return;
+        // Skip items from before daily budget was activated (Precise)
+        const activationDate = dailyBudgetStartedAt ? new Date(dailyBudgetStartedAt) : null;
+        if (activationDate) {
+            const itemStartTime = new Date(item.startDate);
+            if (itemStartTime < activationDate) return;
+        }
 
         const cost = new Money(item.cost || 0);
         const splitWith = item.splitWith || [];
@@ -70,18 +73,20 @@ const calculateDailyAndPiggyBank = (
     });
 
     // Piggy Bank: iterate each completed day (start from activation date if set)
+    // Piggy Bank: iterate each completed day (start from activation date if set)
     let piggyBalance = new Money(0);
     const activationStart = dailyBudgetStartedAt ? new Date(dailyBudgetStartedAt) : null;
-    if (activationStart) activationStart.setHours(0, 0, 0, 0);
-    const piggyStart = activationStart
-        ? (tripStartDate > activationStart ? tripStartDate : activationStart)
-        : tripStartDate;
-    const d = new Date(piggyStart);
-    while (d < startOfToday) {
-        const dateKey = d.toDateString();
-        const daySpent = daySpendMap[dateKey] || new Money(0);
-        piggyBalance = piggyBalance.add(dailyBudgetMoney.subtract(daySpent));
-        d.setDate(d.getDate() + 1);
+
+    if (activationStart) {
+        activationStart.setHours(0, 0, 0, 0);
+        const piggyStart = tripStartDate > activationStart ? tripStartDate : activationStart;
+        const d = new Date(piggyStart);
+        while (d < startOfToday) {
+            const dateKey = d.toDateString();
+            const daySpent = daySpendMap[dateKey] || new Money(0);
+            piggyBalance = piggyBalance.add(dailyBudgetMoney.subtract(daySpent));
+            d.setDate(d.getDate() + 1);
+        }
     }
 
     return {
@@ -111,7 +116,7 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
             { id: 'today', cost: 20, splitWith: [myId], startDate: '2024-01-05T15:00:00Z', isDailyExpense: true },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday, tripStart);
         expect(result.dailySpent).toBe(20);
         expect(result.piggyBankBalance).toBe(200); // Today not included
         expect(result.isBroken).toBe(false);
@@ -129,7 +134,7 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
             { id: 'today', cost: 250, splitWith: [myId], startDate: '2024-01-05T15:00:00Z', isDailyExpense: true },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday, tripStart);
         expect(result.dailySpent).toBe(250);
         expect(result.piggyBankBalance).toBe(200); // Today excluded entirely
         expect(result.isBroken).toBe(false);
@@ -145,13 +150,13 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
             { id: '4', cost: 150, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: true },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday, tripStart);
         expect(result.piggyBankBalance).toBe(-200);
         expect(result.isBroken).toBe(true);
     });
 
     it('Scenario 4: Day 1 — no completed days, Piggy Bank is 0', () => {
-        const result = calculateDailyAndPiggyBank(myId, [], dailyBudget, '2024-01-01T00:00:00Z', '2024-01-01T08:00:00Z');
+        const result = calculateDailyAndPiggyBank(myId, [], dailyBudget, '2024-01-01T00:00:00Z', '2024-01-01T08:00:00Z', '2024-01-01T00:00:00Z');
         expect(result.piggyBankBalance).toBe(0);
         expect(result.isBroken).toBe(false);
     });
@@ -169,7 +174,7 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
             { id: '4', cost: 100, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: true },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday, tripStart);
         expect(result.piggyBankBalance).toBe(90);
         expect(result.isBroken).toBe(false);
     });
@@ -191,7 +196,7 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
             { id: 'today-daily', cost: 25, splitWith: [myId], startDate: '2024-01-05T15:00:00Z', isDailyExpense: true }, // Today, flagged
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday, tripStart);
         expect(result.dailySpent).toBe(25); // Only today's flagged item
         expect(result.piggyBankBalance).toBe(270); // Only past flagged items
         expect(result.isBroken).toBe(false);
@@ -243,5 +248,25 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
         expect(result.dailySpent).toBe(15);          // Only today
         expect(result.piggyBankBalance).toBe(160);    // Only Jan 7-8 counted
         expect(result.isBroken).toBe(false);
+    });
+
+    it('Scenario 9: Intra-day activation — same-day expenses before activation are excluded', () => {
+        // Activation: Jan 3 at 14:00
+        // Item 1: Jan 3 at 10:00 (Before) -> Should be EXCLUDED (Daily Spend = 0 from this)
+        // Item 2: Jan 3 at 16:00 (After) -> Should be INCLUDED
+        const activatedAt = '2024-01-03T14:00:00Z';
+        const todayAtEvenLater = '2024-01-03T20:00:00Z';
+
+        const items: MockItineraryItem[] = [
+            { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z', isDailyExpense: true }, // BEFORE
+            { id: '2', cost: 25, splitWith: [myId], startDate: '2024-01-03T16:00:00Z', isDailyExpense: true }, // AFTER
+        ];
+
+        // We pretend "today" is the same day, later on
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, todayAtEvenLater, activatedAt);
+
+        // Desired behavior: Total daily spent should be only 25 (Item 2).
+        // Current behavior (bug): Total is 75 (Item 1 + Item 2).
+        expect(result.dailySpent).toBe(25);
     });
 });
