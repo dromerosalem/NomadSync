@@ -780,7 +780,12 @@ const App: React.FC = () => {
   const handleCreateTrip = async (name: string, location: string, budget: number, startDate: Date, endDate: Date, initialMembers: Member[], baseCurrency: string, metadata?: { lat: number, lon: number, countryCode: string }, dailyBudget?: number, budgetViewMode?: 'SMART' | 'DIRECT') => {
     setIsLoading(true);
     try {
-      const creatorMember = { ...currentUser, budget: budget, dailyBudget: dailyBudget || 0 };
+      const creatorMember = {
+        ...currentUser,
+        budget: budget,
+        dailyBudget: dailyBudget || 0,
+        dailyBudgetStartedAt: (dailyBudget && dailyBudget > 0) ? startDate.toISOString() : undefined
+      };
       const members = [creatorMember, ...initialMembers];
 
       const newTripData: Omit<Trip, 'id' | 'items'> = {
@@ -838,7 +843,7 @@ const App: React.FC = () => {
       const dailyBudgetChanged = newMember && oldMember && newMember.dailyBudget !== oldMember.dailyBudget;
 
       if (budgetChanged || dailyBudgetChanged) {
-        await tripService.updateMemberBudget(updatedTrip.id, currentUser.id, newMember!.budget || 0, newMember!.dailyBudget);
+        await tripService.updateMemberBudget(updatedTrip.id, currentUser.id, newMember!.budget || 0, newMember!.dailyBudget, newMember!.dailyBudgetStartedAt);
       }
 
       // 3. Update Local State

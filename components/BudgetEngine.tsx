@@ -52,7 +52,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     }, []);
 
     const todayDateStr = new Date().toDateString();
-    const cacheKey = `budget_calc_v4_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}`;
+    const cacheKey = `budget_calc_v5_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}`;
 
     const { result: calculationData, isComputing: isCalculating } = useCachedCalculation(cacheKey, async () => {
         // NOTE: This runs asynchronously if cache miss
@@ -207,6 +207,12 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         const member = trip.members.find(m => m.id === currentUserId);
         const dailyBudgetMoney = new Money(member?.dailyBudget || 0);
 
+        // Activation date: when the user first set their daily budget
+        // If not set, daily tracking is effectively disabled
+        const activationDate = member?.dailyBudgetStartedAt ? new Date(member.dailyBudgetStartedAt) : null;
+        const activationMidnight = activationDate ? new Date(activationDate) : null;
+        if (activationMidnight) activationMidnight.setHours(0, 0, 0, 0);
+
         let todaySpend = new Money(0);
         // Map: dateString -> total spend for that day (completed days only)
         const daySpendMap: Record<string, Money> = {};
@@ -217,6 +223,9 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
             const itemDate = new Date(item.startDate);
             itemDate.setHours(0, 0, 0, 0);
+
+            // Skip items from before daily budget was activated
+            if (activationMidnight && itemDate < activationMidnight) return;
 
             const cost = new Money(item.cost || 0);
             const splitWith = item.splitWith || [];
@@ -245,9 +254,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         // --- PIGGY BANK: Simple day-by-day leftover ---
         // For each completed day: leftover = dailyBudget - daySpend
         // Piggy Bank = sum of all leftovers
-        // Start from feature launch date (Feb 11, 2026) so existing users start fresh
-        const PIGGY_BANK_EPOCH = new Date('2026-02-11T00:00:00');
-        const piggyStart = tripStartDate > PIGGY_BANK_EPOCH ? tripStartDate : PIGGY_BANK_EPOCH;
+        // Start from user's daily budget activation date (fresh start per user)
+        const piggyStart = activationMidnight
+            ? (tripStartDate > activationMidnight ? tripStartDate : activationMidnight)
+            : tripStartDate;
 
         let piggyBalance = new Money(0);
         const tripEndDateMidnight = new Date(trip.endDate);
@@ -286,7 +296,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 }
             }
         };
-    }, [trip.id, trip.updatedAt, trip.items.length, currentUserId, currentUser?.dailyBudget, trip.startDate]);
+    }, [trip.id, trip.updatedAt, trip.items.length, currentUserId, currentUser?.dailyBudget, currentUser?.dailyBudgetStartedAt, trip.startDate]);
 
     const {
         myTotalSpend,

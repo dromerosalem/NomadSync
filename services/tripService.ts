@@ -79,6 +79,7 @@ export const tripService = {
                         status: m.status,
                         budget: m.personal_budget || 0,
                         dailyBudget: m.daily_budget || 0,
+                        dailyBudgetStartedAt: m.daily_budget_started_at || undefined,
                         isCurrentUser: m.user_id === userId
                     })),
                     updatedAt: new Date(trip.updated_at || Date.now()).getTime()
@@ -292,6 +293,7 @@ export const tripService = {
                 role: m.role,
                 personal_budget: m.budget || 0,
                 daily_budget: m.dailyBudget || null,
+                daily_budget_started_at: m.dailyBudgetStartedAt || null,
                 status: m.status || 'ACTIVE'
             }));
 
@@ -332,10 +334,13 @@ export const tripService = {
         if (error) throw error;
     },
 
-    async updateMemberBudget(tripId: string, userId: string, budget: number, dailyBudget?: number): Promise<void> {
+    async updateMemberBudget(tripId: string, userId: string, budget: number, dailyBudget?: number, dailyBudgetStartedAt?: string): Promise<void> {
         const updatePayload: any = { personal_budget: budget };
         if (dailyBudget !== undefined) {
             updatePayload.daily_budget = dailyBudget;
+        }
+        if (dailyBudgetStartedAt !== undefined) {
+            updatePayload.daily_budget_started_at = dailyBudgetStartedAt;
         }
         const { error } = await supabase
             .from('trip_members')

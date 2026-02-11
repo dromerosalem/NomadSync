@@ -38,9 +38,24 @@ const EditTrip: React.FC<EditTripProps> = ({ trip, onUpdate, onCancel, currentUs
   const handleSubmit = () => {
     if (name && location && startDate && endDate) {
       // Update Current User's budget in the members list
-      const updatedMembers = trip.members.map(m =>
-        m.id === currentUserId ? { ...m, budget: parseInt(budget) || 0, dailyBudget: parseInt(dailyBudget) || 0 } : m
-      );
+      const updatedMembers = trip.members.map(m => {
+        if (m.id !== currentUserId) return m;
+        const newDailyBudget = parseInt(dailyBudget) || 0;
+        const hadDailyBudget = !!(m.dailyBudget && m.dailyBudget > 0);
+        const hasDailyBudget = newDailyBudget > 0;
+
+        let startedAt = m.dailyBudgetStartedAt;
+        if (hasDailyBudget && !hadDailyBudget) {
+          // First-time activation — start fresh from right now
+          startedAt = new Date().toISOString();
+        } else if (!hasDailyBudget) {
+          // Removing daily budget — clear the timestamp
+          startedAt = undefined;
+        }
+        // If already had a daily budget and still has one, preserve existing startedAt
+
+        return { ...m, budget: parseInt(budget) || 0, dailyBudget: newDailyBudget, dailyBudgetStartedAt: startedAt };
+      });
 
       onUpdate({
         ...trip,
