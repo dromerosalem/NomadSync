@@ -1,25 +1,27 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Money } from '../utils/money';
 
-// Extended Mock for ItineraryItem to include dates
 interface MockItineraryItem {
     id: string;
     cost: number;
     splitWith: string[];
     splitDetails?: Record<string, number>;
-    startDate: string; // ISO string
+    startDate: string;
     isPrivate?: boolean;
-    paidBy?: string;
 }
 
-// Mock calculation logic from BudgetEngine (updated to match PIGGY BANK logic)
-// We need to simulate "Today" vs "Previous Days"
+/**
+ * Simplified Piggy Bank logic (mirrors BudgetEngine):
+ * - For each COMPLETED past day (tripStart → yesterday): leftover = dailyBudget - daySpend
+ * - Piggy Bank = sum of all leftovers
+ * - Today is NEVER included in the Piggy Bank
+ */
 const calculateDailyAndPiggyBank = (
     currentUserId: string,
     items: MockItineraryItem[],
     dailyBudgetAmount: number,
     tripStartDateStr: string,
-    mockTodayDateStr: string // To simulate "Today" for testing
+    mockTodayDateStr: string
 ) => {
     const startOfToday = new Date(mockTodayDateStr);
     startOfToday.setHours(0, 0, 0, 0);
@@ -27,12 +29,15 @@ const calculateDailyAndPiggyBank = (
     const tripStartDate = new Date(tripStartDateStr);
     tripStartDate.setHours(0, 0, 0, 0);
 
+    const dailyBudgetMoney = new Money(dailyBudgetAmount);
     let todaySpend = new Money(0);
-    let previousDaysSpend = new Money(0);
+    const daySpendMap: Record<string, Money> = {};
 
     items.forEach(item => {
-        const itemDate = new Date(item.startDate);
         if (item.isPrivate) return;
+
+        const itemDate = new Date(item.startDate);
+        itemDate.setHours(0, 0, 0, 0);
 
         const cost = new Money(item.cost || 0);
         const splitWith = item.splitWith || [];
@@ -47,129 +52,112 @@ const calculateDailyAndPiggyBank = (
         }
 
         if (myShare.greaterThan(0)) {
-            // Check if item is today vs previous days relative to our mock "Today"
-            // Note: In real app, we check >= startOfToday. 
-            // For previous, we check >= tripStartDate AND < startOfToday
-
-            // Normalize item date to midnight for comparison
-            const itemDateMidnight = new Date(itemDate);
-            itemDateMidnight.setHours(0, 0, 0, 0);
-
-            if (itemDateMidnight.getTime() === startOfToday.getTime()) {
+            if (itemDate.getTime() === startOfToday.getTime()) {
                 todaySpend = todaySpend.add(myShare);
-            } else if (itemDateMidnight.getTime() >= tripStartDate.getTime() && itemDateMidnight.getTime() < startOfToday.getTime()) {
-                previousDaysSpend = previousDaysSpend.add(myShare);
+            } else if (itemDate >= tripStartDate && itemDate < startOfToday) {
+                const dateKey = itemDate.toDateString();
+                daySpendMap[dateKey] = (daySpendMap[dateKey] || new Money(0)).add(myShare);
             }
         }
     });
 
-    // --- PIGGY BANK CALCULATION ---
-    const timeDiff = startOfToday.getTime() - tripStartDate.getTime();
-    const daysElapsedPrevious = Math.max(0, Math.floor(timeDiff / (1000 * 3600 * 24)));
-
-    const dailyBudgetMoney = new Money(dailyBudgetAmount);
-    const totalBudgetEarnedPrevious = dailyBudgetMoney.multiply(daysElapsedPrevious);
-    const previousBalance = totalBudgetEarnedPrevious.subtract(previousDaysSpend);
-
-    let todayOverdraft = new Money(0);
-    if (todaySpend.greaterThan(dailyBudgetMoney)) {
-        todayOverdraft = todaySpend.subtract(dailyBudgetMoney);
+    // Piggy Bank: iterate each completed day
+    let piggyBalance = new Money(0);
+    const d = new Date(tripStartDate);
+    while (d < startOfToday) {
+        const dateKey = d.toDateString();
+        const daySpent = daySpendMap[dateKey] || new Money(0);
+        piggyBalance = piggyBalance.add(dailyBudgetMoney.subtract(daySpent));
+        d.setDate(d.getDate() + 1);
     }
-
-    const piggyBankBalance = previousBalance.subtract(todayOverdraft);
 
     return {
         dailySpent: todaySpend.toNumber(),
-        piggyBankBalance: piggyBankBalance.toNumber()
+        piggyBankBalance: piggyBalance.toNumber(),
+        isBroken: piggyBalance.lessThan(0)
     };
 };
 
 describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
     const myId = 'user_1';
-    const partnerId = 'user_2';
-    // Test Setup:
-    // Trip Started: 2024-01-01
-    // "Today": 2024-01-05 (Day 5)
-    // Previous Days: Jan 1, 2, 3, 4 (4 days elapsed)
-    const tripStartDate = '2024-01-01T10:00:00Z';
+    // Trip: Jan 1–10, Daily Budget: 100
+    // "Today": Jan 5 (Day 5). Completed days: Jan 1, 2, 3, 4.
+    const tripStart = '2024-01-01T10:00:00Z';
     const mockToday = '2024-01-05T12:00:00Z';
     const dailyBudget = 100;
 
-    it('Scenario 1: Healthy Piggy Bank (Underspent Previous, Underspent Today)', () => {
-        // Previous Days (4 days * 100 = 400 Budget)
-        // Spent: 50/day * 4 = 200
-        // Expected Previous Balance: +200
-
-        // Today: Spend 20 (Budget 100) -> Underspent 80
-        // Expected Piggy Bank: 200 (Today's savings don't count yet) - 0 (Overdraft) = 200
-
+    it('Scenario 1: Healthy Piggy Bank — underspent previous days', () => {
+        // 4 completed days × 100 budget = 400 earned
+        // Spent 50/day × 4 = 200
+        // Piggy Bank = (100-50)*4 = +200
         const items: MockItineraryItem[] = [
             { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
             { id: '2', cost: 50, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
             { id: '3', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z' },
             { id: '4', cost: 50, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
-            { id: 'today', cost: 20, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' }, // Today
+            { id: 'today', cost: 20, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStartDate, mockToday);
-
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
         expect(result.dailySpent).toBe(20);
-        expect(result.piggyBankBalance).toBe(200);
+        expect(result.piggyBankBalance).toBe(200); // Today not included
+        expect(result.isBroken).toBe(false);
     });
 
-    it('Scenario 2: Live Overdraft (Underspent Previous, Overspent Today)', () => {
-        // Previous Balance: +200 (Same as above)
-        // Today: Spend 150 (Budget 100) -> Overdraft 50
-        // Expected Piggy Bank: 200 - 50 = 150 (Immediate Penalty)
-
+    it('Scenario 2: Today overdraft does NOT affect Piggy Bank', () => {
+        // Same 4 past days: +200 saved
+        // Today: spent 250 (massive overdraft) — irrelevant to Piggy Bank
+        // Piggy Bank still = +200
         const items: MockItineraryItem[] = [
             { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
             { id: '2', cost: 50, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
             { id: '3', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z' },
             { id: '4', cost: 50, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
-            { id: 'today', cost: 150, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' }, // Today Overdraft
+            { id: 'today', cost: 250, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStartDate, mockToday);
-
-        expect(result.dailySpent).toBe(150);
-        expect(result.piggyBankBalance).toBe(150);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        expect(result.dailySpent).toBe(250);
+        expect(result.piggyBankBalance).toBe(200); // Today excluded entirely
+        expect(result.isBroken).toBe(false);
     });
 
-    it('Scenario 3: Broken Piggy Bank (Cumulative Debt)', () => {
-        // Previous Days (400 Budget)
-        // Spent: 150/day * 4 = 600
-        // Expected Previous Balance: 400 - 600 = -200 (Already Broken)
-
-        // Today: Spend 10 (Budget 100) -> Underspent 90
-        // Expected Piggy Bank: -200 - 0 = -200 (Today's savings don't fix past debt yet)
-
+    it('Scenario 3: Broken Piggy Bank — cumulative overspend on past days', () => {
+        // 4 days × 150 spent = 600 total, budget was 400
+        // Day-by-day: (100-150)*4 = -200
         const items: MockItineraryItem[] = [
             { id: '1', cost: 150, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
             { id: '2', cost: 150, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
             { id: '3', cost: 150, splitWith: [myId], startDate: '2024-01-03T10:00:00Z' },
             { id: '4', cost: 150, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
-            { id: 'today', cost: 10, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' },
         ];
 
-        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStartDate, mockToday);
-
-        expect(result.dailySpent).toBe(10);
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
         expect(result.piggyBankBalance).toBe(-200);
+        expect(result.isBroken).toBe(true);
     });
 
-    it('Scenario 4: Start of Day 1 (No Previous History)', () => {
-        // Trip Start: Today
-        // Previous Days: 0
-        // Previous Spend: 0
-        // Previous Balance: 0
-
-        // Spend Today: 0
-        // Piggy Bank: 0
-
-        const todayStart = '2024-01-01T08:00:00Z'; // Same as trip start day
-        const result = calculateDailyAndPiggyBank(myId, [], dailyBudget, '2024-01-01T00:00:00Z', todayStart);
-
+    it('Scenario 4: Day 1 — no completed days, Piggy Bank is 0', () => {
+        const result = calculateDailyAndPiggyBank(myId, [], dailyBudget, '2024-01-01T00:00:00Z', '2024-01-01T08:00:00Z');
         expect(result.piggyBankBalance).toBe(0);
+        expect(result.isBroken).toBe(false);
+    });
+
+    it('Scenario 5: Mixed days — some over, some under', () => {
+        // Day 1: spent 30 → leftover +70
+        // Day 2: spent 180 → leftover -80
+        // Day 3: spent 0 → leftover +100
+        // Day 4: spent 100 → leftover 0
+        // Piggy Bank = 70 + (-80) + 100 + 0 = +90
+        const items: MockItineraryItem[] = [
+            { id: '1', cost: 30, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
+            { id: '2', cost: 180, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
+            // Day 3: no items (leftover = full daily budget)
+            { id: '4', cost: 100, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
+        ];
+
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        expect(result.piggyBankBalance).toBe(90);
+        expect(result.isBroken).toBe(false);
     });
 });

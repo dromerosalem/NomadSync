@@ -6,6 +6,7 @@ import AtmosphericAvatar from './AtmosphericAvatar';
 import { getCurrencySymbol, formatAmountWhole, formatAmount } from '../utils/currencyUtils';
 import { Money } from '../utils/money';
 import { useCachedCalculation } from '../hooks/useCachedCalculation';
+import { CacheService } from '../services/CacheService';
 
 interface BudgetEngineProps {
     trip: Trip;
@@ -45,7 +46,13 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
     // Generate a unique cache key based on data version
     // We include item count to catch quick updates if timestamp isn't perfectly synced yet
-    const cacheKey = `budget_calc_v1_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length} `;
+    // Clear stale cache entries on mount (one-time after logic refactor)
+    React.useEffect(() => {
+        CacheService.clearAll().then(() => console.log('[BudgetEngine] Cleared stale cache'));
+    }, []);
+
+    const todayDateStr = new Date().toDateString();
+    const cacheKey = `budget_calc_v3_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}`;
 
     const { result: calculationData, isComputing: isCalculating } = useCachedCalculation(cacheKey, async () => {
         // NOTE: This runs asynchronously if cache miss
@@ -190,33 +197,31 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
         const pDebtNumbers: Record<string, number> = {};
         Object.keys(pDebt).forEach(id => pDebtNumbers[id] = pDebt[id].toNumber());
 
-        // --- DAILY SPEND CALCULATION & PIGGY BANK ---
-        // Filter transactions (my share) for today (using local time)
+        // --- DAILY SPEND & PIGGY BANK ---
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
 
-        // Trip Start Date (at midnight)
         const tripStartDate = new Date(trip.startDate);
         tripStartDate.setHours(0, 0, 0, 0);
-
-        let todaySpend = new Money(0);
-        let previousDaysSpend = new Money(0);
 
         const member = trip.members.find(m => m.id === currentUserId);
         const dailyBudgetMoney = new Money(member?.dailyBudget || 0);
 
-        trip.items.forEach(item => {
-            const itemDate = new Date(item.startDate);
-            itemDate.setHours(0, 0, 0, 0); // Normalize item date to start of day
+        let todaySpend = new Money(0);
+        // Map: dateString -> total spend for that day (completed days only)
+        const daySpendMap: Record<string, Money> = {};
 
+        trip.items.forEach(item => {
             if (item.isPrivate) return;
+
+            const itemDate = new Date(item.startDate);
+            itemDate.setHours(0, 0, 0, 0);
 
             const cost = new Money(item.cost || 0);
             const splitWith = item.splitWith || [];
             const splitDetails = item.splitDetails || {};
             const hasCustomSplit = Object.keys(splitDetails).length > 0;
 
-            // Consumption tracking (My Share)
             let myShare = new Money(0);
             if (hasCustomSplit && splitDetails[currentUserId] !== undefined) {
                 myShare = new Money(splitDetails[currentUserId]);
@@ -226,31 +231,35 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
             if (myShare.greaterThan(0)) {
                 if (itemDate.getTime() === startOfToday.getTime()) {
+                    // Today's spend (for Daily Tracker only)
                     todaySpend = todaySpend.add(myShare);
-                } else if (itemDate.getTime() >= tripStartDate.getTime() && itemDate.getTime() < startOfToday.getTime()) {
-                    previousDaysSpend = previousDaysSpend.add(myShare);
+                } else if (itemDate >= tripStartDate && itemDate < startOfToday) {
+                    // Completed past day — accumulate into day map
+                    const dateKey = itemDate.toDateString();
+                    daySpendMap[dateKey] = (daySpendMap[dateKey] || new Money(0)).add(myShare);
                 }
             }
         });
 
-        // --- PIGGY BANK CALCULATION ---
-        // 1. Previous Days Balance (Fixed for the day)
-        // Days Elapsed excluding today
-        const timeDiff = startOfToday.getTime() - tripStartDate.getTime();
-        const daysElapsedPrevious = Math.max(0, Math.floor(timeDiff / (1000 * 3600 * 24)));
+        // --- PIGGY BANK: Simple day-by-day leftover ---
+        // For each completed day: leftover = dailyBudget - daySpend
+        // Piggy Bank = sum of all leftovers
+        // Start from feature launch date (Feb 11, 2026) so existing users start fresh
+        const PIGGY_BANK_EPOCH = new Date('2026-02-11T00:00:00');
+        const piggyStart = tripStartDate > PIGGY_BANK_EPOCH ? tripStartDate : PIGGY_BANK_EPOCH;
 
-        const totalBudgetEarnedPrevious = dailyBudgetMoney.multiply(daysElapsedPrevious);
-        const previousBalance = totalBudgetEarnedPrevious.subtract(previousDaysSpend);
-
-        // 2. Today's Overdraft (Live)
-        // We only penalize if todaySpend > dailyBudget. We do NOT credit savings until tomorrow.
-        let todayOverdraft = new Money(0);
-        if (todaySpend.greaterThan(dailyBudgetMoney)) {
-            todayOverdraft = todaySpend.subtract(dailyBudgetMoney);
+        let piggyBalance = new Money(0);
+        const tripEndDateMidnight = new Date(trip.endDate);
+        tripEndDateMidnight.setHours(0, 0, 0, 0);
+        // Stop at whichever comes first: today or trip end
+        const piggyEnd = startOfToday < tripEndDateMidnight ? startOfToday : tripEndDateMidnight;
+        const d = new Date(piggyStart);
+        while (d < piggyEnd) {
+            const dateKey = d.toDateString();
+            const daySpent = daySpendMap[dateKey] || new Money(0);
+            piggyBalance = piggyBalance.add(dailyBudgetMoney.subtract(daySpent));
+            d.setDate(d.getDate() + 1);
         }
-
-        // 3. Final Piggy Bank Balance
-        const piggyBankBalance = previousBalance.subtract(todayOverdraft);
 
         // Return all needed values
         return {
@@ -264,15 +273,15 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
             recentTransactions: transactions.slice(0, 3),
             daysUntilEnd: dRemaining,
             settlement: {
-                owed: 0, // Placeholder, not explicitly calculated in this snippet
-                owedTo: 0 // Placeholder, not explicitly calculated in this snippet
+                owed: 0,
+                owedTo: 0
             },
             daily: {
                 spent: todaySpend.toNumber(),
                 isOver: todaySpend.greaterThan(dailyBudgetMoney),
                 piggyBank: {
-                    balance: piggyBankBalance.toNumber(),
-                    isBroken: piggyBankBalance.lessThan(0)
+                    balance: piggyBalance.toNumber(),
+                    isBroken: piggyBalance.lessThan(0)
                 }
             }
         };
