@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Trip, ItemType, ItineraryItem, Member, Role } from '../types';
-import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon, PiggyBankIcon, PiggyBankBrokenIcon } from './Icons';
+import { ChevronLeftIcon, GearIcon, UtensilsIcon, BedIcon, TrainIcon, CameraIcon, PlusIcon, ShoppingBagIcon, FuelIcon, WrenchIcon, ArrowRightIcon, WalletIcon, NetworkIcon, LinkIcon, LockIcon, BanknoteIcon, SearchIcon, PiggyBankIcon, PiggyBankBrokenIcon, InfoIcon } from './Icons';
 import { sanitizeAsset } from '../utils/assetUtils';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { getCurrencySymbol, formatAmountWhole, formatAmount } from '../utils/currencyUtils';
@@ -27,6 +27,10 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
     const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
     const [settleModalOpen, setSettleModalOpen] = useState(false);
+    const [showInfo, setShowInfo] = useState(false);
+    const [showBalanceInfo, setShowBalanceInfo] = useState(false);
+    const [showSettlementInfo, setShowSettlementInfo] = useState(false);
+    const [showMyBalanceInfo, setShowMyBalanceInfo] = useState(false);
     const historyScrollRef = React.useRef<HTMLDivElement>(null);
 
     // Ensure history starts at top when selection changes
@@ -494,11 +498,49 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         {/* Header / Daily Progress */}
                         <div className={`p-5 ${isOverDailyBudget ? 'bg-tactical-accent/5' : ''}`}>
                             <div className="flex items-center justify-between mb-2">
-                                <span className={`text-[10px] font-bold uppercase tracking-widest ${isOverDailyBudget ? 'text-tactical-accent' : 'text-gray-500'}`}>Daily Tracker</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`text-[10px] font-bold uppercase tracking-widest ${isOverDailyBudget ? 'text-tactical-accent' : 'text-gray-500'}`}>Daily Tracker</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowInfo(!showInfo);
+                                        }}
+                                        className="text-gray-600 hover:text-tactical-accent transition-colors"
+                                    >
+                                        <InfoIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
                                 <div className="text-[10px] font-bold text-gray-400">
                                     {isOverDailyBudget ? 'LIMIT EXCEEDED' : 'LEFT TODAY'}
                                 </div>
                             </div>
+
+                            {/* Info Banner */}
+                            {showInfo && (
+                                <>
+                                    {/* Invisible Overlay to catch taps outside */}
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setShowInfo(false)}
+                                    />
+                                    <div className="relative z-50 mt-1 mb-4 p-4 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in">
+                                        <div className="flex items-start gap-3">
+                                            <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
+                                            <div className="space-y-2">
+                                                <p className="text-[11px] font-bold text-white leading-relaxed">
+                                                    Only items added through the budget engine will be counted toward the daily tracker and the Piggy Bank.
+                                                </p>
+                                                <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
+                                                    The daily tracker resets automatically at 00:00 local time.
+                                                </p>
+                                                <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
+                                                    You can reset statistics anytime by removing and re-adding your Daily Budget in trip settings.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
 
                             <div className="flex items-end justify-between mb-3">
                                 <div className="flex items-baseline gap-2">
@@ -645,12 +687,41 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                 {/* 4. Blood Debts (Dual Mode) */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Balances</h3>
+                        <div className="flex items-center gap-1.5">
+                            <h3 className="font-display font-bold text-gray-500 uppercase tracking-widest text-sm">Balances</h3>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowBalanceInfo(!showBalanceInfo);
+                                }}
+                                className="text-gray-600 hover:text-tactical-accent transition-colors"
+                            >
+                                <InfoIcon className="w-3 h-3" />
+                            </button>
+                        </div>
                         {/* Split Mode indicator */}
                         <div className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">
                             {useSmartSplit ? 'Smart Route' : 'Direct View'}
                         </div>
                     </div>
+
+                    {/* Balance Info Banner */}
+                    {showBalanceInfo && (
+                        <>
+                            <div
+                                className="fixed inset-0 z-40"
+                                onClick={() => setShowBalanceInfo(false)}
+                            />
+                            <div className="relative z-50 mt-1 mb-4 p-4 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in">
+                                <div className="flex items-start gap-3">
+                                    <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
+                                    <p className="text-[11px] font-bold text-white leading-relaxed">
+                                        Balances show individual debt or credit between you and each member. You can toggle between <span className="text-tactical-accent">Direct View</span> (actual debts) and <span className="text-tactical-accent">Smart Route</span> (simplified settlements) in trip settings.
+                                    </p>
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     <div className="bg-tactical-card border border-tactical-muted/20 rounded-2xl overflow-hidden divide-y divide-white/5">
                         {trip.members
@@ -701,10 +772,39 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                     {/* GLOBAL SETTLEMENTS VIEW (Visible only in Smart Mode) */}
                     {useSmartSplit && smartTransfers.length > 0 && (
                         <div className="mt-6 border border-tactical-muted/20 rounded-xl bg-black/20 p-4">
-                            <div className="flex items-center gap-2 mb-3 text-tactical-accent/80">
-                                <NetworkIcon className="w-4 h-4" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Group Settlements</span>
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2 text-tactical-accent/80">
+                                    <NetworkIcon className="w-4 h-4" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Group Settlements</span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowSettlementInfo(!showSettlementInfo);
+                                        }}
+                                        className="text-gray-600 hover:text-tactical-accent transition-colors"
+                                    >
+                                        <InfoIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* Settlement Info Banner */}
+                            {showSettlementInfo && (
+                                <>
+                                    <div
+                                        className="fixed inset-0 z-40"
+                                        onClick={() => setShowSettlementInfo(false)}
+                                    />
+                                    <div className="relative z-50 mt-1 mb-6 p-4 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in">
+                                        <div className="flex items-start gap-3">
+                                            <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
+                                            <p className="text-[11px] font-bold text-white leading-relaxed">
+                                                Smart Route calculates the most efficient way to settle all group debts with the fewest possible transfers. Record these payments to clear everyone's balance at once.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                             <div className="space-y-2">
                                 {smartTransfers.map((tx, idx) => {
                                     const fromUser = trip.members.find(m => m.id === tx.from);
@@ -723,7 +823,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                                 </span>
                                             </div>
                                             <div className="font-mono text-xs font-bold text-tactical-muted shrink-0">
-                                                {getCurrencySymbol(trip.baseCurrency || 'USD')}{tx.amount.toFixed(2)}
+                                                {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(tx.amount)}
                                             </div>
                                         </div>
                                     );
@@ -828,8 +928,8 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                         </div>
 
                         <div className="text-sm font-bold tracking-wider mb-6">
-                            {selectedMemberBalance > 0.01 && <span className="text-tactical-accent">THEY OWE YOU {getCurrencySymbol(trip.baseCurrency || 'USD')}{selectedMemberBalance.toFixed(2)}</span>}
-                            {selectedMemberBalance < -0.01 && <span className="text-red-500">YOU OWE {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(selectedMemberBalance).toFixed(2)}</span>}
+                            {selectedMemberBalance > 0.01 && <span className="text-tactical-accent">THEY OWE YOU {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(selectedMemberBalance)}</span>}
+                            {selectedMemberBalance < -0.01 && <span className="text-red-500">YOU OWE {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(Math.abs(selectedMemberBalance))}</span>}
                             {Math.abs(selectedMemberBalance) <= 0.01 && <span className="text-gray-500">ALL SETTLED</span>}
                         </div>
 
@@ -843,29 +943,58 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                             <div className="grid grid-cols-3 gap-2">
                                 <div>
                                     <div className="text-[7px] font-bold text-gray-600 uppercase mb-1">Consumed</div>
-                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalSpend.toFixed(0)}</div>
+                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTotalSpend)}</div>
                                 </div>
                                 <div>
                                     <div className="text-[7px] font-bold text-gray-600 uppercase mb-1">Paid Out</div>
-                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalPaid.toFixed(0)}</div>
+                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTotalPaid)}</div>
                                 </div>
                                 <div>
                                     <div className="text-[7px] font-bold text-gray-600 uppercase mb-1">Received In</div>
-                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{myTotalReceived.toFixed(0)}</div>
+                                    <div className="font-mono text-[11px] font-bold text-white">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(myTotalReceived)}</div>
                                 </div>
                             </div>
 
-                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center">
-                                <div className="text-[8px] font-bold text-gray-500 uppercase">My Balance</div>
-                                <div className={`font - mono text - sm font - bold ${(myTotalPaid - myTotalReceived - myTotalSpend) >= -0.01 ? 'text-tactical-accent' : 'text-red-500'} `}>
-                                    {getCurrencySymbol(trip.baseCurrency || 'USD')}{(myTotalPaid - myTotalReceived - myTotalSpend).toFixed(2)}
+                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center relative">
+                                <div className="flex items-center gap-1.5">
+                                    <div className="text-[8px] font-bold text-gray-500 uppercase">My Balance</div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowMyBalanceInfo(!showMyBalanceInfo);
+                                        }}
+                                        className="text-gray-600 hover:text-tactical-accent transition-colors"
+                                    >
+                                        <InfoIcon className="w-2.5 h-2.5" />
+                                    </button>
                                 </div>
+                                <div className={`font - mono text - sm font - bold ${(myTotalPaid - myTotalReceived - myTotalSpend) >= -0.01 ? 'text-tactical-accent' : 'text-red-500'} `}>
+                                    {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(myTotalPaid - myTotalReceived - myTotalSpend)}
+                                </div>
+
+                                {/* My Balance Info Banner */}
+                                {showMyBalanceInfo && (
+                                    <>
+                                        <div
+                                            className="fixed inset-0 z-[60]"
+                                            onClick={() => setShowMyBalanceInfo(false)}
+                                        />
+                                        <div className="absolute bottom-full left-0 right-0 z-[70] mb-2 p-3 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in backdrop-blur-md">
+                                            <div className="flex items-start gap-2">
+                                                <InfoIcon className="w-3.5 h-3.5 text-tactical-accent mt-0.5 shrink-0" />
+                                                <p className="text-[10px] font-bold text-white leading-relaxed">
+                                                    Your personal trip standing. It shows if you've paid more than your share (gold) or if you still owe the group for what you've enjoyed (red).
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {useSmartSplit && Math.abs(selectedMemberBalance - (pairwiseDebt[selectedMemberId!] || 0)) > 0.01 && (
                                 <div className="mt-3 bg-tactical-accent/10 p-2 rounded border border-tactical-accent/20">
                                     <p className="text-[8px] font-mono text-tactical-accent uppercase leading-tight">
-                                        Note: Smart Route has simplified your transfers. Direct debt to this member: {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(pairwiseDebt[selectedMemberId!] || 0).toFixed(0)}.
+                                        Note: Smart Route has simplified your transfers. Direct debt to this member: {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(pairwiseDebt[selectedMemberId!] || 0))}.
                                     </p>
                                 </div>
                             )}
@@ -877,7 +1006,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                 onClick={() => setSettleModalOpen(true)}
                                 className="px-6 py-2 bg-green-700/80 hover:bg-green-600 text-white text-xs font-bold uppercase rounded-lg border border-green-500/50 shadow-lg"
                             >
-                                SETTLE {getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(selectedMemberBalance).toFixed(2)}
+                                SETTLE {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(Math.abs(selectedMemberBalance))}
                             </button>
                         )}
 
@@ -896,7 +1025,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     </div>
 
                                     <div className="bg-black/40 rounded-lg p-4 mb-6 text-center border border-white/5">
-                                        <span className="text-3xl font-display font-bold text-green-500">{getCurrencySymbol(trip.baseCurrency || 'USD')}{Math.abs(selectedMemberBalance).toFixed(2)}</span>
+                                        <span className="text-3xl font-display font-bold text-green-500">{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(Math.abs(selectedMemberBalance))}</span>
                                     </div>
 
                                     <div className="flex gap-3">
@@ -965,7 +1094,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     </div>
                                     <div className="text-right">
                                         <div className={`font - bold font - mono text - sm ${isSettlement ? 'text-green-500' : (iPaid ? 'text-tactical-accent' : 'text-red-500')} `}>
-                                            {isSettlement ? 'PAID' : (iPaid ? 'lent' : 'borrowed')} {getCurrencySymbol(trip.baseCurrency || 'USD')}{transactionAmount.toFixed(2)}
+                                            {isSettlement ? 'PAID' : (iPaid ? 'lent' : 'borrowed')} {getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmount(transactionAmount)}
                                         </div>
                                     </div>
                                 </div>
