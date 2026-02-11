@@ -72,6 +72,7 @@ export interface ItineraryItem {
   splitDetails?: Record<string, number>; // Optional: Custom amount per member ID
   paidBy: string; // ID of the member who paid
   showInTimeline?: boolean; // Defaults to true for standard items, false for logged expenses
+  isDailyExpense?: boolean; // True = counts towards Daily Tracker & Piggy Bank (set by LogExpense)
 
   // Multi-Currency Fields
   originalAmount?: number;

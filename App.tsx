@@ -1094,6 +1094,7 @@ const App: React.FC = () => {
           splitDetails: itemData.splitDetails,
           paidBy: itemData.paidBy || currentUser.id,
           showInTimeline: itemData.showInTimeline !== undefined ? itemData.showInTimeline : true,
+          isDailyExpense: itemData.isDailyExpense || false,
           // Geolocation Persistence
           latitude: itemData.latitude,
           longitude: itemData.longitude,

@@ -52,7 +52,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     }, []);
 
     const todayDateStr = new Date().toDateString();
-    const cacheKey = `budget_calc_v3_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}`;
+    const cacheKey = `budget_calc_v4_${trip.id}_${currentUserId}_${trip.updatedAt || 0}_${trip.items.length}_${todayDateStr}`;
 
     const { result: calculationData, isComputing: isCalculating } = useCachedCalculation(cacheKey, async () => {
         // NOTE: This runs asynchronously if cache miss
@@ -213,6 +213,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
 
         trip.items.forEach(item => {
             if (item.isPrivate) return;
+            if (!item.isDailyExpense) return; // Only count Budget Engine expenses
 
             const itemDate = new Date(item.startDate);
             itemDate.setHours(0, 0, 0, 0);

@@ -554,6 +554,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 paidBy,
                 isPrivate,
                 showInTimeline,
+                isDailyExpense: true,
                 details: initialItem?.details || 'Expense logged via Budget Engine',
                 receiptItems: []
             });
@@ -622,6 +623,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 paidBy,
                 isPrivate,
                 showInTimeline,
+                isDailyExpense: true,
                 details: initialItem?.details || 'Expense logged via Budget Engine',
                 receiptItems: splitMode === 'ITEMIZED' ? receiptItems : []
             });
@@ -654,6 +656,7 @@ const LogExpense: React.FC<LogExpenseProps> = ({ onClose, onSave, onDelete, trip
                 paidBy,
                 isPrivate,
                 showInTimeline,
+                isDailyExpense: true,
                 details: initialItem?.details || 'Expense logged via Budget Engine',
                 receiptItems: splitMode === 'ITEMIZED' ? receiptItems : []
             });

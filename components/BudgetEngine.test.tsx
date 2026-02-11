@@ -8,6 +8,7 @@ interface MockItineraryItem {
     splitDetails?: Record<string, number>;
     startDate: string;
     isPrivate?: boolean;
+    isDailyExpense?: boolean;
 }
 
 /**
@@ -35,6 +36,7 @@ const calculateDailyAndPiggyBank = (
 
     items.forEach(item => {
         if (item.isPrivate) return;
+        if (!item.isDailyExpense) return; // Only count Budget Engine expenses
 
         const itemDate = new Date(item.startDate);
         itemDate.setHours(0, 0, 0, 0);
@@ -91,11 +93,11 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
         // Spent 50/day × 4 = 200
         // Piggy Bank = (100-50)*4 = +200
         const items: MockItineraryItem[] = [
-            { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
-            { id: '2', cost: 50, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
-            { id: '3', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z' },
-            { id: '4', cost: 50, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
-            { id: 'today', cost: 20, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' },
+            { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z', isDailyExpense: true },
+            { id: '2', cost: 50, splitWith: [myId], startDate: '2024-01-02T10:00:00Z', isDailyExpense: true },
+            { id: '3', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z', isDailyExpense: true },
+            { id: '4', cost: 50, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: true },
+            { id: 'today', cost: 20, splitWith: [myId], startDate: '2024-01-05T15:00:00Z', isDailyExpense: true },
         ];
 
         const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
@@ -109,11 +111,11 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
         // Today: spent 250 (massive overdraft) — irrelevant to Piggy Bank
         // Piggy Bank still = +200
         const items: MockItineraryItem[] = [
-            { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
-            { id: '2', cost: 50, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
-            { id: '3', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z' },
-            { id: '4', cost: 50, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
-            { id: 'today', cost: 250, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' },
+            { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z', isDailyExpense: true },
+            { id: '2', cost: 50, splitWith: [myId], startDate: '2024-01-02T10:00:00Z', isDailyExpense: true },
+            { id: '3', cost: 50, splitWith: [myId], startDate: '2024-01-03T10:00:00Z', isDailyExpense: true },
+            { id: '4', cost: 50, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: true },
+            { id: 'today', cost: 250, splitWith: [myId], startDate: '2024-01-05T15:00:00Z', isDailyExpense: true },
         ];
 
         const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
@@ -126,10 +128,10 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
         // 4 days × 150 spent = 600 total, budget was 400
         // Day-by-day: (100-150)*4 = -200
         const items: MockItineraryItem[] = [
-            { id: '1', cost: 150, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
-            { id: '2', cost: 150, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
-            { id: '3', cost: 150, splitWith: [myId], startDate: '2024-01-03T10:00:00Z' },
-            { id: '4', cost: 150, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
+            { id: '1', cost: 150, splitWith: [myId], startDate: '2024-01-01T10:00:00Z', isDailyExpense: true },
+            { id: '2', cost: 150, splitWith: [myId], startDate: '2024-01-02T10:00:00Z', isDailyExpense: true },
+            { id: '3', cost: 150, splitWith: [myId], startDate: '2024-01-03T10:00:00Z', isDailyExpense: true },
+            { id: '4', cost: 150, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: true },
         ];
 
         const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
@@ -150,14 +152,37 @@ describe('BudgetEngine Logic - Daily & Piggy Bank', () => {
         // Day 4: spent 100 → leftover 0
         // Piggy Bank = 70 + (-80) + 100 + 0 = +90
         const items: MockItineraryItem[] = [
-            { id: '1', cost: 30, splitWith: [myId], startDate: '2024-01-01T10:00:00Z' },
-            { id: '2', cost: 180, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' },
+            { id: '1', cost: 30, splitWith: [myId], startDate: '2024-01-01T10:00:00Z', isDailyExpense: true },
+            { id: '2', cost: 180, splitWith: [myId], startDate: '2024-01-02T10:00:00Z', isDailyExpense: true },
             // Day 3: no items (leftover = full daily budget)
-            { id: '4', cost: 100, splitWith: [myId], startDate: '2024-01-04T10:00:00Z' },
+            { id: '4', cost: 100, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: true },
         ];
 
         const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
         expect(result.piggyBankBalance).toBe(90);
+        expect(result.isBroken).toBe(false);
+    });
+
+    it('Scenario 6: Items without isDailyExpense are excluded', () => {
+        // Mix: 2 daily expenses (flagged) + 2 trip items (not flagged)
+        // Only the flagged ones should count
+        // Day 1: flagged 50 → leftover +50
+        // Day 2: NOT flagged 200 → ignored → leftover +100
+        // Day 3: flagged 80 → leftover +20
+        // Day 4: NOT flagged 300 → ignored → leftover +100
+        // Piggy Bank = 50 + 100 + 20 + 100 = +270
+        const items: MockItineraryItem[] = [
+            { id: '1', cost: 50, splitWith: [myId], startDate: '2024-01-01T10:00:00Z', isDailyExpense: true },
+            { id: '2', cost: 200, splitWith: [myId], startDate: '2024-01-02T10:00:00Z' }, // NOT flagged — trip item
+            { id: '3', cost: 80, splitWith: [myId], startDate: '2024-01-03T10:00:00Z', isDailyExpense: true },
+            { id: '4', cost: 300, splitWith: [myId], startDate: '2024-01-04T10:00:00Z', isDailyExpense: false }, // Explicitly false
+            { id: 'today-trip', cost: 500, splitWith: [myId], startDate: '2024-01-05T15:00:00Z' }, // Today, NOT flagged
+            { id: 'today-daily', cost: 25, splitWith: [myId], startDate: '2024-01-05T15:00:00Z', isDailyExpense: true }, // Today, flagged
+        ];
+
+        const result = calculateDailyAndPiggyBank(myId, items, dailyBudget, tripStart, mockToday);
+        expect(result.dailySpent).toBe(25); // Only today's flagged item
+        expect(result.piggyBankBalance).toBe(270); // Only past flagged items
         expect(result.isBroken).toBe(false);
     });
 });
