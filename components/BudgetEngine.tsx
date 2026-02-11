@@ -31,6 +31,7 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
     const [showBalanceInfo, setShowBalanceInfo] = useState(false);
     const [showSettlementInfo, setShowSettlementInfo] = useState(false);
     const [showMyBalanceInfo, setShowMyBalanceInfo] = useState(false);
+    const [showPiggyBankInfo, setShowPiggyBankInfo] = useState(false);
     const historyScrollRef = React.useRef<HTMLDivElement>(null);
 
     // Ensure history starts at top when selection changes
@@ -528,13 +529,16 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                             <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
                                             <div className="space-y-2">
                                                 <p className="text-[11px] font-bold text-white leading-relaxed">
-                                                    Only items added through the budget engine will be counted toward the daily tracker and the Piggy Bank.
+                                                    Your real-time mission allowance. It helps you stay on track day by day!
                                                 </p>
                                                 <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
-                                                    The daily tracker resets automatically at 00:00 local time.
+                                                    • Resets automatically every night at 00:00 local time.
                                                 </p>
                                                 <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
-                                                    You can reset statistics anytime by removing and re-adding your Daily Budget in trip settings.
+                                                    • Only items logged through the Budget Engine are tracked here.
+                                                </p>
+                                                <p className="text-[10px] text-gray-400 leading-relaxed font-medium italic">
+                                                    Tip: You can adjust your allowance anytime in trip settings.
                                                 </p>
                                             </div>
                                         </div>
@@ -563,6 +567,34 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                 ></div>
                             </div>
                         </div>
+
+                        {/* Piggy Bank Info Banner */}
+                        {showPiggyBankInfo && (
+                            <div className="relative z-50 mx-5 mt-2 mb-4 p-4 bg-pink-500/10 border border-pink-500/30 rounded-xl animate-fade-in backdrop-blur-sm">
+                                <button
+                                    className="absolute -top-2 -right-2 bg-pink-500 text-black rounded-full p-1 shadow-lg z-50"
+                                    onClick={() => setShowPiggyBankInfo(false)}
+                                >
+                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="m6 18 12-12M6 6l12 12" />
+                                    </svg>
+                                </button>
+                                <div className="flex items-start gap-3">
+                                    <InfoIcon className="w-4 h-4 text-pink-400 mt-0.5 shrink-0" />
+                                    <div className="space-y-2">
+                                        <p className="text-[11px] font-bold text-white leading-relaxed">
+                                            Your tactical financial reserve.
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
+                                            • <span className="text-green-400 font-bold">Savings</span>: If you spend less than your daily allowance, the surplus is "saved" here.
+                                        </p>
+                                        <p className="text-[10px] text-gray-400 leading-relaxed font-medium">
+                                            • <span className="text-red-400 font-bold">Overdraft</span>: If you go over your budget, the pig automatically covers you until it's empty!
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Footer: Piggy Bank — Visual Pig */}
                         <div className="px-5 py-4 border-t border-white/5 flex items-center justify-between bg-black/20">
@@ -603,14 +635,27 @@ const BudgetEngine: React.FC<BudgetEngineProps> = ({ trip, currentUserId, curren
                                     </svg>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-bold uppercase tracking-wider text-pink-400">
-                                        Piggy Bank
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="text-[10px] font-bold uppercase tracking-wider text-pink-400">
+                                            Piggy Bank
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowPiggyBankInfo(!showPiggyBankInfo);
+                                            }}
+                                            className="text-gray-600 hover:text-pink-400 transition-colors"
+                                        >
+                                            <InfoIcon className="w-2.5 h-2.5" />
+                                        </button>
                                     </div>
                                     <div className="text-[9px] text-gray-500 mt-0.5">
                                         {piggyBank.isBroken ? 'Overdraft from previous days' : 'Accumulated savings'}
                                     </div>
                                 </div>
                             </div>
+
+
                             <div className={`font-display text-xl font-bold ${piggyBank.isBroken ? 'text-red-500' : 'text-green-400'}`}>
                                 {piggyBank.isBroken ? '-' : '+'}{getCurrencySymbol(trip.baseCurrency || 'USD')}{formatAmountWhole(Math.abs(piggyBank.balance))}
                             </div>
