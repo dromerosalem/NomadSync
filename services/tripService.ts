@@ -34,6 +34,7 @@ export const tripService = {
             role,
             personal_budget,
             daily_budget,
+            daily_budget_started_at,
             status,
             profiles:profiles!trip_members_user_id_fkey (
               full_name,
