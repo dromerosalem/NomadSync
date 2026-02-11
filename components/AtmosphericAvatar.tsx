@@ -5,7 +5,7 @@ interface AtmosphericAvatarProps {
     userId: string;
     avatarUrl?: string | null;
     name: string;
-    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+    size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
     className?: string;
     isPathfinder?: boolean;
 }

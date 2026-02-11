@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Member, Trip, ItemType } from '../types';
-import { ChevronLeftIcon, GearIcon, SwordsIcon, NetworkIcon, WalletIcon, ListCheckIcon, EditIcon, PlusIcon, MapPinIcon, CompassIcon, WalkIcon } from './Icons';
+import { ChevronLeftIcon, GearIcon, SwordsIcon, NetworkIcon, WalletIcon, ListCheckIcon, EditIcon, PlusIcon, MapPinIcon, CompassIcon, WalkIcon, InfoIcon } from './Icons';
 import AtmosphericGradient from './AtmosphericGradient';
 import AtmosphericAvatar from './AtmosphericAvatar';
 import { NotificationManager } from '../services/NotificationManager';
@@ -86,6 +86,11 @@ interface NomadProfileProps {
 const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCreateMission, onSignOut, onViewGlobalLedger, onViewPrivacy, onViewTerms }) => {
     // Network status detection
     const isOnline = useNetworkStatus();
+
+    // Banner states
+    const [showCombatStatsInfo, setShowCombatStatsInfo] = React.useState(false);
+    const [showSkillTreeInfo, setShowSkillTreeInfo] = React.useState(false);
+    const [showFinancialHonorInfo, setShowFinancialHonorInfo] = React.useState(false);
 
     // --- REAL-TIME ANALYTICS ---
     const stats = useMemo(() => {
@@ -258,10 +263,39 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
                 <div className="px-6 space-y-8">
                     {/* Combat Stats */}
                     <div>
-                        <div className="flex items-center gap-2 text-tactical-accent mb-3">
-                            <SwordsIcon className="w-5 h-5" />
-                            <span className="font-display font-bold uppercase tracking-wider text-sm">Combat Stats</span>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-2 text-tactical-accent">
+                                <SwordsIcon className="w-5 h-5" />
+                                <span className="font-display font-bold uppercase tracking-wider text-sm">Combat Stats</span>
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCombatStatsInfo(!showCombatStatsInfo);
+                                }}
+                                className="text-gray-600 hover:text-tactical-accent transition-colors"
+                            >
+                                <InfoIcon className="w-3 h-3" />
+                            </button>
                         </div>
+
+                        {/* Combat Stats Info Banner */}
+                        {showCombatStatsInfo && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setShowCombatStatsInfo(false)}
+                                />
+                                <div className="relative z-50 mt-1 mb-4 p-4 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in backdrop-blur-sm">
+                                    <div className="flex items-start gap-3">
+                                        <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
+                                        <p className="text-[11px] font-bold text-white leading-relaxed">
+                                            Your tactical footprint. <span className="text-tactical-accent">Missions</span> are completed trips, <span className="text-tactical-accent">Territories</span> are major regions explored, and <span className="text-tactical-accent">Countries</span> represent nations you've navigated.
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                         <div className="grid grid-cols-3 gap-3">
                             <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-3 flex flex-col items-center justify-center aspect-square">
                                 <span className="font-display text-3xl font-bold text-tactical-accent mb-1">{stats.missions}</span>
@@ -282,12 +316,39 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
 
                     {/* Skill Tree */}
                     <div>
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2 mb-3">
                             <div className="flex items-center gap-2 text-tactical-accent">
                                 <NetworkIcon className="w-5 h-5" />
                                 <span className="font-display font-bold uppercase tracking-wider text-sm">Skill Tree</span>
                             </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowSkillTreeInfo(!showSkillTreeInfo);
+                                }}
+                                className="text-gray-600 hover:text-tactical-accent transition-colors"
+                            >
+                                <InfoIcon className="w-3 h-3" />
+                            </button>
                         </div>
+
+                        {/* Skill Tree Info Banner */}
+                        {showSkillTreeInfo && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setShowSkillTreeInfo(false)}
+                                />
+                                <div className="relative z-50 mt-1 mb-4 p-4 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in backdrop-blur-sm">
+                                    <div className="flex items-start gap-3">
+                                        <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
+                                        <p className="text-[11px] font-bold text-white leading-relaxed">
+                                            Your progressive growth. Unlock and level up skills by completing missions and managing group finances. Higher levels unlock legendary accolades!
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         {unlockedAchievements.length === 0 ? (
                             <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-6 text-center">
@@ -360,10 +421,39 @@ const NomadProfile: React.FC<NomadProfileProps> = ({ user, trips, onBack, onCrea
 
                     {/* Financial Honor */}
                     <div>
-                        <div className="flex items-center gap-2 text-tactical-accent mb-3">
-                            <WalletIcon className="w-5 h-5" />
-                            <span className="font-display font-bold uppercase tracking-wider text-sm">Financial Honor</span>
+                        <div className="flex items-center gap-2 mb-3">
+                            <div className="flex items-center gap-2 text-tactical-accent">
+                                <WalletIcon className="w-5 h-5" />
+                                <span className="font-display font-bold uppercase tracking-wider text-sm">Financial Honor</span>
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowFinancialHonorInfo(!showFinancialHonorInfo);
+                                }}
+                                className="text-gray-600 hover:text-tactical-accent transition-colors"
+                            >
+                                <InfoIcon className="w-3 h-3" />
+                            </button>
                         </div>
+
+                        {/* Financial Honor Info Banner */}
+                        {showFinancialHonorInfo && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40"
+                                    onClick={() => setShowFinancialHonorInfo(false)}
+                                />
+                                <div className="relative z-50 mt-1 mb-4 p-4 bg-tactical-accent/10 border border-tactical-accent/30 rounded-xl animate-fade-in backdrop-blur-sm">
+                                    <div className="flex items-start gap-3">
+                                        <InfoIcon className="w-4 h-4 text-tactical-accent mt-0.5 shrink-0" />
+                                        <p className="text-[11px] font-bold text-white leading-relaxed">
+                                            Your economic reputation. <span className="text-tactical-accent">Debts Settled</span> is the total cash you’ve paid to others. <span className="text-red-500 font-black">Outstanding</span> is what you currently owe to clear your standing.
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                         <div className="bg-tactical-card border border-tactical-muted/20 rounded-xl p-0 overflow-hidden">
                             <div className="flex">
                                 <div className="flex-1 p-4 border-r border-tactical-muted/10">
