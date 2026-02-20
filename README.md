@@ -1,48 +1,57 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# NomadSync
 
-# NomadSync: Group Travel Refined
+Your ultimate companion for group travel adventure, creating a shared digital command center for your trip.
 
-NomadSync is a modern PWA designed to be the ultimate companion for group travel. It combines itinerary management, real-time collaboration, and smart expense tracking into a single, offline-first application.
+## What This Does
 
-## 📖 Documentation
+NomadSync replaces chaotic spreadsheets and messy group chats for group trips. Whether you're backpacking through Europe or road-tripping across the coast, it keeps everyone aligned and on budget. Features include a visual timeline, interactive maps, and smart expense splitting with AI-powered receipt scanning (via Google Gemini) to easily itemize costs. Best of all, it works offline first, so you can log expenses without a signal and sync up later.
 
-*   **[Product Overview](PRODUCT_OVERVIEW.md)**: Detailed breakdown of features, architecture, and core pillars.
-*   **[Technical Specification](BACKEND_SPEC.md)**: In-depth view of the tech stack, database schema, and security policies.
+## Demo
 
-## ✨ Key Features
+**Live App:** [https://www.nomadsync.co](https://www.nomadsync.co)
 
-*   **Itinerary Hub**: Visual timeline and interactive maps for your entire journey.
-*   **Smart Expenses**: Split bills, scan receipts with AI (Gemini + Llama), and track real-time balances.
-*   **Offline-First**: Access your data anywhere, even without a signal.
-*   **Squad Sync**: Real-time updates and role-based permissions for your travel group.
-*   **Seamless Navigation**: Deep linking support and URL synchronization for all trips and views.
+## Tech Stack
 
-## 🛠️ Tech Stack
+- **Frontend**: React 19, Ionic React, Tailwind CSS - For a responsive, native-like mobile PWA experience.
+- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions) - For real-time data sync, secure authentication, and scalable backend logic.
+- **AI Integration**: Google Gemini & Groq (Llama) - For intelligent receipt scanning and automated expense itemization.
+- **Local Storage**: Dexie.js (IndexedDB) - To enable robust offline-first functionality and queue operations.
+- **Maps**: Leaflet & React-Leaflet - For interactive visual itineraries.
 
-Built with a focus on performance and developer experience:
+## Getting Started
 
-*   **Frontend**: React 19, Ionic React, Ionic Router, Vite, Tailwind CSS, TypeScript.
-*   **Backend**: Supabase (Auth, Postgres, Realtime, Storage).
-*   **AI**: Google Gemini & Llama (Receipt Analysis).
+```bash
+# Clone the repository
+git clone https://github.com/dromerosalem/NomadSync.git
 
-## 🚀 Run Locally
+# Navigate into the directory
+cd NomadSync
 
-**Prerequisites:** Node.js 20+
+# Install dependencies
+npm install
 
-1.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+# Run the local development server
+npm run dev
+```
 
-2.  **Configure Environment:**
-    Set the `GEMINI_API_KEY` and Supabase credentials in [.env.local](.env.local).
+## How It Works
 
-3.  **Start the App:**
-    ```bash
-    npm run dev
-    ```
+NomadSync employs a **Local-First** architecture using IndexedDB (Dexie). All user actions (like adding an expense or itinerary item) are applied immediately to the local database, allowing travelers to use the app in remote areas with zero connectivity. When a network connection is established, a background sync process resolves conflicts (server timestamp wins) and pushes changes to a Supabase Postgres database. Custom Deno Edge Functions handle heavy operations like AI receipt OCR, ensuring the mobile client remains lightning-fast.
 
-4.  **View in Browser:**
-    Open [http://localhost:5173](http://localhost:5173).
+## What I Learned
+
+- Building an offline-first architecture with IndexedDB and handling complex background data synchronization via Service Workers.
+- Creating native-feeling progressive web apps (PWAs) using Ionic React and handling mobile-specific UI constraints (like safe areas).
+- Integrating AI (Google Gemini and Llama) via edge functions for reliable optical character recognition (OCR) and structured data extraction from noisy receipt images.
+- Designing responsive, accessible frontend components with Tailwind CSS and Radix UI primitives.
+
+## Future Ideas
+
+- [ ] Push notifications for new trip invites and major itinerary updates
+- [ ] Advanced gamification integration (e.g., leveling up from "Pathfinder" as you log more miles)
+- [ ] Direct bank integrations or Venmo/PayPal deep-linking for seamless group settlements
+- [ ] Multi-currency support and live exchange rate conversions
+
+## License
+
+Personal Project
