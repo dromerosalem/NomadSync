@@ -9,7 +9,7 @@ import { persistenceService } from '../services/persistenceService';
 const AuthGlobe = React.lazy(() => import('./AuthGlobe'));
 
 interface AuthScreenProps {
-    onAuthSuccess: (user: { name: string; email: string }) => void;
+    onAuthSuccess: (user: { id: string; name: string; email: string; avatarUrl: string | null }) => void;
     onViewPrivacy: () => void;
     onViewTerms: () => void;
     onForgotPassword: () => void;
@@ -37,8 +37,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
             if (error) throw error;
             if (data.user) {
                 onAuthSuccess({
+                    id: data.user.id,
                     name: data.user.user_metadata.full_name || 'New Traveler',
-                    email: data.user.email!
+                    email: data.user.email!,
+                    avatarUrl: data.user.user_metadata.avatar_url || null
                 });
             }
         } catch (err: any) {
@@ -85,8 +87,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                 if (data.session) {
                     clearInterval(interval);
                     onAuthSuccess({
+                        id: data.user.id,
                         name: data.user.user_metadata.full_name || name,
-                        email: data.user.email!
+                        email: data.user.email!,
+                        avatarUrl: data.user.user_metadata.avatar_url || null
                     });
                 }
             }, 3000);
@@ -129,8 +133,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess, onViewPrivacy, o
                 persistenceService.requestPersistence();
 
                 onAuthSuccess({
+                    id: result.data.user.id,
                     name: result.data.user.user_metadata.full_name || name || normalizedEmail.split('@')[0],
-                    email: normalizedEmail
+                    email: normalizedEmail,
+                    avatarUrl: result.data.user.user_metadata.avatar_url || null
                 });
             }
         } catch (err: any) {

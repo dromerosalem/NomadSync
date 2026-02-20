@@ -82,6 +82,19 @@ const App: React.FC = () => {
   // Ref to flag that we detected an email verification on initial load.
   // Must be set BEFORE Supabase clears the hash from the URL.
   const isBrowserVerification = useRef(false);
+  // Flag to prevent URL sync from stripping OAuth hash tokens during callback processing
+  const isProcessingOAuth = useRef(false);
+  // Guard to prevent duplicate profile fetches from multiple onAuthStateChange events
+  const profileFetched = useRef(false);
+  // State to show loading spinner during OAuth callback until profile is resolved
+  const [oauthLoading, setOauthLoading] = useState(() => {
+    const hash = window.location.hash;
+    const path = window.location.pathname;
+    // Only for Google OAuth callbacks, NOT email verification (which also has access_token in hash)
+    const hasOAuthTokens = !!(hash && (hash.includes('access_token') || hash.includes('refresh_token')));
+    const isEmailVerification = path === '/verified' || hash.includes('type=signup') || hash.includes('type=email');
+    return hasOAuthTokens && !isEmailVerification;
+  });
 
   const [view, setView] = useState<ViewState>(() => {
     // If we have a user, start at DASHBOARD
@@ -99,6 +112,13 @@ const App: React.FC = () => {
     }
     if (path === '/update-password') return 'UPDATE_PASSWORD';
     if (path === '/forgot-password') return 'FORGOT_PASSWORD';
+
+    // Detect OAuth callback: hash contains access_token from Google redirect
+    if (hash && (hash.includes('access_token') || hash.includes('refresh_token'))) {
+      console.log('[App] OAuth callback detected in URL hash. Blocking URL sync...');
+      isProcessingOAuth.current = true;
+      return 'AUTH';
+    }
 
     return localStorage.getItem(LAST_USER_KEY) ? 'DASHBOARD' : 'AUTH';
   });
@@ -125,6 +145,13 @@ const App: React.FC = () => {
 
   // Static Route URL Sync (View → URL)
   useEffect(() => {
+    // Block URL sync while OAuth callback is being processed — pushing a new URL
+    // would strip the #access_token hash before Supabase's detectSessionInUrl can read it
+    if (isProcessingOAuth.current) {
+      console.log('[App] URL sync blocked: OAuth callback in progress');
+      return;
+    }
+
     const currentPath = location.pathname;
     const targetPath = VIEW_TO_PATH[view];
 
@@ -249,6 +276,13 @@ const App: React.FC = () => {
       }
 
       if (session) {
+        // Capture and clear OAuth state
+        const wasOAuthCallback = isProcessingOAuth.current;
+        if (wasOAuthCallback) {
+          console.log('[App] OAuth session established, unblocking URL sync');
+          isProcessingOAuth.current = false;
+        }
+
         setIsAuthenticated(true);
         // Request persistence on login/state change
         persistenceService.requestPersistence().then(granted => {
@@ -268,21 +302,19 @@ const App: React.FC = () => {
         setCurrentUser(mappedUser);
         localStorage.setItem(LAST_USER_KEY, JSON.stringify(mappedUser));
 
-        // Request persistence on login/state change
-        persistenceService.requestPersistence().then(granted => {
-          if (granted) console.log('Storage persistence verified on auth change.');
-        });
-
         // Request Notifications
         if ('Notification' in window && Notification.permission === 'default') {
           Notification.requestPermission();
         }
 
-        // Check Onboarding Status
+        // Check Onboarding Status — only once per session
+        if (profileFetched.current) return;
+        profileFetched.current = true;
         userService.fetchProfile(user.id).then(profile => {
           // Priority Check: Verification Bridge
           if (window.location.pathname === '/verified') {
             setView('VERIFIED' as ViewState);
+            setOauthLoading(false);
             return;
           }
 
@@ -315,56 +347,67 @@ const App: React.FC = () => {
             setView('ONBOARDING');
           }
 
+          // Clear OAuth loading — React 18 batches this with setView above
+          setOauthLoading(false);
+
           if (profile.onboardingCompleted !== undefined) {
             setCurrentUser(prev => ({ ...prev, onboardingCompleted: profile.onboardingCompleted }));
           }
         });
-      } else {
+      } else if (_event === 'SIGNED_OUT') {
+        // Only cleanup on explicit sign-out, NOT on transient null-session events
+        // (e.g. INITIAL_SESSION before session loads, TOKEN_REFRESHED, etc.)
         handleSignOutCleanup();
       }
     });
 
-    // Initial session check
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (session) {
-        setIsAuthenticated(true);
-        // Request persistence immediately on session restore
-        persistenceService.requestPersistence().then(granted => {
-          if (granted) console.log('Storage persistence verified on restore.');
-        });
+    // Initial session check — skip for OAuth callbacks since onAuthStateChange handles those
+    const hashOnMount = window.location.hash;
+    const isOAuthCallback = hashOnMount.includes('access_token') || hashOnMount.includes('refresh_token');
 
-        const user = session.user;
-        const mappedUser: Member = {
-          id: user.id,
-          name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Ghost Operative',
-          email: user.email!,
-          role: 'PATHFINDER',
-          avatarUrl: user.user_metadata.avatar_url || null,
-          isCurrentUser: true,
-          status: 'ACTIVE'
-        };
-        setCurrentUser(mappedUser);
-        localStorage.setItem(LAST_USER_KEY, JSON.stringify(mappedUser));
+    if (!isOAuthCallback) {
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (session) {
+          setIsAuthenticated(true);
+          // Request persistence immediately on session restore
+          persistenceService.requestPersistence().then(granted => {
+            if (granted) console.log('Storage persistence verified on restore.');
+          });
 
-        // Check Onboarding... (Rest of verification logic remains mostly same)
-        userService.fetchProfile(user.id).then(profile => {
-          // ... profile logic ...
-          // We can optimize this later, but for now let it run to verify state
-          if (profile.onboardingCompleted !== undefined) {
-            setCurrentUser(prev => ({ ...prev, onboardingCompleted: profile.onboardingCompleted }));
-          }
-        });
-      } else {
-        // No session found
-        if (error || !navigator.onLine) {
-          console.log('[App] Offline or Error getting session. Maintaining "Hydrated" state if available.');
-          // Do NOT sign out if offline
+          const user = session.user;
+          const mappedUser: Member = {
+            id: user.id,
+            name: user.user_metadata.full_name || user.email?.split('@')[0] || 'Ghost Operative',
+            email: user.email!,
+            role: 'PATHFINDER',
+            avatarUrl: user.user_metadata.avatar_url || null,
+            isCurrentUser: true,
+            status: 'ACTIVE'
+          };
+          setCurrentUser(mappedUser);
+          localStorage.setItem(LAST_USER_KEY, JSON.stringify(mappedUser));
+
+          // Check Onboarding and set view
+          userService.fetchProfile(user.id).then(profile => {
+            if (profile.onboardingCompleted) {
+              setView(prev => prev === 'AUTH' ? 'DASHBOARD' : prev);
+            } else {
+              setView('ONBOARDING');
+            }
+            if (profile.onboardingCompleted !== undefined) {
+              setCurrentUser(prev => ({ ...prev, onboardingCompleted: profile.onboardingCompleted }));
+            }
+          });
         } else {
-          console.log('[App] Online and no session. Cleanup.');
-          handleSignOutCleanup();
+          if (error || !navigator.onLine) {
+            console.log('[App] Offline or Error getting session. Maintaining "Hydrated" state if available.');
+          } else {
+            console.log('[App] Online and no session. Cleanup.');
+            handleSignOutCleanup();
+          }
         }
-      }
-    });
+      });
+    }
 
     // --- Service Worker & Sync Registration ---
     let handleMessage: (event: MessageEvent) => void;
@@ -740,10 +783,42 @@ const App: React.FC = () => {
     await supabase.auth.signOut();
   };
 
-  const handleAuthSuccess = () => {
-    // Rely on onAuthStateChange to set user state and isAuthenticated
-    // Just ensure we move to the dashboard if we aren't already there
-    setView('DASHBOARD');
+  const handleAuthSuccess = (userData: { id: string; name: string; email: string; avatarUrl: string | null }) => {
+    // Map user data directly from the AuthScreen callback — no async getSession() needed
+    const mappedUser: Member = {
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      role: 'PATHFINDER',
+      avatarUrl: userData.avatarUrl,
+      isCurrentUser: true,
+      status: 'ACTIVE'
+    };
+
+    // Set all three states synchronously — React 18 batches these into one render
+    // Default to ONBOARDING (safe for new users, corrected by fetchProfile if needed)
+    setIsAuthenticated(true);
+    setCurrentUser(mappedUser);
+    setView('ONBOARDING');
+    localStorage.setItem(LAST_USER_KEY, JSON.stringify(mappedUser));
+
+    // Prevent onAuthStateChange from duplicating profile fetch
+    profileFetched.current = true;
+
+    // Fetch profile to confirm final view (ONBOARDING stays or upgrades to DASHBOARD)
+    userService.fetchProfile(userData.id).then(profile => {
+      if (profile.onboardingCompleted) {
+        setView('DASHBOARD');
+      } else {
+        setView('ONBOARDING');
+      }
+      if (profile.onboardingCompleted !== undefined) {
+        setCurrentUser(prev => ({ ...prev, onboardingCompleted: profile.onboardingCompleted }));
+      }
+    }).catch(() => {
+      // Fallback for new users
+      setView('ONBOARDING');
+    });
   };
 
   // Helper: Semantic Sort Logic
@@ -1167,6 +1242,16 @@ const App: React.FC = () => {
       <PWAInstall />
       <ScrollToTop trigger={view} />
       <main className="flex-1 relative flex flex-col w-full">
+
+        {/* OAuth loading overlay — shown while profile determines the correct destination */}
+        {oauthLoading && (
+          <div className="fixed inset-0 z-[9999] bg-tactical-bg flex flex-col items-center justify-center">
+            <div className="animate-spin-slow">
+              <AuthGlobe />
+            </div>
+            <p className="mt-8 text-xs font-mono text-tactical-accent animate-pulse tracking-widest">CONNECTING...</p>
+          </div>
+        )}
 
         {!isAuthenticated && view === 'AUTH' && (
           <AuthScreen

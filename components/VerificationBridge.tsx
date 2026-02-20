@@ -9,7 +9,7 @@ const VerificationBridge: React.FC = () => {
     useEffect(() => {
         const cleanup = async () => {
             try {
-                await supabase.auth.signOut();
+                await supabase.auth.signOut({ scope: 'local' });
             } catch (err) {
                 console.error('Bridge signOut error:', err);
             }
