@@ -22,3 +22,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+ 
+# AI Agents
+.agents
+.claude
+docs
+testsprite_tests
+

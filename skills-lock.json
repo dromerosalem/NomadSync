@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "doc-prd": {
+      "source": "vladm3105/aidoc-flow-framework",
+      "sourceType": "github",
+      "computedHash": "11863866de359794abcec8d1c2c9c45052be3f8cc536d855c44b45249f1341cf"
+    },
+    "technical-writer": {
+      "source": "onewave-ai/claude-skills",
+      "sourceType": "github",
+      "computedHash": "91f95ce88d7f311aa1eb1ca00e2dbfe629383c00a7bf076effb0e3af9e051b76"
+    }
+  }
+}
