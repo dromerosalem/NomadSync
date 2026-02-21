@@ -1,6 +1,8 @@
 # NomadSync
 
-![NomadSync Hero](./public/assets/screenshots/hero.png)
+<div align="center">
+  <img src="./public/assets/screenshots/hero.png" width="30%" alt="NomadSync Hero" />
+</div>
 
 Your ultimate companion for group travel adventure, creating a shared digital command center for your trip.
 
