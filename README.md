@@ -1,10 +1,19 @@
 # NomadSync
 
+![NomadSync Hero](./public/assets/screenshots/hero.png)
+
 Your ultimate companion for group travel adventure, creating a shared digital command center for your trip.
 
 ## What This Does
 
 NomadSync replaces chaotic spreadsheets and messy group chats for group trips. Whether you're backpacking through Europe or road-tripping across the coast, it keeps everyone aligned and on budget. Features include a visual timeline, interactive maps, and smart expense splitting with AI-powered receipt scanning (via Google Gemini) to easily itemize costs. It also features multi-currency support with live exchange rate conversions, and push notifications for new trip invites and major itinerary updates. Best of all, it works offline first, so you can log expenses without a signal and sync up later.
+
+## Screenshots
+
+<div align="center">
+  <img src="./public/assets/screenshots/itinerary.png" width="30%" alt="Itinerary View" />
+  <img src="./public/assets/screenshots/expenses.png" width="30%" alt="Expense Management" />
+</div>
 
 ## Demo
 
